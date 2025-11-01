@@ -1,21 +1,18 @@
-import {Routes, Route, Link, Navigate} from "react-router-dom";
-import {ToastContainer} from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import {AuthProvider} from "./context/AuthContext";
-
-import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
-import Navbar from "./components/Navbar/Navbar";
-import Footer from "./components/Footer/Footer";
-import FarmerSignup from "./pages/FarmRegister";
-import FarmerLogin from "./pages/FarmLogin";
-import EditProfile from "./pages/EditProfile";
-import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
-import FarmStorePage from "./pages/FarmStorePage";
-import Slider from "./components/FarmStore/slider";
-
+import { Routes, Route, Link } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute'
+import Navbar from './components/Navbar/Navbar'
+import Footer from './components/Footer/Footer'
+import FarmerSignup from './pages/FarmRegister'
+import FarmerLogin from './pages/FarmLogin'
+import EditProfile from './pages/EditProfile';
+import ForgotPasswordFlow from './pages/ForgotPasswordFlow';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import NotFound from './pages/NotFound';
+import Dashboard from './pages/Dashboard';
+import CartPage from './pages/CartPage'; 
 function App() {
   return (
     <AuthProvider>
@@ -134,32 +131,13 @@ function App() {
               }
             />
 
-            <Route
-              path="/edit-profile"
-              element={
-                <ProtectedRoute>
-                  <EditProfile />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/cart"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">
-                    Shopping Cart
-                  </h1>
-                </div>
-              }
-            />
-
-            <Route path="/farm/:id" element={<FarmStorePage />} />
-
-            {/* Example: Redirect from base path to a default farm */}
-            {/* <Route
-              path="/"
-              element={<Navigate to="/farm/sunrise-orchard" replace />}
-            /> */}
+            <Route path="/edit-profile" element={
+              <ProtectedRoute>
+                <EditProfile />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/cart" element={<CartPage />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

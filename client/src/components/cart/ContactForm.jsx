@@ -16,14 +16,14 @@ export default function ContactForm({
       </h2>
       
       {/* Label text with the light emerald color you requested */}
-      <p className="text-emerald-400 text-sm mb-6">
+      <p className="text-emerald-800 text-sm mb-6">
         We will reach out to confirm delivery details and timing.
       </p>
       
       <div className="space-y-4">
         {/* Full Name */}
         <div>
-          <label className="block text-sm font-medium text-emerald-400 mb-2">
+          <label className="block text-sm font-bold text-emerald-700 mb-2">
             Full Name
           </label>
           <input
@@ -38,7 +38,7 @@ export default function ContactForm({
         
         {/* Phone Number */}
         <div>
-          <label className="block text-sm font-medium text-emerald-400 mb-2">
+          <label className="block text-sm font-bold text-emerald-700 mb-2">
             Phone Number
           </label>
           <input
