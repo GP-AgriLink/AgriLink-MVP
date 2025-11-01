@@ -1,34 +1,129 @@
+
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../common/Logo';
 import avatarPlaceholder from '../../assets/avatar-placeholder.svg';
 
-const ORDER_COUNT_REFRESH_INTERVAL = 600000; // 10 minutes
+const ORDER_COUNT_REFRESH_INTERVAL = 600000;
 
 function Navbar() {
-  // Get user, logout, order count, and avatar from AuthContext
-  const { user, logout, incomingOrdersCount, fetchAndSetOrderCount, avatarUrl } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [incomingOrdersCount, setIncomingOrdersCount] = useState(0);
+  const [cartItemsCount, setCartItemsCount] = useState(0);
   const dropdownRef = useRef(null);
   const profileDropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const hamburgerButtonRef = useRef(null);
 
-  // This interval still runs to catch new orders from other sources
   useEffect(() => {
-    if (user) {
-      const interval = setInterval(() => {
-        fetchAndSetOrderCount(); // Use context function
-      }, ORDER_COUNT_REFRESH_INTERVAL);
+    const fetchUserAvatar = async () => {
+      if (user) {
+        try {
+          const { getProfile } = await import('../../services/profileApi');
+          const profileData = await getProfile();
+          if (profileData?.avatarUrl) {
+            setAvatarUrl(profileData.avatarUrl);
+          }
+        } catch (error) {
+          console.error('Error fetching avatar:', error);
+        }
+      }
+    };
+    fetchUserAvatar();
+  }, [user]);
 
-      return () => clearInterval(interval);
+  useEffect(() => {
+    const fetchOrdersCount = async () => {
+      if (user) {
+        try {
+          const { getIncomingOrdersCount } = await import('../../services/orderApi');
+          const count = await getIncomingOrdersCount();
+          setIncomingOrdersCount(count);
+          localStorage.setItem('incomingOrdersCount', count.toString());
+        } catch (error) {
+          console.error('Error fetching orders count:', error);
+          setIncomingOrdersCount(0);
+          localStorage.setItem('incomingOrdersCount', '0');
+        }
+      } else {
+        setIncomingOrdersCount(0);
+        localStorage.removeItem('incomingOrdersCount');
+      }
+    };
+
+    if (user) {
+      const storedCount = localStorage.getItem('incomingOrdersCount');
+      if (storedCount) {
+        setIncomingOrdersCount(parseInt(storedCount, 10));
+      }
+      fetchOrdersCount();
     }
-  }, [user, fetchAndSetOrderCount]);
+    
+    const interval = setInterval(fetchOrdersCount, ORDER_COUNT_REFRESH_INTERVAL);
+    
+    const handleStorageChange = (e) => {
+      if (e.key === 'incomingOrdersCount' && e.newValue) {
+        setIncomingOrdersCount(parseInt(e.newValue, 10));
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const loadCartCount = () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setCartItemsCount(0);
+          return;
+        }
+        
+        const cartKey = `cart_${token}`; 
+        // ( If cart is generic, change this logic )
+        const cartData = localStorage.getItem(cartKey) || localStorage.getItem('cart'); 
+        
+        if (cartData) {
+          const items = JSON.parse(cartData);
+          const count = items.reduce((acc, item) => acc + (item.qty || 1), 0);
+          setCartItemsCount(count);
+        } else {
+          setCartItemsCount(0);
+        }
+      } catch (error) {
+        console.error('Error loading cart count:', error);
+        setCartItemsCount(0);
+      }
+    };
+
+    loadCartCount();
+
+    const handleStorageChange = (e) => {
+      if (e.key && (e.key.startsWith('cart_') || e.key === 'cart')) {
+        loadCartCount();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('cartUpdated', loadCartCount);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', loadCartCount);
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,7 +134,7 @@ function Navbar() {
         setIsProfileDropdownOpen(false);
       }
       if (
-        mobileMenuRef.current &&
+        mobileMenuRef.current && 
         !mobileMenuRef.current.contains(event.target) &&
         hamburgerButtonRef.current &&
         !hamburgerButtonRef.current.contains(event.target)
@@ -74,7 +169,7 @@ function Navbar() {
   const handleNavigateToDashboard = (view) => {
     setIsProfileDropdownOpen(false);
     setIsMobileMenuOpen(false);
-
+    
     if (location.pathname === '/dashboard') {
       localStorage.setItem('dashboardActiveView', view);
       window.dispatchEvent(new CustomEvent('dashboardViewChange', { detail: { activeView: view } }));
@@ -83,32 +178,24 @@ function Navbar() {
     }
   };
 
+
   return (
     <header className="font-['Inter'] bg-white/70 backdrop-blur-md sticky top-0 z-[100] border-b border-emerald-100/70 shadow-[0_-4px_16px_rgba(6,78,59,0.7)] rounded-b-2xl">
       <div className="w-full lg:w-5/6 mx-auto flex justify-between items-center px-4 md:px-6 py-4 md:py-5">
         <Logo />
 
         <div className="hidden lg:flex items-center gap-4">
+          
+          
           {!user ? (
             <>
-              <button
-                className="group relative w-11 h-11 rounded-xl bg-white/80 backdrop-blur-sm border border-emerald-200/60 flex items-center justify-center transition-all duration-300 hover:border-emerald-400/80 hover:bg-emerald-50/50 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5 hover:scale-105"
-                aria-label="Shopping Cart"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600 group-hover:stroke-emerald-700 transition-colors">
-                  <circle cx="9" cy="21" r="1"></circle>
-                  <circle cx="20" cy="21" r="1"></circle>
-                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                </svg>
-              </button>
-
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={toggleDropdown}
                   className="group relative bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 font-semibold text-white rounded-xl px-7 py-3 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-105 flex items-center gap-3 border border-white/20 overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-
+                  
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-white relative z-10">
                     <path d="M4.5 3.75c5.25.75 9 5.25 9.75 9.75.75-4.5 4.5-9 9.75-9.75-.75 5.25-3.75 9-9.75 11.25 2.25 1.5 5.25 3.75 6 6-4.5-1.5-7.5-3.75-9-6-1.5 2.25-4.5 4.5-9 6 .75-2.25 3.75-4.5 6-6C8.25 12.75 5.25 9 4.5 3.75Z"></path>
                   </svg>
@@ -165,14 +252,13 @@ function Navbar() {
                   <line x1="3" y1="6" x2="21" y2="6"></line>
                   <path d="M16 10a4 4 0 0 1-8 0"></path>
                 </svg>
-                {/* Display count from CONTEXT state */
-                  incomingOrdersCount > 0 && (
-                    <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-lg shadow-emerald-500/60 ring-2 ring-white">
-                      {incomingOrdersCount}
-                    </span>
-                  )}
+                {incomingOrdersCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-lg shadow-emerald-500/60 ring-2 ring-white">
+                    {incomingOrdersCount}
+                  </span>
+                )}
               </button>
-
+              
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={toggleProfileDropdown}
@@ -182,9 +268,9 @@ function Navbar() {
                 >
                   <div className="relative w-full h-full">
                     <div className="w-11 h-11 rounded-full overflow-hidden ring-2 ring-emerald-500/30 group-hover:ring-emerald-500/60 transition-all shadow-lg">
-                      <img
-                        src={avatarUrl || avatarPlaceholder}
-                        alt={user.farmName}
+                      <img 
+                        src={avatarUrl || avatarPlaceholder} 
+                        alt={user.farmName} 
                         className="w-full h-full object-cover"
                       />
                     </div>
@@ -196,9 +282,9 @@ function Navbar() {
                     <div className="px-5 py-4 border-b border-emerald-100/75">
                       <div className="flex items-center gap-3">
                         <div className="w-12 h-12 rounded-full overflow-hidden ring-2 ring-emerald-200 shadow-md">
-                          <img
-                            src={avatarUrl || avatarPlaceholder}
-                            alt={user.farmName}
+                          <img 
+                            src={avatarUrl || avatarPlaceholder} 
+                            alt={user.farmName} 
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -224,7 +310,7 @@ function Navbar() {
                         </div>
                         <span className="group-hover:translate-x-0.5 transition-transform">My Products</span>
                       </button>
-
+                      
                       <button
                         onClick={() => handleNavigateToDashboard('profile')}
                         className="group flex items-center gap-3.5 px-5 py-3 text-gray-700 font-medium hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 transition-all w-full text-left"
@@ -237,7 +323,7 @@ function Navbar() {
                         </div>
                         <span className="group-hover:translate-x-0.5 transition-transform">My Profile</span>
                       </button>
-
+                      
                       <Link
                         to="/edit-profile"
                         onClick={() => setIsProfileDropdownOpen(false)}
@@ -255,7 +341,7 @@ function Navbar() {
                   </div>
                 )}
               </div>
-
+              
               <button
                 onClick={handleLogout}
                 className="group relative w-11 h-11 rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 backdrop-blur-sm border border-slate-200/70 flex items-center justify-center transition-all duration-300 hover:bg-gradient-to-br hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:border-emerald-400/80 hover:shadow-xl hover:shadow-emerald-500/40 hover:-translate-y-0.5 hover:scale-105"
@@ -269,6 +355,24 @@ function Navbar() {
               </button>
             </>
           )}
+
+          <Link
+            to="/cart"
+            className="group relative w-11 h-11 rounded-xl bg-white/80 backdrop-blur-sm border border-emerald-200/60 flex items-center justify-center transition-all duration-300 hover:border-emerald-400/80 hover:bg-emerald-50/50 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5 hover:scale-105"
+            aria-label="Shopping Cart"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600 group-hover:stroke-emerald-700 transition-colors">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-2 -right-2 min-w-[22px] h-[22px] px-1.5 bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-lg shadow-emerald-500/60 ring-2 ring-white">
+                {cartItemsCount}
+              </span>
+            )}
+          </Link>
+
         </div>
 
         <button
@@ -297,21 +401,30 @@ function Navbar() {
       {isMobileMenuOpen && (
         <div ref={mobileMenuRef} className="lg:hidden bg-white/98 backdrop-blur-xl border-t border-emerald-100/50 shadow-2xl">
           <div className="px-4 py-5 space-y-2.5">
+            <Link
+              to="/cart"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 text-gray-700 font-semibold no-underline hover:from-emerald-100 hover:to-teal-100 transition-all shadow-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center shadow-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                  </svg>
+                </div>
+                <span>Shopping Cart</span>
+              </div>
+              {cartItemsCount > 0 && (
+                <span className="min-w-[24px] h-6 px-2 bg-gradient-to-br from-emerald-500 via-teal-500 to-emerald-600 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-md shadow-emerald-500/50">
+                  {cartItemsCount}
+                </span>
+              )}
+            </Link>
+
             {!user ? (
               <>
-                <button className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 text-gray-700 font-semibold hover:from-emerald-100 hover:to-teal-100 transition-all shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center shadow-sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600">
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                      </svg>
-                    </div>
-                    <span>Shopping Cart</span>
-                  </div>
-                </button>
-
                 <Link
                   to="/login"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -348,9 +461,9 @@ function Navbar() {
                 <div className="flex items-center gap-3.5 px-4 py-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl shadow-sm border border-emerald-100/50">
                   <div className="relative">
                     <div className="w-14 h-14 rounded-xl overflow-hidden ring-2 ring-emerald-200 shadow-md">
-                      <img
-                        src={avatarUrl || avatarPlaceholder}
-                        alt={user.farmName}
+                      <img 
+                        src={avatarUrl || avatarPlaceholder} 
+                        alt={user.farmName} 
                         className="w-full h-full object-cover"
                       />
                     </div>
