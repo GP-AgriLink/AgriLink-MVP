@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import Logo from '../common/Logo';
-import { sanitizeEmail } from '../../utils/validation';
+import { sanitizeEmail } from '../../utils/sanitizers';
 
 const validationSchema = Yup.object({
   email: Yup.string()

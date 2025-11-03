@@ -1,29 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import ProfileHeader from '../components/Profile/ProfileHeader';
-import ProfileForm from '../components/Profile/ProfileForm';
-import AvatarUpload from '../components/Profile/AvatarUpload';
-import { getProfile } from '../services/profileApi';
-import { getAuthToken, clearAuthData } from '../context/AuthContext';
 import OrdersPage from './OrdersPage';
+import MyProductsPage from './FarmProductsPage';
+import ProfilePage from './ProfilePage';
+import AddProduct from '../components/FarmProduct/AddProduct';
+import EditProduct from '../components/FarmProduct/EditProduct';
+import { createProduct, updateProduct } from '../services/farmProductApi';
 
-const getDefaultProfile = () => ({
-  id: "",
-  firstName: "",
-  lastName: "",
-  email: "",
-  farmName: "",
-  phoneNumber: "",
-  farmBio: "",
-  location: {
-    type: "Point",
-    coordinates: [30.0444, 31.2357],
-  },
-  specialties: [],
-  avatarUrl: "",
-});
-
-function Dashboard() {
+const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeComponent, setActiveComponent] = useState(() => {
@@ -32,11 +16,12 @@ function Dashboard() {
     }
     return localStorage.getItem('dashboardActiveView') || 'profile';
   });
-  const [profile, setProfile] = useState(getDefaultProfile());
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
   const lastNavStateRef = useRef(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
 
   useEffect(() => {
     if (location.state?.activeView && location.state.activeView !== lastNavStateRef.current) {
@@ -64,54 +49,61 @@ function Dashboard() {
     localStorage.setItem('dashboardActiveView', activeComponent);
   }, [activeComponent]);
 
+  // Effect to disable navbar sticky behavior when sidebar is open on mobile
   useEffect(() => {
-    if (activeComponent === 'profile') {
-      fetchProfile();
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      // Add class to body to indicate sidebar is open
+      document.body.classList.add('sidebar-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('sidebar-open');
     }
-  }, [activeComponent]);
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError(null);
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('sidebar-open');
+    };
+  }, [isSidebarOpen]);
 
+  const handleAddProduct = () => {
+    setIsAddProductOpen(true);
+  };
+
+  const handleEditProduct = (product) => {
+    setProductToEdit(product);
+    setIsEditProductOpen(true);
+  };
+
+  const handleAddProductSubmit = async (productData) => {
     try {
-      const token = getAuthToken();
-
-      if (!token) {
-        clearAuthData();
-        navigate("/login");
-        return;
+      await createProduct(productData);
+      setIsAddProductOpen(false);
+      if (window.refreshProducts) {
+        window.refreshProducts();
       }
-
-      const data = await getProfile();
-
-      if (data) {
-        const profileData = {
-          ...getDefaultProfile(),
-          ...data,
-          location: data.location || getDefaultProfile().location,
-          specialties: Array.isArray(data.specialties) ? data.specialties : [],
-        };
-
-        setProfile(profileData);
-        setImagePreview(profileData.avatarUrl || "");
-      }
-    } catch (err) {
-      console.error("Error fetching profile:", err);
-      const errorMsg = err.response?.data?.message || "Failed to fetch profile";
-      setError(errorMsg);
-
-      if (err.response?.status === 401) {
-        clearAuthData();
-        navigate("/login");
-      }
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('Failed to create product:', error);
+      throw error;
     }
   };
 
-  const handleEditClick = () => {
-    navigate("/edit-profile");
+  const handleEditProductSubmit = async (productData) => {
+    try {
+      if (!productToEdit?._id && !productToEdit?.id) {
+        throw new Error('Product ID is missing');
+      }
+      const productId = productToEdit._id || productToEdit.id;
+      await updateProduct(productId, productData);
+      setIsEditProductOpen(false);
+      setProductToEdit(null);
+      if (window.refreshProducts) {
+        window.refreshProducts();
+      }
+    } catch (error) {
+      console.error('Failed to update product:', error);
+      throw error;
+    }
   };
 
   const menuItems = [
@@ -120,76 +112,35 @@ function Dashboard() {
     { id: 'profile', label: 'My Profile', icon: 'profile' },
   ];
 
-  const MyOrders = () => (
-    <div className="text-center py-12 min-h-[400px] flex flex-col" >
-      <OrdersPage />
-    </div>
-  );
-
-  const MyProducts = () => (
-    <div className="text-center py-12 px-6 min-h-[400px] flex flex-col items-center justify-center">
-      <div className="text-6xl mb-4">🌾</div>
-      <h2 className="text-2xl font-bold text-emerald-900 mb-2">My Products</h2>
-      <p className="text-gray-600">Products component coming soon...</p>
-    </div>
-  );
-
-  const MyProfile = () => {
-    if (loading) {
-      return (
-        <div className="flex items-center justify-center py-12 px-6 min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-emerald-500 border-t-transparent" />
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center py-12 px-6 min-h-[400px] flex flex-col items-center justify-center">
-          <div className="text-red-500">
-            <p>{error}</p>
-            <button
-              onClick={fetchProfile}
-              className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div>
-        <ProfileHeader isEditing={false} onEditClick={handleEditClick} />
-        <div className="p-5 md:p-6">
-          <div className="mb-6 flex justify-center">
-            <AvatarUpload
-              profilePicture={profile.avatarUrl}
-              imagePreview={imagePreview}
-              isEditing={false}
-              onPreviewChange={setImagePreview}
-              onProfileChange={(updatedProfile) =>
-                setProfile((prev) => ({ ...prev, ...updatedProfile }))
-              }
-            />
-          </div>
-          <ProfileForm profile={profile} isEditing={false} />
-        </div>
-      </div>
-    );
-  };
-
   const renderActiveComponent = () => {
     switch (activeComponent) {
       case 'orders':
-        return <MyOrders />;
+        return (
+          <div className="text-center py-12 min-h-[400px] flex flex-col">
+            <OrdersPage />
+          </div>
+        );
       case 'products':
-        return <MyProducts />;
+        return (
+          <div className="text-center py-12 min-h-[400px]">
+            <MyProductsPage 
+              onEdit={handleEditProduct}
+              onAddNew={handleAddProduct}
+            />
+          </div>
+        );
       case 'profile':
-        return <MyProfile />;
+        return (
+          <div className="text-center py-12 min-h-[400px] flex flex-col">
+            <ProfilePage />
+          </div>
+        );
       default:
-        return <MyOrders />;
+        return (
+          <div className="text-center py-12 min-h-[400px] flex flex-col">
+            <OrdersPage />
+          </div>
+        );
     }
   };
 
@@ -228,7 +179,43 @@ function Dashboard() {
     <div className="box-border" style={{ minHeight: 'calc(100vh - 200px)' }}>
       <div className="w-full mx-auto px-4 sm:px-6 py-6">
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="min-w-72 max-w-80 flex-shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 p-5 min-h-[90vh]">
+          {/* Mobile Menu Toggle Button */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="lg:hidden fixed bottom-6 right-6 z-[500] p-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all"
+            aria-label="Toggle menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              {isSidebarOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+
+          {/* Overlay for mobile */}
+          {isSidebarOpen && (
+            <div
+              className="lg:hidden fixed inset-0 bg-black/50 z-[500]"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          {/* Sidebar */}
+          <aside className={`
+            min-w-72 max-w-80 flex-shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 p-5 min-h-[90vh] max-h-[90vh] overflow-auto
+            lg:relative lg:translate-x-0
+            fixed top-0 left-0 h-full z-[500] transition-transform duration-300 ease-in-out
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 z-[50]'}
+          `}>
             <h2 className="text-sm font-bold text-emerald-800 mb-5 tracking-[4.2px] uppercase" style={{ fontFamily: 'Inter, -apple-system, Roboto, Helvetica, sans-serif', letterSpacing: '4.2px' }}>
               Farmer Portal
             </h2>
@@ -236,7 +223,10 @@ function Dashboard() {
               {menuItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveComponent(item.id)}
+                  onClick={() => {
+                    setActiveComponent(item.id);
+                    setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold transition-all ${activeComponent === item.id
                     ? 'bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5'
                     : 'text-emerald-900 hover:bg-emerald-50'
@@ -249,13 +239,30 @@ function Dashboard() {
             </nav>
           </aside>
 
-          <main className="flex-1 min-h-fit">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 overflow-auto min-h-fit">
+          <main className="flex-1 max-h-fit">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 overflow-auto min-h-fit max-h-[90vh]">
               {renderActiveComponent()}
             </div>
           </main>
         </div>
       </div>
+
+      {/* Product Modals */}
+      <AddProduct
+        isOpen={isAddProductOpen}
+        onClose={() => setIsAddProductOpen(false)}
+        onSubmit={handleAddProductSubmit}
+      />
+      
+      <EditProduct
+        isOpen={isEditProductOpen}
+        onClose={() => {
+          setIsEditProductOpen(false);
+          setProductToEdit(null);
+        }}
+        onSubmit={handleEditProductSubmit}
+        product={productToEdit}
+      />
     </div>
   );
 }

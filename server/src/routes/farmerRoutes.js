@@ -1,7 +1,3 @@
-/**
- * @file farmerRoutes.js
- * @description Defines the API endpoints for farmers, applies validation, and attaches middleware.
- */
 import express from "express";
 import { body } from "express-validator";
 import {
@@ -11,33 +7,35 @@ import {
   updateFarmerProfile,
   forgotPassword,
   resetPassword,
+  uploadFarmerAvatar,
 } from "../controllers/farmerController.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { upload, convertToBase64 } from "../config/upload.js";
 
 const router = express.Router();
 
 // --- Public Routes ---
 
 // @route   POST /api/farmers/register
-// Handles new farmer registration.
 router.post(
   "/register",
-  // Validation middleware to sanitize and check required fields.
   [
     body("farmName", "Farm name is required").not().isEmpty(),
     body("email", "Please include a valid email").isEmail(),
     body("password", "Password must be 6 or more characters").isLength({
       min: 6,
     }),
+    body("phoneNumber", "Please include a valid phone number")
+      .not()
+      .isEmpty()
+      .isMobilePhone("ar-EG"),
   ],
   registerFarmer
 );
 
 // @route   POST /api/farmers/login
-// Handles farmer login.
 router.post(
   "/login",
-  // Validation middleware.
   [
     body("email", "Please include a valid email").isEmail(),
     body("password", "Password is required").exists(),
@@ -52,12 +50,20 @@ router.put("/reset-password/:token", resetPassword);
 // --- Private Routes ---
 
 // @route   GET & PUT /api/farmers/profile
-// This single route handles two different HTTP methods for the same resource.
 router
   .route("/profile")
-  // The 'protect' middleware runs first. If the token is valid, it calls the controller.
   .get(protect, getFarmerProfile)
-  // The PUT request also requires a valid token.
   .put(protect, updateFarmerProfile);
+
+// @route   POST /api/farmers/profile/upload-picture
+// @desc    Upload a new farmer avatar
+// @access  Private
+router.post(
+  "/profile/upload-picture",
+  protect,
+  upload.single("profilePicture"),
+  convertToBase64,
+  uploadFarmerAvatar
+);
 
 export default router;

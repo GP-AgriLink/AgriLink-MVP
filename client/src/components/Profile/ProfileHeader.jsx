@@ -1,23 +1,27 @@
 import React from "react";
 import { FiEdit2 } from "react-icons/fi";
 
+/**
+ * ProfileHeader
+ * Displays profile page header with edit action button
+ * @param {boolean} isEditing - Current edit mode state
+ * @param {Function} onEditClick - Handler for edit button click
+ */
 const ProfileHeader = ({ isEditing, onEditClick }) => {
   return (
-    <div className="bg-gradient-to-r from-green-700 to-emerald-600 text-white rounded-full px-6 py-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl md:text-2xl font-semibold text-white">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center gap-4">
+        <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
           My Profile
         </h2>
-        <button
-          onClick={onEditClick}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white text-green-600 rounded-lg shadow-sm hover:opacity-95 transition"
-        >
-          <FiEdit2 />
-          <span className="text-sm font-medium">
-            {isEditing ? "Cancel" : "Edit Profile"}
-          </span>
-        </button>
       </div>
+      <button
+        onClick={onEditClick}
+        className="px-4 py-2 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm text-sm"
+      >
+        <FiEdit2 />
+        <span>{isEditing ? "Cancel" : "Edit Profile"}</span>
+      </button>
     </div>
   );
 };

@@ -56,7 +56,6 @@ const getMyProducts = async (req, res) => {
 const getProductsByFarm = async (req, res) => {
   try {
     // Find products by the farm ID in the URL, and only show 'active' ones
-    // --- UPDATED LOGIC: This query now filters out archived products for the public view ---
     const products = await Product.find({
       farmer: req.params.farmId,
       status: "active",
@@ -83,7 +82,6 @@ const updateProduct = async (req, res) => {
     }
 
     // --- CRITICAL: Ownership Check ---
-    // Make sure the logged-in farmer owns this product
     if (product.farmer.toString() !== req.farmer._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
@@ -134,8 +132,6 @@ const archiveProduct = async (req, res) => {
       return res.status(401).json({ message: "Not authorized" });
     }
 
-    // await product.deleteOne();
-
     // --- UPDATED LOGIC: Instead of deleting, we update flags ---
     product.isArchived = true;
     product.status = "inactive"; // Also make it inactive for consistency
@@ -148,10 +144,47 @@ const archiveProduct = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload an image for a product
+ * @route   POST /api/products/:id/upload-image
+ * @access  Private
+ */
+const uploadProductImage = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // --- Ownership Check ---
+    if (product.farmer.toString() !== req.farmer._id.toString()) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    if (!req.file || !req.file.base64) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Store base64 string directly in the database
+    product.imageUrl = req.file.base64;
+    await product.save();
+
+    res.json({
+      message: "Image uploaded successfully",
+      imageUrl: product.imageUrl,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
+};
+
 export {
   createProduct,
   getMyProducts,
   getProductsByFarm,
   updateProduct,
   archiveProduct,
+  uploadProductImage, // Add new export
 };

@@ -14,9 +14,8 @@ const ProtectedRoute = ({ children }) => {
         const savedUser = localStorage.getItem('user');
         const savedToken = localStorage.getItem('token');
         
-        // If user state exists but localStorage is cleared
+        // If user state exists but localStorage is cleared, redirect to login
         if (!savedUser || !savedToken) {
-          console.log('Auth data deleted while on protected route, redirecting to login');
           clearAuthData();
           window.location.href = '/login';
         }

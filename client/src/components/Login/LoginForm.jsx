@@ -4,7 +4,8 @@ import {useAuth} from "../../context/AuthContext";
 import {Formik, Form} from "formik";
 import Logo from "../common/Logo";
 import InputField from "./InputField";
-import {loginValidationSchema, sanitizeEmail} from "../../utils/validation";
+import {loginValidationSchema} from "../../utils/validationSchemas";
+import {sanitizeEmail} from "../../utils/sanitizers";
 
 const LoginForm = () => {
   const navigate = useNavigate();

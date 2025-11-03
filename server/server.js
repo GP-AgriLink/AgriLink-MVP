@@ -27,23 +27,42 @@ connectDB();
 const app = express();
 
 // To connect with client
+const allowedOrigins = [
+    "https://agrilink-server.vercel.app",
+    /http:\/\/localhost:\d+/,
+    /http:\/\/127.0.0.1:\d+/,
+];
+
 app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "http://localhost:5174",
-      "http://localhost:5175",
-    ],
-    credentials: true,
-  })
+    cors({
+        origin: function (origin, callback) {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            if (!origin) return callback(null, true);
+
+            // Check if the origin is in our allowed list (or matches regex)
+            const isAllowed = allowedOrigins.some((allowedOrigin) => {
+                if (allowedOrigin instanceof RegExp) {
+                    return allowedOrigin.test(origin);
+                }
+                return allowedOrigin === origin;
+            });
+
+            if (isAllowed) {
+                callback(null, true);
+            } else {
+                callback(new Error("Not allowed by CORS"));
+            }
+        },
+        credentials: true,
+    })
 );
 
 // --- Middleware ---
 // This middleware is essential for parsing incoming request bodies with JSON payloads.
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- API Routes ---
-
 app.use("/api/farmers", farmerRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/farms", farmRoutes);

@@ -6,8 +6,9 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { Lock, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import Logo from '../components/common/Logo';
+import { useAuth } from '../context/AuthContext';
 
-import { sanitizeString } from '../utils/validation';
+import { sanitizeString } from '../utils/sanitizers';
 
 const validationSchema = Yup.object({
   password: Yup.string()
@@ -26,8 +27,24 @@ const validationSchema = Yup.object({
 export default function ResetPasswordPage() {
   const { token } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard with profile view
+    if (user) {
+      navigate('/dashboard', { 
+        replace: true,
+        state: { activeView: 'profile' }
+      });
+    }
+  }, [user, navigate]);
+
+  // Don't render if user is authenticated
+  if (user) {
+    return null;
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -69,8 +86,6 @@ export default function ResetPasswordPage() {
         navigate('/login');
       }, 3000);
     } catch (err) {
-      console.error('Reset password error:', err);
-
       if (err.response?.status === 400) {
         toast.error("Password reset link has expired. Please request a new one", {
           position: "top-right",

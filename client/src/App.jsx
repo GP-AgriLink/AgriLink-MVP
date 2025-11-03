@@ -21,7 +21,18 @@ function App() {
     <AuthProvider>
       <div className="app min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex flex-col">
         <Navbar />
-        <ToastContainer />
+        <ToastContainer 
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          style={{ zIndex: 99999 }}
+        />
         <main className="main-content w-full lg:w-5/6 mx-auto flex-grow px-4 sm:px-6 lg:px-0">
           <Routes>
             <Route
