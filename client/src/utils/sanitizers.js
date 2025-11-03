@@ -10,7 +10,7 @@
  */
 export const sanitizeString = (input) => {
   if (!input || typeof input !== 'string') return '';
-  
+
   return input
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
@@ -25,7 +25,7 @@ export const sanitizeString = (input) => {
  */
 export const sanitizeEmail = (email) => {
   if (!email || typeof email !== 'string') return '';
-  
+
   return email
     .toLowerCase()
     .replace(/[<>]/g, '')
@@ -51,12 +51,29 @@ export const sanitizePhone = (phone) => {
  */
 export const sanitizeName = (name) => {
   if (!name || typeof name !== 'string') return '';
-  
+
+  // UPDATED: Added Arabic character range \u0621-\u064A
   return name
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
     .replace(/on\w+=/gi, '')
-    .replace(/[^A-Za-z\s'-]/g, '')
+    .replace(/[^A-Za-z\u0621-\u064A\s'-]/g, '') // Keep English, Arabic, space, hyphen, apostrophe
+    .trim();
+};
+
+/**
+ * Sanitizes farm name fields allowing only letters
+ * @param {string} farmName - Raw farm name input
+ * @returns {string} Sanitized farm name
+ */
+export const sanitizeFarmName = (farmName) => {
+  if (!farmName || typeof farmName !== 'string') return '';
+
+  return farmName
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
+    .replace(/[^A-Za-z\u0621-\u064A]/g, '') // Keep only English and Arabic letters
     .trim();
 };
 
@@ -67,7 +84,7 @@ export const sanitizeName = (name) => {
  */
 export const sanitizeTextArea = (text) => {
   if (!text || typeof text !== 'string') return '';
-  
+
   return text
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
@@ -148,8 +165,8 @@ export const sanitizeProductData = (productData) => {
   }
 
   if (productData.price !== undefined) {
-    sanitized.price = typeof productData.price === 'number' 
-      ? productData.price 
+    sanitized.price = typeof productData.price === 'number'
+      ? productData.price
       : parseFloat(productData.price) || 0;
   }
 

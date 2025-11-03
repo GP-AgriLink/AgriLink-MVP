@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import ProductTable from "./ProductTable";
 import EmptyState from "./EmptyState";
 
@@ -10,18 +11,28 @@ import EmptyState from "./EmptyState";
  * @param {Function} onRestore - Handler to restore an archived product
  * @param {Function} onAddNew - Handler to create new product
  */
-const ProductList = ({ 
-  products, 
-  onEdit, 
-  onArchive, 
-  onRestore, 
-  onAddNew 
+const ProductList = ({
+  products,
+  onEdit,
+  onArchive,
+  onRestore,
+  onAddNew
 }) => {
-  const activeProducts = products.filter(p => !p.isArchived);
-  const archivedProducts = products.filter(p => p.isArchived);
+  const activeProducts = useMemo(() => {
+    return products.filter(p => !p.isArchived && p.status !== 'inactive');
+  }, [products]);
+
+  const archivedProducts = useMemo(() => {
+    return products.filter(p => p.isArchived);
+  }, [products]);
+
+  const inactiveProducts = useMemo(() => {
+    return products.filter(p => !p.isArchived && p.status === 'inactive');
+  }, [products]);
 
   const activeCount = activeProducts.length;
   const archivedCount = archivedProducts.length;
+  const inactiveCount = inactiveProducts.length;
   const outOfStockCount = activeProducts.filter(
     p => p.stock === 0 || p.status === "out-of-stock"
   ).length;
@@ -38,6 +49,11 @@ const ProductList = ({
             {activeCount > 0 && (
               <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
                 {activeCount} Active
+              </span>
+            )}
+            {inactiveCount > 0 && (
+              <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
+                {inactiveCount} Inactive
               </span>
             )}
             {outOfStockCount > 0 && (
@@ -106,6 +122,34 @@ const ProductList = ({
           <ProductTable
             products={archivedProducts}
             isArchived={true}
+            onEdit={onEdit}
+            onArchive={onArchive}
+            onRestore={onRestore}
+          />
+        </section>
+      )}
+
+      {/* Inactive Products Section */}
+      {inactiveProducts.length > 0 && (
+        <section className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              Inactive Products
+            </h2>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="bg-gray-100 text-gray-700 px-4 py-1 rounded-full text-sm font-medium">
+                {inactiveCount} Inactive
+              </span>
+            </div>
+          </div>
+
+          <p className="text-gray-500 text-left text-sm">
+            Products marked as inactive are hidden from customers but can be reactivated.
+          </p>
+
+          <ProductTable
+            products={inactiveProducts}
+            isArchived={false}
             onEdit={onEdit}
             onArchive={onArchive}
             onRestore={onRestore}

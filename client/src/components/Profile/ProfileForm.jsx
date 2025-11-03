@@ -67,7 +67,7 @@ const ProfileForm = ({ profile, isEditing, onProfileUpdate }) => {
     <div className="space-y-6">
       {/* Compact Information Grid */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <div className="text-start grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <CompactInfoItem icon={FiBriefcase} label="Farm Name" value={profile.farmName} className="md:col-span-2" />
           <CompactInfoItem icon={FiUser} label="First Name" value={profile.firstName} />
           <CompactInfoItem icon={FiUser} label="Last Name" value={profile.lastName} />

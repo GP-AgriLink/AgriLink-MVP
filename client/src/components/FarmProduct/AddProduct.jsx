@@ -32,7 +32,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
@@ -40,21 +40,38 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
 
   const validateForm = () => {
     const newErrors = {};
+    const name = formData.name.trim();
+    const price = parseFloat(formData.price);
+    const stock = parseInt(formData.stock);
 
-    if (!formData.name.trim()) {
+    // Name validation
+    if (!name) {
       newErrors.name = "Product name is required";
+    } else if (name.length < 2) {
+      newErrors.name = "Must be at least 2 characters";
+    } else if (name.length > 100) {
+      newErrors.name = "Cannot exceed 100 characters";
     }
 
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      newErrors.price = "Price must be greater than 0";
+    // Price validation
+    if (!formData.price || isNaN(price) || price < 0.01) {
+      newErrors.price = "Price must be at least 0.01";
+    } else if (!/^\d+(\.\d{1,2})?$/.test(formData.price)) {
+      newErrors.price = "Price can have at most 2 decimal places";
     }
 
+    // Unit validation
     if (!formData.unit) {
       newErrors.unit = "Unit is required";
+    } else if (!UNIT_OPTIONS.find(o => o.value === formData.unit)) {
+      newErrors.unit = "Invalid unit selected";
     }
 
-    if (!formData.stock || parseInt(formData.stock) < 0) {
+    // Stock validation
+    if (formData.stock === "" || isNaN(stock) || stock < 0) {
       newErrors.stock = "Stock must be 0 or greater";
+    } else if (stock !== parseFloat(formData.stock)) {
+      newErrors.stock = "Stock must be a whole number";
     }
 
     setErrors(newErrors);
@@ -171,102 +188,102 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
         {/* Form - Scrollable Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-4 sm:p-5 space-y-3">
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
-              {errors.submit}
-            </div>
-          )}
-
-          {/* Product Name */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Product Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="e.g., Fresh Brown Eggs"
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.name ? "border-red-500" : "border-gray-300"
-                }`}
-            />
-            {errors.name && (
-              <p className="text-red-500 text-xs mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Price, Unit, and Stock in Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Price */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Price <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-gray-500 text-sm">$</span>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.price ? "border-red-500" : "border-gray-300"
-                    }`}
-                />
+            {errors.submit && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+                {errors.submit}
               </div>
-              {errors.price && (
-                <p className="text-red-500 text-xs mt-1">{errors.price}</p>
-              )}
-            </div>
+            )}
 
-            {/* Unit */}
+            {/* Product Name */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Unit <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="unit"
-                value={formData.unit}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.unit ? "border-red-500" : "border-gray-300"
-                  }`}
-              >
-                <option value="">Select unit</option>
-                {UNIT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {errors.unit && (
-                <p className="text-red-500 text-xs mt-1">{errors.unit}</p>
-              )}
-            </div>
-
-            {/* Stock */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Stock <span className="text-red-500">*</span>
+                Product Name <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                name="stock"
-                value={formData.stock}
+                type="text"
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
-                placeholder="0"
-                min="0"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.stock ? "border-red-500" : "border-gray-300"
+                placeholder="e.g., Fresh Brown Eggs"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.name ? "border-red-500" : "border-gray-300"
                   }`}
               />
-              {errors.stock && (
-                <p className="text-red-500 text-xs mt-1">{errors.stock}</p>
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
               )}
             </div>
+
+            {/* Price, Unit, and Stock in Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Price */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Price <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500 text-sm">$</span>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className={`w-full pl-8 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.price ? "border-red-500" : "border-gray-300"
+                      }`}
+                  />
+                </div>
+                {errors.price && (
+                  <p className="text-red-500 text-xs mt-1">{errors.price}</p>
+                )}
+              </div>
+
+              {/* Unit */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Unit <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="unit"
+                  value={formData.unit}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.unit ? "border-red-500" : "border-gray-300"
+                    }`}
+                >
+                  <option value="">Select unit</option>
+                  {UNIT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.unit && (
+                  <p className="text-red-500 text-xs mt-1">{errors.unit}</p>
+                )}
+              </div>
+
+              {/* Stock */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Stock <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  placeholder="0"
+                  min="0"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm ${errors.stock ? "border-red-500" : "border-gray-300"
+                    }`}
+                />
+                {errors.stock && (
+                  <p className="text-red-500 text-xs mt-1">{errors.stock}</p>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
 
           {/* Action Buttons - Fixed at bottom */}
           <div className="px-4 sm:px-5 py-3 bg-gray-50 border-t flex-shrink-0">

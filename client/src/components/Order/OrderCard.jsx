@@ -1,139 +1,185 @@
-// client/components/Order/OrderCard.jsx
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import {
+  Package,
+  User,
+  Phone,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  ChevronDown,
+} from "lucide-react";
 
+/**
+ * OrderCard
+ * Displays a single incoming order with details and actions.
+ * @param {Object} order - The full order object from the server
+ * @param {Function} onOrderUpdate - (id, newStatus) => {}
+ */
 const OrderCard = ({ order, onOrderUpdate }) => {
-    const [fadeOut, setFadeOut] = useState(false);
-    const orderData = order.order || order.data || order;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(null); // 'Completed' or 'Cancelled'
 
-    const initialStatus =
-        orderData.status === "Ready for Delivery" ? "Delivery" : orderData.status;
-    const [status, setStatus] = useState(initialStatus);
+  // Extract data from the order prop
+  const {
+    _id: id,
+    customerName,
+    customerPhone,
+    orderItems,
+    totalAmount,
+    createdAt,
+  } = order;
 
-    useEffect(() => {
-        if (orderData.status === "Ready for Delivery") setStatus("Delivery");
-        else setStatus(orderData.status);
-    }, [orderData.status]);
+  const orderDate = new Date(createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
-    const formatNumber = (num) =>
-        typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00";
+  const handleAction = async (newStatus) => {
+    setIsSubmitting(newStatus);
+    try {
+      await onOrderUpdate(id, newStatus);
+    } catch (err) {
+      // Error is handled by service/page, just reset submitting state
+      setIsSubmitting(null);
+    }
+    // On success, the component will be removed by the parent
+  };
 
-    const handleClick = async (newStatus) => {
-        if (newStatus === "Delivery") {
-            setStatus("Delivery");
-            try {
-                await onOrderUpdate(orderData._id || orderData.id, "Ready for Delivery");
-            } catch (err) {
-                console.error("Failed to update order:", err);
-                alert("Failed to update order status. Please try again.");
-            }
-        } else {
-            setFadeOut(true);
-            setTimeout(async () => {
-                try {
-                    await onOrderUpdate(orderData._id || orderData.id, newStatus);
-                } catch (err) {
-                    console.error("Failed to update order:", err);
-                    alert("Failed to update order status. Please try again.");
-                }
-            }, 300);
-        }
-    };
+  const isActionDisabled = !!isSubmitting;
 
-    const cardStyle =
-        status === "Delivery"
-            ? "bg-gray-50 border-gray-200"
-            : "bg-white border-green-100";
-
-    const items = orderData.items || orderData.orderItems || [];
-    const customer =
-        orderData.customer || orderData.customerName || "Unknown Customer";
-    const phone = orderData.phone || orderData.customerPhone || "No Phone";
-    const total = orderData.total || orderData.totalAmount || 0;
-    const date = orderData.createdAt || orderData.date;
-
-    return (
-        // constrain width so cards don't get too wide on very large screens
-        <div
-            className={`w-full max-w-[420px] 3xl:max-w-[520px] ${cardStyle} shadow-lg rounded-2xl p-5 sm:p-6 transition-all duration-300 flex flex-col justify-between border ${fadeOut ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
-                }`}
-        >
-            <div>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <p className="text-sm text-gray-500 font-medium">
-                        {date
-                            ? new Date(date).toLocaleDateString("en-GB", { dateStyle: "medium" })
-                            : "Unknown Date"}
-                    </p>
-                    <span className="bg-green-50 text-green-700 text-sm px-3 py-1 rounded-md font-semibold self-start sm:self-auto">
-                        Total ${formatNumber(total)}
-                    </span>
-                </div>
-
-                <h3
-                    className={`font-semibold text-left text-lg mb-1 ${status === "Delivery" ? "text-green-700" : "text-gray-800"
-                        }`}
-                >
-                    {status === "Incoming"
-                        ? "Incoming Order"
-                        : status === "Delivery"
-                            ? "Delivery Order"
-                            : status}
-                </h3>
-
-                <p className="text-gray-700 font-medium pb-1">{customer}</p>
-                <p className="text-sm text-gray-500 mb-4">{phone}</p>
-
-                <div
-                    className={`${status === "Delivery"
-                            ? "bg-gray-100 border-green-200"
-                            : "bg-green-50 border-green-100"
-                        } rounded-xl p-4 mb-4 border`}
-                >
-                    <p className="text-sm font-semibold text-left text-gray-700 mb-2 tracking-wide">
-                        Items ({items.length})
-                    </p>
-
-                    {items.map((item, index) => (
-                        <div
-                            key={index}
-                            className="flex justify-between text-sm text-gray-600 py-1 border-b border-gray-100 last:border-none"
-                        >
-                            <div className="flex flex-col text-left">
-                                <span className="font-medium">{item.name}</span>
-                                <span className="text-xs text-gray-500">
-                                    {item.qty} pcs × ${formatNumber(item.price)}
-                                </span>
-                            </div>
-                            <span className="font-semibold text-gray-700">
-                                ${formatNumber(item.qty * item.price)}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                    onClick={() => handleClick("Completed")}
-                    className="w-full bg-white text-[#0EB17C] py-2.5 rounded-lg font-semibold border border-[#0EB17C] shadow-sm hover:bg-[#0EB17C] hover:text-white transition"
-                >
-                    Complete
-                </button>
-                <button
-                    onClick={() => handleClick("Delivery")}
-                    className="w-full bg-[#13C191] text-white py-2.5 rounded-lg font-semibold hover:opacity-90 transition"
-                >
-                    Delivery
-                </button>
-                <button
-                    onClick={() => handleClick("Cancelled")}
-                    className="w-full bg-red-100 text-red-700 py-2.5 rounded-lg font-semibold hover:bg-red-200 transition"
-                >
-                    Cancel
-                </button>
-            </div>
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+      {/* Card Header */}
+      <div
+        className="px-4 py-3 sm:px-5 flex justify-between items-center cursor-pointer border-b border-gray-100"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-emerald-50 text-emerald-600 rounded-full">
+            <Package size={20} />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 text-base sm:text-lg">
+              {customerName}
+            </h3>
+            <p className="text-sm text-gray-500">
+              Total:{" "}
+              <span className="font-medium text-gray-700">
+                ${totalAmount.toFixed(2)} {/* UPDATED */}
+              </span>
+            </p>
+          </div>
         </div>
-    );
+        <div className="flex items-center gap-4">
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-gray-500">
+            <Calendar size={14} />
+            {orderDate}
+          </span>
+          <ChevronDown
+            size={20}
+            className={`text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""
+              }`}
+          />
+        </div>
+      </div>
+
+      {/* Collapsible Body */}
+      {isExpanded && (
+        <div className="px-4 py-4 sm:px-5 border-b border-gray-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
+            <InfoItem icon={User} label="Customer" value={customerName} />
+            <InfoItem icon={Phone} label="Phone" value={customerPhone} />
+            <InfoItem icon={Calendar} label="Date" value={orderDate} />
+          </div>
+
+          <hr className="my-4" />
+
+          {/* Order Items */}
+          <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            Order Items
+          </h4>
+          <ul className="space-y-2">
+            {orderItems.map((item, index) => (
+              <li key={index} className="flex justify-between items-center text-sm">
+                <div>
+                  <span className="font-medium text-gray-800">{item.name}</span>
+                  <span className="text-gray-500 ml-2">
+                    (x{item.quantity})
+                  </span>
+                </div>
+                <span className="text-gray-700 font-medium">
+                  ${(item.unitPrice * item.quantity).toFixed(2)} {/* UPDATED */}
+                </span>
+              </li>
+            ))}
+            <li className="flex justify-between items-center text-sm font-bold text-gray-900 pt-2 border-t">
+              <span>Total</span>
+              <span>${totalAmount.toFixed(2)}</span> {/* UPDATED */}
+            </li>
+          </ul>
+        </div>
+      )}
+
+      {/* Card Footer (Actions) */}
+      <div className="px-4 py-3 sm:px-5 bg-gray-50/70 flex flex-col sm:flex-row gap-2">
+        <button
+          onClick={() => handleAction("Completed")}
+          disabled={isActionDisabled}
+          className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-md font-semibold text-sm transition hover:bg-emerald-700 disabled:opacity-50"
+        >
+          {isSubmitting === "Completed" ? (
+            <Spinner />
+          ) : (
+            <CheckCircle size={16} />
+          )}
+          Mark as Completed
+        </button>
+        <button
+          onClick={() => handleAction("Cancelled")}
+          disabled={isActionDisabled}
+          className="flex-1 inline-flex justify-center items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-md font-semibold text-sm transition hover:bg-red-600 disabled:opacity-50"
+        >
+          {isSubmitting === "Cancelled" ? <Spinner /> : <XCircle size={16} />}
+          Cancel Order
+        </button>
+      </div>
+    </div>
+  );
 };
+
+// Helper components for Card
+const InfoItem = ({ icon: Icon, label, value }) => (
+  <div className="flex items-start gap-2">
+    <Icon className="w-4 h-4 text-gray-400 mt-0.5" />
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="text-sm font-medium text-gray-800">{value}</p>
+    </div>
+  </div>
+);
+
+const Spinner = () => (
+  <svg
+    className="animate-spin h-4 w-4 text-white"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
 
 export default OrderCard;

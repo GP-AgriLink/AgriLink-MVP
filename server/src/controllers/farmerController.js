@@ -23,7 +23,7 @@ const registerFarmer = async (req, res) => {
   }
 
   // 2. Destructure the essential fields for initial registration.
-  const { farmName, email, password } = req.body;
+  const { farmName, email, password, phoneNumber } = req.body;
 
   try {
     // 3. Check if a farmer with the same email already exists in the database.
@@ -34,11 +34,12 @@ const registerFarmer = async (req, res) => {
         .json({ message: "Farmer with this email already exists" });
     }
 
-    // 4. Create the new farmer document. The pre-save hook in the Farmer model will automatically hash the password.
+    // 4. Create the new farmer document.
     const farmer = await Farmer.create({
       farmName,
       email,
       password,
+      phoneNumber,
     });
 
     // 5. If creation is successful, respond with the new farmer's basic data and a JWT.
@@ -102,7 +103,7 @@ const getFarmerProfile = async (req, res) => {
   const farmer = req.farmer;
 
   if (farmer) {
-    // Respond with all relevant profile data. The password is already excluded by the middleware.
+    // Respond with all relevant profile data.
     res.json({
       _id: farmer._id,
       firstName: farmer.firstName,
@@ -150,9 +151,6 @@ const updateFarmerProfile = async (req, res) => {
     farmer.avatarUrl = req.body.avatarUrl || farmer.avatarUrl;
     farmer.specialties = req.body.specialties || farmer.specialties;
 
-    // --- ROBUST LOCATION UPDATE LOGIC ---
-    // Explicitly check for 'coordinates' to ensure we only update
-    // the location when valid data is sent.
     if (req.body.location && req.body.location.coordinates) {
       farmer.location = {
         type: "Point",
@@ -177,8 +175,6 @@ const updateFarmerProfile = async (req, res) => {
       location: updatedFarmer.location,
     });
   } catch (error) {
-    // The try...catch block will catch any database errors
-    // (e.g., from .findById() or .save()) and send a generic server error.
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
@@ -215,13 +211,12 @@ const forgotPassword = async (req, res) => {
     await farmer.save();
 
     // 4. Create the reset URL pointing to the frontend client
-    // Use environment variable for frontend URL or fallback to localhost:5173
     const frontendURL = process.env.FRONTEND_URL || "http://localhost:5173";
     const resetURL = `${frontendURL}/reset-password/${resetToken}`;
 
     // 5. Send the email using nodemailer
     const transporter = nodemailer.createTransport({
-      service: "gmail", // Or another service
+      service: "gmail",
       auth: {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD,
@@ -281,7 +276,6 @@ const forgotPassword = async (req, res) => {
 
     res.status(200).json({ message: "Token sent to email!" });
   } catch (error) {
-    // Invalidate the token on error
     if (req.body.email) {
       const farmer = await Farmer.findOne({ email: req.body.email });
       if (farmer) {
@@ -343,6 +337,37 @@ const resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload a farmer's avatar
+ * @route   POST /api/farmers/profile/upload-picture
+ * @access  Private
+ */
+const uploadFarmerAvatar = async (req, res) => {
+  try {
+    const farmer = await Farmer.findById(req.farmer._id);
+
+    if (!farmer) {
+      return res.status(404).json({ message: "Farmer not found" });
+    }
+
+    if (!req.file || !req.file.base64) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // Store base64 string directly in the database
+    farmer.avatarUrl = req.file.base64;
+    await farmer.save();
+
+    res.json({
+      message: "Avatar uploaded successfully",
+      avatarUrl: farmer.avatarUrl,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
 // Export all controller functions to be used in the routes file.
 export {
   registerFarmer,
@@ -351,4 +376,5 @@ export {
   updateFarmerProfile,
   forgotPassword,
   resetPassword,
+  uploadFarmerAvatar,
 };

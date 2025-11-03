@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
 
 import ForgotPasswordStep from "../components/ForgetPassword/ForgotPasswordStep";
 import CheckEmailStep from "../components/ForgetPassword/CheckEmailStep";
@@ -12,8 +13,24 @@ export default function ForgotPasswordFlow() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const API_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard with profile view
+    if (user) {
+      navigate('/dashboard', { 
+        replace: true,
+        state: { activeView: 'profile' }
+      });
+    }
+  }, [user, navigate]);
+
+  // Don't render if user is authenticated
+  if (user) {
+    return null;
+  }
 
   const handleSendEmail = async (userEmail) => {
     setIsLoading(true);

@@ -17,6 +17,7 @@ const Dashboard = () => {
     return localStorage.getItem('dashboardActiveView') || 'profile';
   });
   const lastNavStateRef = useRef(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
@@ -47,6 +48,23 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem('dashboardActiveView', activeComponent);
   }, [activeComponent]);
+
+  // Effect to disable navbar sticky behavior when sidebar is open on mobile
+  useEffect(() => {
+    if (isSidebarOpen) {
+      document.body.style.overflow = 'hidden';
+      // Add class to body to indicate sidebar is open
+      document.body.classList.add('sidebar-open');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('sidebar-open');
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('sidebar-open');
+    };
+  }, [isSidebarOpen]);
 
   const handleAddProduct = () => {
     setIsAddProductOpen(true);
@@ -161,7 +179,43 @@ const Dashboard = () => {
     <div className="box-border" style={{ minHeight: 'calc(100vh - 200px)' }}>
       <div className="w-full mx-auto px-4 sm:px-6 py-6">
         <div className="flex flex-col lg:flex-row gap-8">
-          <aside className="min-w-72 max-w-80 flex-shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 p-5 min-h-[90vh]">
+          {/* Mobile Menu Toggle Button */}
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="lg:hidden fixed bottom-6 right-6 z-[500] p-4 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all"
+            aria-label="Toggle menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              {isSidebarOpen ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              )}
+            </svg>
+          </button>
+
+          {/* Overlay for mobile */}
+          {isSidebarOpen && (
+            <div
+              className="lg:hidden fixed inset-0 bg-black/50 z-[500]"
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+
+          {/* Sidebar */}
+          <aside className={`
+            min-w-72 max-w-80 flex-shrink-0 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 p-5 min-h-[90vh] max-h-[90vh] overflow-auto
+            lg:relative lg:translate-x-0
+            fixed top-0 left-0 h-full z-[500] transition-transform duration-300 ease-in-out
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0 z-[50]'}
+          `}>
             <h2 className="text-sm font-bold text-emerald-800 mb-5 tracking-[4.2px] uppercase" style={{ fontFamily: 'Inter, -apple-system, Roboto, Helvetica, sans-serif', letterSpacing: '4.2px' }}>
               Farmer Portal
             </h2>
@@ -169,7 +223,10 @@ const Dashboard = () => {
               {menuItems.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setActiveComponent(item.id)}
+                  onClick={() => {
+                    setActiveComponent(item.id);
+                    setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                  }}
                   className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl font-semibold transition-all ${activeComponent === item.id
                     ? 'bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5'
                     : 'text-emerald-900 hover:bg-emerald-50'
@@ -182,8 +239,8 @@ const Dashboard = () => {
             </nav>
           </aside>
 
-          <main className="flex-1 min-h-fit">
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 overflow-auto min-h-fit">
+          <main className="flex-1 max-h-fit">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-100/70 overflow-auto min-h-fit max-h-[90vh]">
               {renderActiveComponent()}
             </div>
           </main>

@@ -7,7 +7,10 @@ import {
   getProductsByFarm,
   updateProduct,
   archiveProduct,
+  uploadProductImage,
 } from "../controllers/productController.js";
+import { upload, convertToBase64 } from "../config/upload.js";
+
 const router = express.Router();
 
 // @route   POST /api/products
@@ -37,6 +40,17 @@ router.get("/myproducts", protect, getMyProducts);
 // @desc    Get all active products for a specific farm
 // @access  Public
 router.get("/farm/:farmId", getProductsByFarm);
+
+// @route   POST /api/products/:id/upload-image
+// @desc    Upload an image for a product
+// @access  Private
+router.post(
+  "/:id/upload-image",
+  protect,
+  upload.single("productImage"),
+  convertToBase64,
+  uploadProductImage
+);
 
 // @route   PUT /api/products/:id
 // @desc    Update a product

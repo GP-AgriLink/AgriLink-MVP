@@ -1,115 +1,60 @@
-// client/pages/OrdersPage.jsx
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { getMyOrders, updateOrderStatus } from "../services/orderApi";
+import { useAuth } from "../context/AuthContext"; // Import useAuth
 import IncomingOrders from "../components/Order/IncomingOrders";
 import PastOrders from "../components/Order/PastOrders";
+import { toast } from "react-toastify";
+import noOrderImage from "/noOrder_4.svg"; // Ensure this path is correct
 
 const OrdersPage = () => {
   const [incomingOrders, setIncomingOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { fetchAndSetOrderCount } = useAuth(); // Get the context function
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const { data } = await axios.get("/api/orders/myorders", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const ordersArray = await getMyOrders(); // Uses service
 
-        const ordersArray = Array.isArray(data)
-          ? data
-          : Array.isArray(data.orders)
-            ? data.orders
-            : [];
-
-        const incoming = ordersArray.filter(
-          (o) => o.status === "Incoming" || o.status === "Ready for Delivery"
-        );
+      if (Array.isArray(ordersArray)) {
+        // Filter based on valid server statuses
+        const incoming = ordersArray.filter((o) => o.status === "Incoming");
         const past = ordersArray.filter(
           (o) => o.status === "Completed" || o.status === "Cancelled"
         );
-
-        setIncomingOrders(
-          incoming.map((o) => ({
-            id: o._id,
-            customer: o.customerName,
-            phone: o.customerPhone || "N/A",
-            total: o.totalAmount,
-            items: o.orderItems.map((i) => ({
-              name: i.name,
-              qty: i.quantity,
-              price: i.unitPrice,
-            })),
-            status: o.status === "Ready for Delivery" ? "Delivery" : "Incoming",
-            date: new Date(o.createdAt).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-          }))
-        );
-
-        setPastOrders(
-          past.map((o) => ({
-            id: o._id,
-            customer: o.customerName,
-            total: o.totalAmount,
-            status: o.status,
-            date: o.updatedAt || o.createdAt,
-          }))
-        );
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-      } finally {
-        setLoading(false);
+        setIncomingOrders(incoming);
+        setPastOrders(past);
       }
-    };
+    } catch (err) {
+      console.error("Error fetching orders:", err);
+      // Error is already toasted by the interceptor
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleOrderUpdate = async (id, newStatus) => {
     try {
-      const token = localStorage.getItem("token");
-      const { data: updatedOrder } = await axios.put(
-        `/api/orders/${id}/status`,
-        { status: newStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const updatedOrder = await updateOrderStatus(id, newStatus);
 
       if (newStatus === "Completed" || newStatus === "Cancelled") {
-        setIncomingOrders((prev) => prev.filter((o) => o.id !== id));
-        setPastOrders((prev) => {
-          const exists = prev.find((o) => o.id === updatedOrder._id);
-          if (exists) return prev;
-          return [
-            ...prev,
-            {
-              id: updatedOrder._id,
-              customer: updatedOrder.customerName,
-              total: updatedOrder.totalAmount,
-              status: updatedOrder.status,
-              date: updatedOrder.updatedAt || updatedOrder.createdAt,
-            },
-          ];
-        });
-      } else {
-        setIncomingOrders((prev) =>
-          prev.map((o) =>
-            o.id === id
-              ? {
-                ...o,
-                status:
-                  newStatus === "Ready for Delivery" ? "Delivery" : newStatus,
-              }
-              : o
-          )
-        );
+        setIncomingOrders((prev) => prev.filter((o) => o._id !== id));
+        setPastOrders((prev) => [updatedOrder, ...prev]);
+        toast.success(`Order marked as ${newStatus}`);
+
+        // This is the fix:
+        // Instantly refresh the count in the global context
+        fetchAndSetOrderCount();
       }
     } catch (err) {
       console.error("Error updating order status:", err);
-      alert("Failed to update order status. Please try again.");
+      // Error is toasted by the interceptor
     }
   };
 
@@ -124,10 +69,26 @@ const OrdersPage = () => {
     );
   }
 
+  // Show empty state if no orders are found
+  if (!loading && incomingOrders.length === 0 && pastOrders.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4">
+        <img src={noOrderImage} alt="No orders" className="w-64 h-64 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-700">No Orders Yet</h2>
+        <p className="text-gray-500">
+          When you get a new order, it will appear here.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen px-4 sm:px-8 md:px-12 lg:px-20 xl:px-16 2xl:px-8 3xl:px-8 py-2">
       <div className="max-w-[1600px] mx-auto flex flex-col gap-12">
-        <IncomingOrders orders={incomingOrders} onOrderUpdate={handleOrderUpdate} />
+        <IncomingOrders
+          orders={incomingOrders}
+          onOrderUpdate={handleOrderUpdate}
+        />
         <PastOrders orders={pastOrders} />
       </div>
     </div>
