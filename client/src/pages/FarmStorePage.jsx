@@ -1,13 +1,13 @@
-import {useState, useEffect} from "react";
-import {useParams} from "react-router-dom";
-import {motion} from "framer-motion";
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import apiClient from "../config/api.js";
 import FarmInfo from "../components/FarmStore/FarmInfo.jsx";
 import ProductCard from "../components/FarmStore/ProductCard.jsx";
 import Slider from "../components/FarmStore/slider.jsx";
 
 const FarmStorePage = () => {
-  const {id} = useParams();
+  const { id } = useParams();
   const [products, setProducts] = useState([]);
   const [farm, setFarm] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -47,9 +47,9 @@ const FarmStorePage = () => {
       <div className="flex items-center justify-center min-h-screen bg-[#F8FFFC]">
         <motion.div
           className="relative flex items-center justify-center"
-          initial={{opacity: 0, scale: 0.9}}
-          animate={{opacity: 1, scale: 1}}
-          transition={{duration: 1, ease: "easeOut"}}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, ease: "easeOut" }}
         >
           <span className="w-12 h-12 rounded-full grid place-items-center bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-lg z-10">
             <svg
@@ -65,8 +65,8 @@ const FarmStorePage = () => {
 
           <motion.span
             className="absolute w-20 h-20 border-4 border-emerald-400 border-t-transparent rounded-full"
-            animate={{rotate: 360}}
-            transition={{duration: 4, repeat: Infinity, ease: "linear"}}
+            animate={{ rotate: 360 }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
           ></motion.span>
         </motion.div>
       </div>
@@ -97,12 +97,11 @@ const FarmStorePage = () => {
   return (
     <motion.div
       className="bg-[#F8FFFC] min-h-screen"
-      initial={{opacity: 0}}
-      animate={{opacity: 1}}
-      transition={{duration: 0.6}}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6 }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* --- SLIDER أول الصفحة --- */}
         {farm && (
           <div className="mb-12">
             <Slider key={farm._id} />
@@ -143,9 +142,9 @@ const FarmStorePage = () => {
           <main className="lg:col-span-8">
             {products.length === 0 ? (
               <motion.div
-                initial={{opacity: 0, scale: 0.95}}
-                animate={{opacity: 1, scale: 1}}
-                transition={{duration: 0.6}}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6 }}
                 className="text-center py-16 bg-white rounded-2xl shadow-xl border border-[#84dcc6]"
               >
                 <h3 className="text-xl font-bold text-[#0a3832] mb-2">
@@ -160,12 +159,16 @@ const FarmStorePage = () => {
                 <motion.div
                   key={currentPage}
                   className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
-                  initial={{opacity: 0, y: 20}}
-                  animate={{opacity: 1, y: 0}}
-                  transition={{duration: 0.5, ease: "easeOut"}}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
                 >
                   {currentProducts.map((product) => (
-                    <ProductCard key={product._id} product={product} />
+                    <ProductCard
+                      key={product._id}
+                      product={product}
+                      farm={farm}
+                    />
                   ))}
                 </motion.div>
 
@@ -173,9 +176,9 @@ const FarmStorePage = () => {
                   <motion.div
                     key={`pagination-${currentPage}`}
                     className="flex justify-center mt-10 space-x-2"
-                    initial={{opacity: 0}}
-                    animate={{opacity: 1}}
-                    transition={{duration: 0.4, delay: 0.1}}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
                   >
                     <button
                       onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
@@ -217,9 +220,9 @@ const FarmStorePage = () => {
           {/* Farm Info Sidebar */}
           <motion.aside
             className="lg:col-span-4 mt-12 lg:mt-0"
-            initial={{opacity: 0, x: 30}}
-            animate={{opacity: 1, x: 0}}
-            transition={{duration: 0.6, delay: 0.3}}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
           >
             <FarmInfo farm={farm} />
           </motion.aside>
