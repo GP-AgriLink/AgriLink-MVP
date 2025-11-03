@@ -1,3 +1,4 @@
+import { memo } from "react";
 import ProductImage from "./ProductImage";
 
 /**
@@ -20,10 +21,10 @@ const ProductRow = ({
 }) => {
   const formatPrice = (price) => {
     if (price === null || price === undefined || isNaN(price)) {
-      return "EGP 0.00";
+      return "$0.00"; // UPDATED
     }
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    return `EGP ${numPrice.toFixed(2)}`;
+    return `$${numPrice.toFixed(2)}`; // UPDATED
   };
 
   const LOW_STOCK_THRESHOLD = 10;
@@ -179,4 +180,4 @@ const ProductRow = ({
   );
 };
 
-export default ProductRow;
+export default memo(ProductRow);

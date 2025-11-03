@@ -4,7 +4,7 @@ import ProfileHeader from '../components/Profile/ProfileHeader';
 import ProfileForm from '../components/Profile/ProfileForm';
 import AvatarUpload from '../components/Profile/AvatarUpload';
 import { getProfile } from '../services/profileApi';
-import { getAuthToken, clearAuthData } from '../context/AuthContext';
+import { getAuthToken, clearAuthData, useAuth } from '../context/AuthContext';
 
 const getDefaultProfile = () => ({
   id: "",
@@ -28,6 +28,7 @@ const getDefaultProfile = () => ({
  */
 const ProfilePage = () => {
   const navigate = useNavigate();
+  const { updateAvatar: updateContextAvatar } = useAuth();
   const [profile, setProfile] = useState(getDefaultProfile());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -66,6 +67,10 @@ const ProfilePage = () => {
 
         setProfile(profileData);
         setImagePreview(profileData.avatarUrl || "");
+        // Update context avatar when profile loads
+        if (profileData.avatarUrl) {
+          updateContextAvatar(profileData.avatarUrl);
+        }
       }
     } catch (err) {
       console.error("Error fetching profile:", err);
