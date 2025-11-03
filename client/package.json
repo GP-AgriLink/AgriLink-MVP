@@ -15,6 +15,7 @@
     "axios": "^1.13.0",
     "dompurify": "^3.3.0",
     "formik": "^2.4.6",
+    "framer-motion": "^12.23.24",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.548.0",
     "react": "^19.1.1",
