@@ -154,7 +154,7 @@ const FarmInfo = ({farm}) => {
 
       {/* Certifications */}
       {certifications.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 hidden sm:block">
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
             Certifications
           </h4>
@@ -170,7 +170,7 @@ const FarmInfo = ({farm}) => {
 
       {/* Pickup & Delivery */}
       {pickupDelivery.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 hidden sm:block">
           <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
             Pickup & Delivery
           </h4>
