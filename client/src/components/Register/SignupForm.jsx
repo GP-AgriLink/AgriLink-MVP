@@ -4,7 +4,7 @@ import InputField from "./InputField";
 import Logo from "../common/Logo";
 import {Formik, Form} from "formik";
 import {registrationValidationSchema} from "../../utils/validationSchemas";
-import {sanitizeName, sanitizeEmail} from "../../utils/sanitizers";
+import {sanitizeEmail, sanitizeFarmName} from "../../utils/sanitizers";
 
 const SignupForm = () => {
   const navigate = useNavigate();
@@ -43,7 +43,7 @@ const SignupForm = () => {
         validationSchema={registrationValidationSchema}
         onSubmit={async (values, {setSubmitting, setFieldError}) => {
           try {
-            const sanitizedFarmName = sanitizeName(values.farmName);
+            const sanitizedFarmName = sanitizeFarmName(values.farmName);
             const sanitizedEmail = sanitizeEmail(values.email);
             const sanitizedPassword = values.password.trim();
             

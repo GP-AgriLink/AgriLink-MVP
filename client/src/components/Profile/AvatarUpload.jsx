@@ -1,20 +1,40 @@
 import React from "react";
 import { FiEdit2, FiUser } from "react-icons/fi";
 import { uploadAvatar } from "../../services/profileApi";
+import { toast } from 'react-toastify';
+import { useAuth } from '../../context/AuthContext';
 
 const AvatarUpload = ({ profilePicture, imagePreview, isEditing, onPreviewChange, onProfileChange }) => {
+  const { updateAvatar: updateContextAvatar } = useAuth();
   const preview = imagePreview || profilePicture;
 
   const handleFile = async (e) => {
     if (!isEditing) return;
     const file = e.target.files?.[0];
     if (!file) return;
-    onPreviewChange(URL.createObjectURL(file));
+
+    // 1. Show local preview immediately
+    const localPreviewUrl = URL.createObjectURL(file);
+    onPreviewChange(localPreviewUrl); // Show user the selected image
+
     try {
+      // 2. Start the upload (server returns base64 string)
       const updated = await uploadAvatar(file);
-      if (updated) onProfileChange(updated);
+
+      // 3. On success, pass the base64 string back up
+      if (updated && updated.avatarUrl) {
+        onProfileChange(updated); // This updates the ProfilePage state
+        // Update the context so navbar updates immediately
+        updateContextAvatar(updated.avatarUrl);
+        toast.success("Avatar updated successfully!");
+      }
     } catch (err) {
       console.error("uploadAvatar:", err);
+      toast.error(err.message || "Avatar upload failed");
+      onPreviewChange(profilePicture); // Revert to original picture on failure
+    } finally {
+      // Revoke the local URL to prevent memory leaks
+      URL.revokeObjectURL(localPreviewUrl);
     }
   };
 
@@ -28,7 +48,7 @@ const AvatarUpload = ({ profilePicture, imagePreview, isEditing, onPreviewChange
             <FiUser className="w-1/2 h-1/2 text-emerald-600" />
           </div>
         )}
-        
+
         {isEditing ? (
           <label className="absolute inset-0 cursor-pointer">
             <div className="w-full h-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
@@ -37,8 +57,8 @@ const AvatarUpload = ({ profilePicture, imagePreview, isEditing, onPreviewChange
             <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
           </label>
         ) : (
-          <div 
-            className="absolute inset-0" 
+          <div
+            className="absolute inset-0"
             onClick={(e) => e.preventDefault()}
           />
         )}
