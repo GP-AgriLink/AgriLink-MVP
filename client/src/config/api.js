@@ -19,17 +19,23 @@ export const API_ENDPOINTS = {
     profile: "/api/farmers/profile",
     uploadPicture: "/api/farmers/profile/upload-picture",
   },
+  farms: {
+    allFarms: "/api/farms",
+    nearby: "/api/farms/nearby",
+    byId: (farmId) => `/api/farms/${farmId}`,
+  },
   orders: {
     myOrders: "/api/orders/myorders",
-    incomingCount: "/api/orders/count/incoming", // New endpoint
+    incomingCount: "/api/orders/count/incoming",
     create: "/api/orders",
     updateStatus: (orderId) => `/api/orders/${orderId}/status`,
   },
   products: {
     myProducts: "/api/products/myproducts",
     create: "/api/products",
-    // Standardized endpoint for update/delete by ID
     byId: (productId) => `/api/products/${productId}`,
+    publicByFarm: (farmId) => `/api/products/farm/${farmId}`,
+    uploadImage: (productId) => `/api/products/${productId}/upload-image`,
   },
 };
 
