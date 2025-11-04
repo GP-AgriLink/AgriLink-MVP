@@ -1,7 +1,7 @@
-import {Routes, Route, Link, Navigate} from "react-router-dom";
-import {ToastContainer} from "react-toastify";
+import { Routes, Route, Link, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import {AuthProvider} from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import Navbar from "./components/Navbar/Navbar";
@@ -14,14 +14,14 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
-import Slider from "./components/FarmStore/slider";
+import CartPage from "./pages/CartPage";
 
 function App() {
   return (
     <AuthProvider>
       <div className="app min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex flex-col">
         <Navbar />
-        <ToastContainer 
+        <ToastContainer
           position="top-right"
           autoClose={3000}
           hideProgressBar={false}
@@ -144,13 +144,7 @@ function App() {
             />
             <Route
               path="/cart"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">
-                    Shopping Cart
-                  </h1>
-                </div>
-              }
+              element={<CartPage />}
             />
 
             <Route path="/farm/:id" element={<FarmStorePage />} />

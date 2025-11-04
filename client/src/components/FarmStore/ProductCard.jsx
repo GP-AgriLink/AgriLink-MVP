@@ -37,7 +37,18 @@ const ProductCard = ({product}) => {
             : item
         );
       } else {
-        updatedCart = [...existingCart, {...product, quantity: 1}];
+        // Store only essential fields to avoid nested objects or extra data
+        const cartItem = {
+          _id,
+          name,
+          price,
+          unit,
+          imageUrl,
+          stock,
+          farmer: typeof product.farmer === 'object' ? product.farmer._id : product.farmer,
+          quantity: 1
+        };
+        updatedCart = [...existingCart, cartItem];
       }
 
       localStorage.setItem("cartItems", JSON.stringify(updatedCart));

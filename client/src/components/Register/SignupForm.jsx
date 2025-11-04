@@ -48,15 +48,12 @@ const SignupForm = () => {
             const sanitizedPassword = values.password.trim();
             
             const cleanedPhone = values.phoneNumber.replace(/[\s-]/g, '');
-            const phoneWithCountryCode = cleanedPhone.startsWith('0') 
-              ? `+20${cleanedPhone.substring(1)}`
-              : `+20${cleanedPhone}`;
             
             const result = await register(
               sanitizedFarmName,
               sanitizedEmail,
               sanitizedPassword,
-              phoneWithCountryCode
+              cleanedPhone
             );
 
             if (result.success) {
