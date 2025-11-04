@@ -8,7 +8,7 @@ const PastOrders = ({ orders }) => {
   const canceledCount = orders.filter((o) => o.status === "Cancelled").length;
 
   const formatDate = (order) => {
-    const dateStr = order.updatedAt || order.createdAt;
+    const dateStr = order.date; // Use the 'date' prop passed from OrdersPage
     if (!dateStr) return "Unknown Date";
     try {
       const date = new Date(dateStr);
@@ -58,16 +58,18 @@ const PastOrders = ({ orders }) => {
             <tbody>
               {orders.map((order, i) => (
                 <tr
-                  key={order._id}
+                  key={order.id}
                   className={`border-t hover:bg-green-50 transition ${i % 2 === 0 ? "bg-white" : "bg-gray-50"
                     }`}
                 >
-                  <td className="py-4 px-6 font-medium">#{order._id.slice(-6)}</td>
-                  <td className="py-4 px-6">{order.customerName}</td>
-                  <td className="py-4 px-6">${order.totalAmount.toFixed(2)}</td>
+                  <td className="py-4 px-6 font-medium">#{order.id.slice(-6)}</td>
+                  <td className="py-4 px-6">{order.customer}</td>
+                  <td className="py-4 px-6">${order.total.toFixed(2)}</td>
                   <td className="py-4 px-6">{formatDate(order)}</td>
                   <td
-                    className={`py-4 px-6 font-semibold ${order.status === "Completed" ? "text-green-600" : "text-red-900"
+                    className={`py-4 px-6 font-semibold ${order.status === "Completed"
+                        ? "text-green-600"
+                        : "text-red-900"
                       }`}
                   >
                     {order.status}

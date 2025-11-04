@@ -35,13 +35,12 @@ const IncomingOrders = ({ orders, onOrderUpdate }) => {
       {orders.length > 0 ? (
         <>
           <div
-            className={`grid gap-8 justify-items-center grid-cols-1 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3 transition-opacity duration-300 ${
-              fade ? "opacity-0" : "opacity-100"
-            }`}
+            className={`grid gap-8 justify-items-center grid-cols-1 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3 transition-opacity duration-300 ${fade ? "opacity-0" : "opacity-100"
+              }`}
           >
             {currentOrders.map((order) => (
               <OrderCard
-                key={order._id}
+                key={order.id}
                 order={order}
                 onOrderUpdate={onOrderUpdate}
               />
@@ -54,11 +53,10 @@ const IncomingOrders = ({ orders, onOrderUpdate }) => {
                 <button
                   key={idx}
                   onClick={() => handlePageChange(idx + 1)}
-                  className={`px-4 py-2 rounded-md font-semibold transition ${
-                    currentPage === idx + 1
-                      ? "bg-[#13C191] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`px-4 py-2 rounded-md font-semibold transition ${currentPage === idx + 1
+                    ? "bg-[#13C191] text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   {idx + 1}
                 </button>
@@ -67,23 +65,23 @@ const IncomingOrders = ({ orders, onOrderUpdate }) => {
           )}
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="bg-emerald-50 p-8 rounded-xl shadow-sm w-full max-w-md">
+          <div className = "flex flex-col items-center justify-center py-10 text-center">
+          <div className = "bg-emerald-50 p-8 rounded-xl shadow-sm w-full max-w-md">
             <img
-              src="/noOrder_4.svg"
-              alt="No orders"
-              className="w-[280px] sm:w-[350px] mx-auto opacity-90 object-contain"
+              src = "/noOrder_4.svg"
+              alt = "No orders"
+              className = "w-[280px] sm:w-[350px] mx-auto opacity-90 object-contain"
             />
-            <p className="text-lg font-semibold text-emerald-700 mt-4">
-              No Orders Right Now.
-            </p>
-            <p className="text-sm text-gray-500 mt-2">
-              Everything looks calm for now.
-            </p>
-          </div>
-        </div>
+      <p className="text-lg font-semibold text-emerald-700 mt-4">
+        No Orders Right Now.
+      </p>
+      <p className="text-sm text-gray-500 mt-2">
+        Everything looks calm for now.
+      </p>
+    </div>
+        </div >
       )}
-    </section>
+    </section >
   );
 };
 

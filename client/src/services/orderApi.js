@@ -40,7 +40,7 @@ export const getIncomingOrdersCount = async () => {
  * @returns {Promise<Object>} The updated order object
  */
 export const updateOrderStatus = async (orderId, status) => {
-  if (!["Completed", "Cancelled"].includes(status)) {
+  if (!["Completed", "Cancelled", "Ready for Delivery", "Incoming"].includes(status)) {
     console.error("Invalid status for update.");
     throw new Error("Invalid status for update.");
   }

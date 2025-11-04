@@ -19,12 +19,41 @@ const OrdersPage = () => {
 
       if (Array.isArray(ordersArray)) {
         // Filter based on valid server statuses
-        const incoming = ordersArray.filter((o) => o.status === "Incoming");
+        const incoming = ordersArray.filter(
+          (o) => o.status === "Incoming" || o.status === "Ready for Delivery"
+        );
         const past = ordersArray.filter(
           (o) => o.status === "Completed" || o.status === "Cancelled"
         );
-        setIncomingOrders(incoming);
-        setPastOrders(past);
+
+        // Transform data for the new OrderCard component
+        setIncomingOrders(
+          incoming.map((o) => ({
+            id: o._id,
+            customer: o.customerName,
+            phone: o.customerPhone || "N/A",
+            total: o.totalAmount,
+            items: o.orderItems.map((i) => ({
+              name: i.name,
+              qty: i.quantity,
+              price: i.unitPrice,
+            })),
+            status: o.status,
+            date: o.createdAt,
+            data: o, // Include original data if needed
+          }))
+        );
+
+        setPastOrders(
+          past.map((o) => ({
+            id: o._id,
+            customer: o.customerName,
+            total: o.totalAmount,
+            status: o.status,
+            date: o.updatedAt || o.createdAt,
+            data: o,
+          }))
+        );
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
@@ -44,12 +73,30 @@ const OrdersPage = () => {
       const updatedOrder = await updateOrderStatus(id, newStatus);
 
       if (newStatus === "Completed" || newStatus === "Cancelled") {
-        setIncomingOrders((prev) => prev.filter((o) => o._id !== id));
-        setPastOrders((prev) => [updatedOrder, ...prev]);
+        setIncomingOrders((prev) => prev.filter((o) => o.id !== id));
+        // Add the formatted order to pastOrders
+        setPastOrders((prev) => [
+          {
+            id: updatedOrder._id,
+            customer: updatedOrder.customerName,
+            total: updatedOrder.totalAmount,
+            status: updatedOrder.status,
+            date: updatedOrder.updatedAt || updatedOrder.createdAt,
+            data: updatedOrder,
+          },
+          ...prev,
+        ]);
         toast.success(`Order marked as ${newStatus}`);
-
-        // This is the fix:
-        // Instantly refresh the count in the global context
+        fetchAndSetOrderCount();
+      } else if (newStatus === "Ready for Delivery") {
+        // Update the status for the item in the incoming list
+        setIncomingOrders((prev) =>
+          prev.map((o) =>
+            o.id === id ? { ...o, status: "Ready for Delivery" } : o
+          )
+        );
+        toast.success(`Order marked as Ready for Delivery`);
+        // Refresh count since "Incoming" count will change
         fetchAndSetOrderCount();
       }
     } catch (err) {
