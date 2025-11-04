@@ -13,9 +13,9 @@ import { validateEgyptianPhone } from './validators';
 const nameRegex = /^[a-zA-Z\u0621-\u064A\s'-]+$/;
 const nameInvalidCharsMessage = "Name can only contain letters, spaces, hyphens, and apostrophes";
 
-// Farm name regex: only letters allowed
-const farmNameRegex = /^[a-zA-Z\u0621-\u064A]+$/;
-const farmNameInvalidCharsMessage = "Farm name can only contain letters";
+// Farm name regex: letters, spaces, hyphens, periods, underscores allowed
+const farmNameRegex = /^[a-zA-Z\u0621-\u064A\s'\-._ ]+$/;
+const farmNameInvalidCharsMessage = "Farm name can only contain letters, spaces, hyphens, periods, underscores";
 
 // Email validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;

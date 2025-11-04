@@ -62,7 +62,7 @@ export const sanitizeName = (name) => {
 };
 
 /**
- * Sanitizes farm name fields allowing only letters
+ * Sanitizes farm name fields allowing letters, spaces, hyphens, periods, underscores, and apostrophes
  * @param {string} farmName - Raw farm name input
  * @returns {string} Sanitized farm name
  */
@@ -73,7 +73,7 @@ export const sanitizeFarmName = (farmName) => {
     .replace(/[<>]/g, '')
     .replace(/javascript:/gi, '')
     .replace(/on\w+=/gi, '')
-    .replace(/[^A-Za-z\u0621-\u064A]/g, '') // Keep only English and Arabic letters
+    .replace(/[^A-Za-z\u0621-\u064A\s'\-._ ]/g, '') // Keep English, Arabic, space, hyphen, period, underscore, apostrophe
     .trim();
 };
 
@@ -119,7 +119,14 @@ export const sanitizeFormData = (data) => {
     }
 
     if (Array.isArray(value)) {
-      sanitized[key] = sanitizeArray(value);
+      // Check if array contains objects or primitives
+      if (value.length > 0 && typeof value[0] === 'object') {
+        // Array of objects - recursively sanitize each object
+        sanitized[key] = value.map(item => sanitizeFormData(item));
+      } else {
+        // Array of strings - use sanitizeArray
+        sanitized[key] = sanitizeArray(value);
+      }
       continue;
     }
 

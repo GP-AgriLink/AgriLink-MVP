@@ -91,7 +91,8 @@ function Navbar() {
         <div className="hidden lg:flex items-center gap-4">
           {!user ? (
             <>
-              <button
+              <Link
+                to="/cart"
                 className="group relative w-11 h-11 rounded-xl bg-white/80 backdrop-blur-sm border border-emerald-200/60 flex items-center justify-center transition-all duration-300 hover:border-emerald-400/80 hover:bg-emerald-50/50 hover:shadow-xl hover:shadow-emerald-500/20 hover:-translate-y-0.5 hover:scale-105"
                 aria-label="Shopping Cart"
               >
@@ -100,7 +101,7 @@ function Navbar() {
                   <circle cx="20" cy="21" r="1"></circle>
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
                 </svg>
-              </button>
+              </Link>
 
               <div className="relative" ref={dropdownRef}>
                 <button
