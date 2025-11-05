@@ -135,7 +135,7 @@ export const uploadProductImage = async (productId, file) => {
     formData.append("productImage", file);
 
     const response = await apiClient.post(
-      `${API_ENDPOINTS.products.byId(productId)}/upload-image`,
+      API_ENDPOINTS.products.uploadImage(productId),
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },

@@ -1,24 +1,22 @@
-import { useState, useEffect } from "react";
-import { getMyOrders, updateOrderStatus } from "../services/orderApi";
-import { useAuth } from "../context/AuthContext"; // Import useAuth
-import IncomingOrders from "../components/Order/IncomingOrders";
-import PastOrders from "../components/Order/PastOrders";
-import { toast } from "react-toastify";
-import noOrderImage from "/noOrder_4.svg"; // Ensure this path is correct
+import { useState, useEffect } from 'react';
+import { getMyOrders, updateOrderStatus } from '../services/orderApi';
+import { useAuth } from '../context/AuthContext';
+import IncomingOrders from '../components/Order/IncomingOrders';
+import PastOrders from '../components/Order/PastOrders';
+import { toast } from 'react-toastify';
+import noOrderImage from '/noOrder_4.svg';
 
 const OrdersPage = () => {
   const [incomingOrders, setIncomingOrders] = useState([]);
   const [pastOrders, setPastOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { fetchAndSetOrderCount } = useAuth(); // Get the context function
+  const { fetchAndSetOrderCount } = useAuth();
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const ordersArray = await getMyOrders(); // Uses service
-
+      const ordersArray = await getMyOrders();
       if (Array.isArray(ordersArray)) {
-        // Filter based on valid server statuses
         const incoming = ordersArray.filter(
           (o) => o.status === "Incoming" || o.status === "Ready for Delivery"
         );
@@ -26,7 +24,6 @@ const OrdersPage = () => {
           (o) => o.status === "Completed" || o.status === "Cancelled"
         );
 
-        // Transform data for the new OrderCard component
         setIncomingOrders(
           incoming.map((o) => ({
             id: o._id,
@@ -40,7 +37,6 @@ const OrdersPage = () => {
             })),
             status: o.status,
             date: o.createdAt,
-            data: o, // Include original data if needed
           }))
         );
 
@@ -51,13 +47,11 @@ const OrdersPage = () => {
             total: o.totalAmount,
             status: o.status,
             date: o.updatedAt || o.createdAt,
-            data: o,
           }))
         );
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
-      // Error is already toasted by the interceptor
     } finally {
       setLoading(false);
     }
@@ -71,37 +65,11 @@ const OrdersPage = () => {
   const handleOrderUpdate = async (id, newStatus) => {
     try {
       const updatedOrder = await updateOrderStatus(id, newStatus);
-
-      if (newStatus === "Completed" || newStatus === "Cancelled") {
-        setIncomingOrders((prev) => prev.filter((o) => o.id !== id));
-        // Add the formatted order to pastOrders
-        setPastOrders((prev) => [
-          {
-            id: updatedOrder._id,
-            customer: updatedOrder.customerName,
-            total: updatedOrder.totalAmount,
-            status: updatedOrder.status,
-            date: updatedOrder.updatedAt || updatedOrder.createdAt,
-            data: updatedOrder,
-          },
-          ...prev,
-        ]);
-        toast.success(`Order marked as ${newStatus}`);
-        fetchAndSetOrderCount();
-      } else if (newStatus === "Ready for Delivery") {
-        // Update the status for the item in the incoming list
-        setIncomingOrders((prev) =>
-          prev.map((o) =>
-            o.id === id ? { ...o, status: "Ready for Delivery" } : o
-          )
-        );
-        toast.success(`Order marked as Ready for Delivery`);
-        // Refresh count since "Incoming" count will change
-        fetchAndSetOrderCount();
-      }
+      toast.success(`Order marked as ${newStatus}`, { autoClose: 2000 });
+      await fetchOrders();
+      await fetchAndSetOrderCount();
     } catch (err) {
       console.error("Error updating order status:", err);
-      // Error is toasted by the interceptor
     }
   };
 
@@ -116,7 +84,6 @@ const OrdersPage = () => {
     );
   }
 
-  // Show empty state if no orders are found
   if (!loading && incomingOrders.length === 0 && pastOrders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center p-4">
