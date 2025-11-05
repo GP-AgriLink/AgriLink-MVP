@@ -1,8 +1,10 @@
 import React from "react";
-import AddToCart from "./AddToCart.jsx";
-import {toast} from "react-toastify";
+import AddToCart from './AddToCart.jsx';
+import { useCart } from '../../context/CartContext';
 
-const ProductCard = ({product}) => {
+const ProductCard = ({ product }) => {
+  const { addToCart } = useCart();
+
   const {
     _id,
     name = "Unnamed Product",
@@ -15,52 +17,7 @@ const ProductCard = ({product}) => {
   } = product;
 
   const handleAddToCart = () => {
-    try {
-      if (stock === 0) {
-        toast.error("This product is out of stock", {
-          position: "top-right",
-          autoClose: 2000,
-        });
-        return;
-      }
-
-      const existingCart = JSON.parse(localStorage.getItem("cartItems")) || [];
-      const existingItemIndex = existingCart.findIndex(
-        (item) => item._id === _id
-      );
-
-      let updatedCart;
-      if (existingItemIndex !== -1) {
-        updatedCart = existingCart.map((item, index) =>
-          index === existingItemIndex
-            ? {...item, quantity: (item.quantity || 1) + 1}
-            : item
-        );
-      } else {
-        // Store only essential fields to avoid nested objects or extra data
-        const cartItem = {
-          _id,
-          name,
-          price,
-          unit,
-          imageUrl,
-          stock,
-          farmer: typeof product.farmer === 'object' ? product.farmer._id : product.farmer,
-          quantity: 1
-        };
-        updatedCart = [...existingCart, cartItem];
-      }
-
-      localStorage.setItem("cartItems", JSON.stringify(updatedCart));
-
-      toast.success(`${name} added successfully to the cart`, {
-        position: "top-right",
-        autoClose: 2000,
-      });
-    } catch (error) {
-      console.error("Error saving to localStorage:", error);
-      toast.error("Failed to add product to cart");
-    }
+    addToCart(product);
   };
 
   return (
@@ -78,39 +35,17 @@ const ProductCard = ({product}) => {
           src={imageUrl}
           alt={name}
         />
-
-        {/* Tag badge */}
         {tag && (
-          <span
-            className="
-              absolute top-4 left-4
-              bg-[#2a9d8f] text-white text-xs font-semibold uppercase
-              px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap
-            "
-          >
+          <span className="absolute top-4 left-4 bg-[#2a9d8f] text-white text-xs font-semibold uppercase px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap">
             {tag}
           </span>
         )}
-
-        {/* Stock badge */}
         {stock === 0 ? (
-          <span
-            className="
-              absolute top-4 right-4
-              bg-red-600 text-white text-xs font-semibold uppercase
-              px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap
-            "
-          >
+          <span className="absolute top-4 right-4 bg-red-600 text-white text-xs font-semibold uppercase px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap">
             Out of Stock
           </span>
         ) : stock < 10 ? (
-          <span
-            className="
-              absolute top-4 right-4
-              bg-yellow-500 text-white text-xs font-semibold uppercase
-              px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap
-            "
-          >
+          <span className="absolute top-4 right-4 bg-yellow-500 text-white text-xs font-semibold uppercase px-3 py-1.5 rounded-full shadow-md z-10 whitespace-nowrap">
             Low Stock
           </span>
         ) : null}
@@ -119,15 +54,11 @@ const ProductCard = ({product}) => {
       {/* --- CONTENT --- */}
       <div className="p-6 flex flex-col flex-grow">
         <h3 className="text-xl font-bold text-[#0a3832] mb-1">{name}</h3>
-
         <div className="flex flex-row gap-1 mb-3">
           <p className="text-base font-medium text-[#008c7a]">${price}</p>
           <p className="text-base font-medium text-[#5cb39f]">/ {unit}</p>
         </div>
-
         <p className="text-sm text-gray-500 mb-6 flex-grow">{description}</p>
-
-        {/* --- ADD TO CART BUTTON --- */}
         <AddToCart onClick={handleAddToCart} disabled={stock === 0} />
       </div>
     </div>
