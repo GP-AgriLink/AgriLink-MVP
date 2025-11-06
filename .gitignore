@@ -5,39 +5,25 @@ node_modules/
 **/node_modules/
 **/.pnp
 **/.pnp.js
-package.json
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
-
 
 # Client Dependencies
 client/node_modules/
 client/.pnp
 client/.pnp.js
-client/package.json
 client/package-lock.json
 client/yarn.lock
 client/pnpm-lock.yaml
-
-
-
-
 
 # Server Dependencies
 server/node_modules/
 server/.pnp
 server/.pnp.js
-server/package.json
 server/package-lock.json
 server/yarn.lock
 server/pnpm-lock.yaml
-
-
-
-
-
-#
 
 # ============================================
 # Environment Variables
@@ -64,6 +50,19 @@ server/.env.development.local
 server/.env.test.local
 server/.env.production.local
 server/.env.*.local
+
+# Allow essential config files to be tracked
+!client/.prettierrc
+!client/tailwind.config.js
+!client/vite.config.js
+!client/postcss.config.js
+!client/eslint.config.js
+
+!server/.prettierrc
+!server/tailwind.config.js
+!server/vite.config.js
+!server/postcss.config.js
+!server/eslint.config.js
 
 # ============================================
 # Logs
@@ -257,20 +256,6 @@ server/.eslintcache
 **/*.sqlite
 **/*.sqlite3
 **/*.db
-
-# ============================================
-# Uploads (file uploads)
-# ============================================
-uploads/
-public/uploads/
-
-# Client Uploads
-client/uploads/
-client/public/uploads/
-
-# Server Uploads
-server/uploads/
-server/public/uploads/
 
 # ============================================
 # SSL Certificates

@@ -4,65 +4,61 @@ import { Link } from 'react-router-dom';
 
 const CartSummary = ({ items, total, itemCount, onQuantityChange, onRemoveItem, onClearAll }) => {
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+    <div className="rounded-2xl bg-white p-6 shadow-md md:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900">Your Cart</h2>
-          <p className="text-sm text-emerald-800 mt-1">
-            {itemCount} {itemCount === 1 ? 'item' : 'items'} in your cart
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Order Summary
+          <p className="mt-1 text-sm font-light text-emerald-700">
+            Review the product in your basket before confirming delivery.
           </p>
-        </div>
-        {items.length > 0 && (
-          <button
-            onClick={onClearAll}
-            className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
-          >
-            Clear All
-          </button>
-        )}
+        </h2>
+
+        <span className="text-sm font-bold uppercase tracking-wide text-emerald-700">
+          {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
+        </span>
       </div>
 
       {/* Cart Items */}
-      <div className="space-y-4 mb-6">
+      <div className="mb-6 space-y-4">
         {items.map((item) => (
           <div
             key={item._id}
-            className="flex items-center gap-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100"
+            className="flex items-center gap-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4"
           >
             {/* Product Info */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <Link
                 to={`/farm/${item.farmer}`}
-                className="text-base font-semibold text-gray-900 hover:text-emerald-600 transition-colors block truncate"
+                className="block truncate text-base font-semibold text-gray-900 transition-colors hover:text-emerald-600"
               >
                 {item.name}
               </Link>
-              <p className="text-sm text-emerald-700 mt-1">
+              <p className="mt-1 text-sm text-emerald-700">
                 ${item.price.toFixed(2)} / {item.unit}
               </p>
             </div>
 
             {/* Quantity Controls */}
             <div className="flex items-center gap-3">
-              <div className="flex items-center border border-emerald-300 rounded-lg bg-white">
+              <div className="flex items-center rounded-lg border border-emerald-300 bg-white">
                 <button
                   onClick={() => onQuantityChange(item._id, item.quantity - 1)}
-                  className="p-2 text-emerald-600 hover:bg-emerald-50 transition-colors rounded-l-lg"
+                  className="rounded-l-lg p-2 text-emerald-600 transition-colors hover:bg-emerald-50"
                   aria-label="Decrease quantity"
                 >
-                  <FiMinus className="w-4 h-4" />
+                  <FiMinus className="h-4 w-4" />
                 </button>
-                <span className="px-4 font-semibold text-gray-900 text-sm min-w-[40px] text-center">
+                <span className="min-w-[40px] px-4 text-center text-sm font-semibold text-gray-900">
                   {item.quantity}
                 </span>
                 <button
                   onClick={() => onQuantityChange(item._id, item.quantity + 1)}
                   disabled={item.quantity >= item.stock}
-                  className="p-2 text-emerald-600 hover:bg-emerald-50 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded-r-lg p-2 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Increase quantity"
                 >
-                  <FiPlus className="w-4 h-4" />
+                  <FiPlus className="h-4 w-4" />
                 </button>
               </div>
 
@@ -76,25 +72,33 @@ const CartSummary = ({ items, total, itemCount, onQuantityChange, onRemoveItem, 
               {/* Remove Button */}
               <button
                 onClick={() => onRemoveItem(item._id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50"
                 aria-label="Remove item"
               >
-                <FiTrash2 className="w-4 h-4" />
+                <FiTrash2 className="h-4 w-4" />
               </button>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Clear All Button - MOVED HERE */}
+      {items.length > 0 && (
+        <div className="-mt-2 mb-4 flex justify-end">
+          <button
+            onClick={onClearAll}
+            className="text-sm font-medium text-red-600 transition-colors hover:text-red-700"
+          >
+            Clear All
+          </button>
+        </div>
+      )}
+
       {/* Total */}
       <div className="border-t border-gray-200 pt-6">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold text-emerald-700 uppercase tracking-wide">
-            TOTAL
-          </span>
-          <span className="text-2xl font-bold text-gray-900">
-            ${total.toFixed(2)}
-          </span>
+          <span className="text-lg font-bold uppercase tracking-wide text-emerald-700">TOTAL</span>
+          <span className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</span>
         </div>
       </div>
     </div>
