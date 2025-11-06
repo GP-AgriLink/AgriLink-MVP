@@ -1,39 +1,36 @@
 export default function CartBanner({ totalDue, farmName }) {
   return (
-    <div className="bg-emerald-100 rounded-2xl shadow-lg p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+    <div className="grid grid-cols-1 items-center gap-8 rounded-3xl border border-emerald-200/50 bg-gradient-to-br from-emerald-200 via-emerald-50 to-emerald-200 p-8 shadow-md md:grid-cols-3 md:p-10">
       {/* Left Side: Title */}
       <div className="md:col-span-2">
-        <span className="text-emerald-700 font-semibold text-sm uppercase tracking-wider">
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-emerald-600">
           CONFIRM YOUR ORDER
         </span>
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mt-2 mb-4">
+        <h1 className="mb-5 mt-3 text-4xl font-bold leading-tight text-gray-900 md:text-5xl">
           Pay on delivery with confidence.
         </h1>
-        <p className="text-emerald-900 mb-4">
-          Pay on delivery to {farmName || "Agrilink Corp"}. Your total due is{" "}
-          <span className="font-medium text-emerald-900">
-            ${totalDue.toFixed(2)}
-          </span>
-          .
+        <p className="mb-5 text-base leading-relaxed text-emerald-700">
+          Pay on delivery to {farmName || 'Agrilink Corp'}. Your total due is{' '}
+          <span className="font-semibold text-gray-900">${totalDue.toFixed(2)}</span>.
         </p>
-        <div className="flex gap-2">
-          <span className="bg-white/70 border border-emerald-200 text-emerald-800 text-base font-semibold px-5 py-2 rounded-full">
-            {farmName || "Agrilink Corp"}
+        <div className="flex gap-3">
+          <span className="rounded-full border border-emerald-200 bg-white/80 px-5 py-2.5 text-sm font-medium text-emerald-700 shadow-sm backdrop-blur-sm">
+            {farmName || 'Agrilink Corp'}
           </span>
         </div>
       </div>
 
       {/* Right Side: Total Box */}
-      <div className="bg-white/60 backdrop-blur-sm border border-emerald-200 rounded-xl p-4 md:p-6 text-center">
-        <span className="font-bold text-emerald-700 text-sm uppercase tracking-wide">
+      <div className="rounded-2xl border border-emerald-200/60 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm">
+        <span className="text-lg font-medium uppercase tracking-[0.12em] text-emerald-600">
           AMOUNT DUE
         </span>
 
-        <div className="text-3xl sm:text-4xl font-bold text-gray-900 my-2">
+        <div className="my-3 text-4xl font-bold text-gray-900 md:text-5xl">
           ${totalDue.toFixed(2)}
         </div>
 
-        <p className="text-emerald-700 text-xs">
+        <p className="text-xs leading-relaxed text-emerald-700">
           Pay the farmer directly when your order is delivered.
         </p>
       </div>
