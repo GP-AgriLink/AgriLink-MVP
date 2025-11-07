@@ -9,7 +9,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./src/config/db.js";
-import farmerRoutes from "./src/routes/farmerRoutes.js";
+import userRoutes from './src/routes/userRoutes.js';
 import productRoutes from "./src/routes/productRoutes.js";
 import farmRoutes from "./src/routes/farmRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
@@ -63,7 +63,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- API Routes ---
-app.use("/api/farmers", farmerRoutes);
+app.use('/api/users', userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/farms", farmRoutes);
 app.use("/api/orders", orderRoutes);
