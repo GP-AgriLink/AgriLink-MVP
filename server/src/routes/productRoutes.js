@@ -7,6 +7,7 @@ import {
   getProductsByFarm,
   updateProduct,
   archiveProduct,
+  getAllCategories
 } from "../controllers/productController.js";
 
 const router = express.Router();
@@ -26,9 +27,18 @@ router.post(
     body("stock", "Stock count must be a non-negative number").isNumeric({
       min: 0,
     }),
+    body('categories', 'Categories must be an array of strings').optional().isArray()
   ],
   createProduct
 );
+
+
+
+// --- NEW: Add this route at the top ---
+// @route   GET /api/products/categories
+// @desc    Get all unique product categories
+// @access  Public
+router.get('/categories', getAllCategories);
 
 // @route   GET /api/products/myproducts
 // @desc    Get all products for the logged-in farmer
@@ -43,7 +53,9 @@ router.get("/farm/:farmId", getProductsByFarm);
 // @route   PUT /api/products/:id
 // @desc    Update a product
 // @access  Private
-router.put("/:id", protect, isFarmer, updateProduct);
+router.put("/:id", protect, isFarmer,[ 
+        body('categories', 'Categories must be an array of strings').optional().isArray()
+    ], updateProduct);
 
 // @route   DELETE /api/products/:id
 // @desc    Delete a product

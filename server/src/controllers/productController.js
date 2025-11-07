@@ -14,7 +14,7 @@ const createProduct = async (req, res) => {
   }
 
   try {
-    // 2. Find the Farm ID associated with the logged-in user
+    // Find the Farm ID associated with the logged-in user
     const farm = await Farm.findOne({ user: req.user._id });
     if (!farm) {
       return res
@@ -22,14 +22,15 @@ const createProduct = async (req, res) => {
         .json({ message: "Farm profile not found for this user." });
     }
 
-    const { name, price, unit, stock } = req.body;
+    const { name, price, unit, stock,categories } = req.body;
 
     const newProduct = new Product({
       name,
       price,
       unit,
       stock,
-      farmer: farm._id, // 3. Use the Farm's ID, not the User's ID
+      categories,
+      farmer: farm._id, // Use the Farm's ID, not the User's ID
     });
 
     const product = await newProduct.save();
@@ -43,23 +44,35 @@ const createProduct = async (req, res) => {
 /**
  * @desc    Get all products for the logged-in farmer (including archived)
  * @route   GET /api/products/myproducts
- * @access  Private (Farmer only)
+ * @access  Private
  */
 const getMyProducts = async (req, res) => {
-  try {
-    // 4. Find the farm associated with the user first
-    const farm = await Farm.findOne({ user: req.user._id });
-    if (!farm) {
-      return res.status(404).json({ message: "Farm profile not found." });
-    }
+    try {
+        // Find the farm associated with the user first
+        const farm = await Farm.findOne({ user: req.user._id });
+        if (!farm) {
+            return res.status(404).json({ message: 'Farm profile not found.' });
+        }
 
-    // 5. Find products belonging to that farm
-    const products = await Product.find({ farmer: farm._id });
-    res.json(products);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
+        // Build the base query
+        const query = { farmer: farm._id };
+
+        // Check for a category in the query string
+        // (e.g., /api/products/myproducts?category=Dairy)
+        if (req.query.category) {
+            query.categories = {
+                $in: [req.query.category] // Find products where the 'categories' array contains this value
+            };
+        }
+        
+        // Find products using the dynamic query
+        const products = await Product.find(query);
+        res.json(products);
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
 };
 
 /**
@@ -68,18 +81,30 @@ const getMyProducts = async (req, res) => {
  * @access  Public
  */
 const getProductsByFarm = async (req, res) => {
-  try {
-    // This logic remains the same, but it's good to confirm
-    const products = await Product.find({
-      farmer: req.params.farmId, // The ID in the URL is the Farm ID
-      status: "active",
-      isArchived: false,
-    });
-    res.json(products);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
+    try {
+        // --- Build the query object ---
+        const query = {
+            farmer: req.params.farmId,
+            status: 'active',
+            isArchived: false
+        };
+
+        // ---Check for a category in the query string ---
+        // (e.g., /api/products/farm/123?category=Vegetable)
+        if (req.query.category) {
+            query.categories = {
+                $in: [req.query.category] // Find products where the 'categories' array contains this value
+            };
+        }
+        
+        // ---Use the dynamic query object ---
+        const products = await Product.find(query);
+        res.json(products);
+        
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
 };
 
 /**
@@ -113,6 +138,7 @@ const updateProduct = async (req, res) => {
       status,
       stock,
       isArchived,
+      categories
     } = req.body;
     if (name) product.name = name;
     if (description) product.description = description;
@@ -122,6 +148,7 @@ const updateProduct = async (req, res) => {
     if (status) product.status = status;
     if (stock !== undefined) product.stock = stock;
     if (isArchived !== undefined) product.isArchived = isArchived;
+    if (categories) product.categories = categories;
 
     product = await product.save();
     res.json(product);
@@ -164,10 +191,31 @@ const archiveProduct = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get a list of all unique product categories
+ * @route   GET /api/products/categories
+ * @access  Public
+ */
+const getAllCategories = async (req, res) => {
+    try {
+        // 'distinct' scans the 'categories' field across all products
+        // and returns an array of unique values.
+        const categories = await Product.find().distinct('categories');
+        res.json(categories);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+
+
+
 export {
   createProduct,
   getMyProducts,
   getProductsByFarm,
   updateProduct,
   archiveProduct,
+  getAllCategories
 };
