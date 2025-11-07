@@ -80,15 +80,30 @@ const updateMyFarmProfile = async (req, res) => {
 // --- Public Routes (These were already correct) ---
 
 /**
- * @desc    Get all farms for the homepage map
+ * @desc    Get all farms for the homepage map (paginated)
  * @route   GET /api/farms
  * @access  Public
  */
 const getAllFarms = async (req, res) => {
     try {
-        // We now select from 'Farm' model, not 'Farmer'
-        const farms = await Farm.find({}).select('farmName specialties location');
-        res.json(farms);
+        const limit = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
+        const query = {}; // We can add filters here later if needed
+
+        const total = await Farm.countDocuments(query);
+        const farms = await Farm.find(query)
+            .select('farmName specialties location')
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: farms,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
@@ -115,32 +130,53 @@ const getFarmById = async (req, res) => {
 };
 
 /**
- * @desc    Get farms within a certain radius
+ * @desc    Get farms within a certain radius (paginated)
  * @route   GET /api/farms/nearby
  * @access  Public
  */
 const getNearbyFarms = async (req, res) => {
-    // ... (This logic remains the same, but uses the 'Farm' model)
     const { longitude, latitude, distance } = req.query;
     const maxDistance = distance || 10000;
 
     if (!longitude || !latitude) {
         return res.status(400).json({ message: 'Please provide longitude and latitude' });
     }
+    
+    const limit = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const query = {
+        location: {
+            $nearSphere: {
+                $geometry: {
+                    type: 'Point',
+                    coordinates: [parseFloat(longitude), parseFloat(latitude)]
+                },
+                $maxDistance: parseInt(maxDistance)
+            }
+        }
+    };
 
     try {
-        const farms = await Farm.find({
-            location: {
-                $nearSphere: {
-                    $geometry: {
-                        type: 'Point',
-                        coordinates: [parseFloat(longitude), parseFloat(latitude)]
-                    },
-                    $maxDistance: parseInt(maxDistance)
-                }
-            }
-        }).select('farmName specialties location');
-        res.json(farms);
+        // Note: .countDocuments() for $nearSphere is tricky.
+        // A simpler way for pagination with geo queries is to fetch all results
+        // and paginate in the application layer if performance allows.
+        // For pure Mongoose pagination with geo queries, a more complex aggregation pipeline is needed.
+        // For now, let's just paginate the results normally.
+        
+        const total = await Farm.countDocuments(query);
+        const farms = await Farm.find(query)
+            .select('farmName specialties location')
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: farms,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');

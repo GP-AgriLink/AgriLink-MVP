@@ -42,32 +42,40 @@ const createProduct = async (req, res) => {
 };
 
 /**
- * @desc    Get all products for the logged-in farmer (including archived)
+ * @desc    Get all products for the logged-in farmer (paginated)
  * @route   GET /api/products/myproducts
  * @access  Private
  */
 const getMyProducts = async (req, res) => {
     try {
-        // Find the farm associated with the user first
+        const limit = Number(req.query.limit) || 10; // Default 10 per page
+        const page = Number(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
         const farm = await Farm.findOne({ user: req.user._id });
         if (!farm) {
             return res.status(404).json({ message: 'Farm profile not found.' });
         }
 
-        // Build the base query
+        // Base query
         const query = { farmer: farm._id };
-
-        // Check for a category in the query string
-        // (e.g., /api/products/myproducts?category=Dairy)
         if (req.query.category) {
-            query.categories = {
-                $in: [req.query.category] // Find products where the 'categories' array contains this value
-            };
+            query.categories = { $in: [req.query.category] };
         }
-        
-        // Find products using the dynamic query
-        const products = await Product.find(query);
-        res.json(products);
+
+        // Get total count
+        const total = await Product.countDocuments(query);
+        // Get paginated data
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: products,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
 
     } catch (error) {
         console.error(error.message);
@@ -76,30 +84,37 @@ const getMyProducts = async (req, res) => {
 };
 
 /**
- * @desc    Get all active, non-archived products for a specific farm
+ * @desc    Get all active, non-archived products for a specific farm (paginated)
  * @route   GET /api/products/farm/:farmId
  * @access  Public
  */
 const getProductsByFarm = async (req, res) => {
     try {
-        // --- Build the query object ---
+        const limit = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
         const query = {
             farmer: req.params.farmId,
             status: 'active',
             isArchived: false
         };
 
-        // ---Check for a category in the query string ---
-        // (e.g., /api/products/farm/123?category=Vegetable)
         if (req.query.category) {
-            query.categories = {
-                $in: [req.query.category] // Find products where the 'categories' array contains this value
-            };
+            query.categories = { $in: [req.query.category] };
         }
-        
-        // ---Use the dynamic query object ---
-        const products = await Product.find(query);
-        res.json(products);
+
+        const total = await Product.countDocuments(query);
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: products,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
         
     } catch (error) {
         console.error(error.message);
