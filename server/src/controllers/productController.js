@@ -1,10 +1,11 @@
 import { validationResult } from "express-validator";
 import Product from "../models/Product.js";
+import Farm from "../models/Farm.js";
 
 /**
  * @desc    Create a new product
  * @route   POST /api/products
- * @access  Private
+ * @access  Private (Farmer only)
  */
 const createProduct = async (req, res) => {
   const errors = validationResult(req);
@@ -13,14 +14,22 @@ const createProduct = async (req, res) => {
   }
 
   try {
+    // 2. Find the Farm ID associated with the logged-in user
+    const farm = await Farm.findOne({ user: req.user._id });
+    if (!farm) {
+      return res
+        .status(404)
+        .json({ message: "Farm profile not found for this user." });
+    }
+
     const { name, price, unit, stock } = req.body;
-    req.body;
+
     const newProduct = new Product({
       name,
       price,
       unit,
       stock,
-      farmer: req.farmer._id, // This ID comes from the 'protect' middleware!
+      farmer: farm._id, // 3. Use the Farm's ID, not the User's ID
     });
 
     const product = await newProduct.save();
@@ -34,13 +43,18 @@ const createProduct = async (req, res) => {
 /**
  * @desc    Get all products for the logged-in farmer (including archived)
  * @route   GET /api/products/myproducts
- * @access  Private
+ * @access  Private (Farmer only)
  */
 const getMyProducts = async (req, res) => {
   try {
-    // This query intentionally fetches ALL products, including archived ones,
-    // so the farmer can see and potentially restore them from their dashboard.
-    const products = await Product.find({ farmer: req.farmer._id });
+    // 4. Find the farm associated with the user first
+    const farm = await Farm.findOne({ user: req.user._id });
+    if (!farm) {
+      return res.status(404).json({ message: "Farm profile not found." });
+    }
+
+    // 5. Find products belonging to that farm
+    const products = await Product.find({ farmer: farm._id });
     res.json(products);
   } catch (error) {
     console.error(error.message);
@@ -55,11 +69,11 @@ const getMyProducts = async (req, res) => {
  */
 const getProductsByFarm = async (req, res) => {
   try {
-    // Find products by the farm ID in the URL, and only show 'active' ones
+    // This logic remains the same, but it's good to confirm
     const products = await Product.find({
-      farmer: req.params.farmId,
+      farmer: req.params.farmId, // The ID in the URL is the Farm ID
       status: "active",
-      isArchived: false, // Only show products that are not archived
+      isArchived: false,
     });
     res.json(products);
   } catch (error) {
@@ -81,8 +95,11 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // --- CRITICAL: Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
+    // Find the user's farm to check for ownership
+    const farm = await Farm.findOne({ user: req.user._id });
+
+    // CRITICAL: Ownership Check
+    if (product.farmer.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 
@@ -127,8 +144,11 @@ const archiveProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // --- CRITICAL: Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
+    // Find the user's farm to check for ownership
+    const farm = await Farm.findOne({ user: req.user._id });
+
+    // CRITICAL: Ownership Check
+    if (product.farmer.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 
@@ -144,47 +164,10 @@ const archiveProduct = async (req, res) => {
   }
 };
 
-/**
- * @desc    Upload an image for a product
- * @route   POST /api/products/:id/upload-image
- * @access  Private
- */
-const uploadProductImage = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // --- Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    if (!req.file || !req.file.base64) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    // Store base64 string directly in the database
-    product.imageUrl = req.file.base64;
-    await product.save();
-
-    res.json({
-      message: "Image uploaded successfully",
-      imageUrl: product.imageUrl,
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
-};
-
 export {
   createProduct,
   getMyProducts,
   getProductsByFarm,
   updateProduct,
   archiveProduct,
-  uploadProductImage, // Add new export
 };
