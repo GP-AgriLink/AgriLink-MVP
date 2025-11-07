@@ -3,12 +3,12 @@
  * Renders the orders management interface within the dashboard layout
  */
 
-import OrdersPage from '../../pages/OrdersPage';
+import IncomingOrders from '../Order/IncomingOrders';
 
 const DashboardOrdersView = () => {
   return (
     <div className="text-center py-12 min-h-[400px] flex flex-col">
-      <OrdersPage />
+      <IncomingOrders />
     </div>
   );
 };
