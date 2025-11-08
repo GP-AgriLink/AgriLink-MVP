@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 26.0.1, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+   viewBox="0 0 500 500" style="enable-background:new 0 0 500 500;" xml:space="preserve">
+<style type="text/css">
+  .st0{display:none;}
+  .st1{display:inline;fill:#FFFFFF;}
+  .st2{fill:#39B597;}
+  /* Added for clean, maintainable text */
+  .st_text_green {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 38px;
+    font-weight: 600;
+    fill: #39B597;
+  }
+  .st_text_black {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 38px;
+    font-weight: 600;
+    fill: #000000; /* Match original's black */
+  }
+</style>
+<g id="BACKGROUND" class="st0">
+  <rect id="XMLID_00000079466777018383195710000017464465770155757704_" class="st1" width="500" height="500"/>
+</g>
+<g id="OBJECTS">
+  <!-- Text: "NO PRODUCTS" -->
+  <g id="TEXT">
+    <text x="250" y="384" text-anchor="middle" class="st_text_green">NO<tspan class="st_text_black" dx="10">PRODUCTS</tspan></text>
+  </g>
+
+  <!-- Icons -->
+  <g>
+    <!-- "No" Symbol (Re-used from noOrders.svg for consistency) -->
+    <!-- This symbol's center is at (247.565, 185.16) -->
+    <path class="st2" d="M347.99,283.2c25.12-25.25,40.65-59.88,40.65-98.05c0-77.06-63.28-139.76-141.07-139.76
+      c-38.76,0-73.92,15.57-99.44,40.73c-0.17,0.14-0.36,0.26-0.52,0.43c-0.18,0.18-0.31,0.37-0.46,0.56
+      c-25.12,25.25-40.65,59.88-40.65,98.05c0,77.06,63.28,139.76,141.07,139.76c38.76,0,73.92-15.57,99.44-40.73
+      c0.17-0.14,0.36-0.26,0.52-0.43C347.7,283.59,347.84,283.39,347.99,283.2z M374.58,185.16c0,32.1-12.2,61.42-32.23,83.67
+      L162.7,91.62c22.51-20.07,52.27-32.3,84.87-32.3C317.6,59.32,374.58,115.77,374.58,185.16z M120.55,185.16
+      c0-32.1,12.2-61.42,32.23-83.67l179.65,177.21c-22.51,20.07-52.27,32.3-84.87,32.3C177.53,310.99,120.55,254.54,120.55,185.16z"/>
+    
+    <!-- Product Box Icon (Centered in "No" Symbol) -->
+    <!-- The original box center (270, 210) is moved to the "No" symbol center (247.565, 185.16) -->
+    <!-- This requires a translation of dx = -22.435 and dy = -24.84 -->
+    <g transform="translate(-22.435 -24.84)">
+        <path id="product_box" class="st2" d="M200,175 l100,0 l0,100 l-100,0 z M200,175 l40,-30 l100,0 l-40,30 z M300,175 l40,-30 l0,100 l-40,30 z"/>
+    </g>
+  </g>
+</g>
+</svg>

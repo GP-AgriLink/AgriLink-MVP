@@ -20,10 +20,7 @@ export const createProduct = async (productData) => {
     // Sanitize and send as JSON
     const dataToSend = sanitizeProductData(productData);
 
-    const response = await apiClient.post(
-      API_ENDPOINTS.products.create,
-      dataToSend
-    );
+    const response = await apiClient.post(API_ENDPOINTS.products.create, dataToSend);
     return response.data;
   } catch (error) {
     const errorMessage =
@@ -44,8 +41,7 @@ export const getMyProducts = async () => {
     const response = await apiClient.get(API_ENDPOINTS.products.myProducts);
     return response.data || [];
   } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || "Failed to fetch products";
+    const errorMessage = error.response?.data?.message || "Failed to fetch products";
     throw new Error(errorMessage); // Re-throw for the page to handle
   }
 };
@@ -64,10 +60,7 @@ export const updateProduct = async (productId, updateData) => {
     const dataToSend = sanitizeProductData(updateData);
 
     // Use the standardized 'byId' endpoint for PUT requests
-    const response = await apiClient.put(
-      API_ENDPOINTS.products.byId(productId),
-      dataToSend
-    );
+    const response = await apiClient.put(API_ENDPOINTS.products.byId(productId), dataToSend);
     return response.data;
   } catch (error) {
     const errorMessage =
@@ -87,37 +80,10 @@ export const updateProduct = async (productId, updateData) => {
 export const archiveProduct = async (productId) => {
   try {
     // Use the standardized 'byId' endpoint for DELETE requests
-    const response = await apiClient.delete(
-      API_ENDPOINTS.products.byId(productId)
-    );
+    const response = await apiClient.delete(API_ENDPOINTS.products.byId(productId));
     return response.data;
   } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || "Failed to archive product";
-    throw new Error(errorMessage);
-  }
-};
-
-/**
- * Restore an archived product (Protected endpoint)
- *
- * @param {string} productId - Product ID to restore
- * @returns {Promise<object>} Updated product object
- */
-export const restoreProduct = async (productId) => {
-  try {
-    // Restore is just an update setting isArchived to false
-    const restoredProduct = await updateProduct(productId, {
-      isArchived: false,
-      status: "active", // Also reset status to active
-    });
-    return restoredProduct;
-  } catch (error) {
-    const errorMessage =
-      error.response?.data?.message ||
-      error.response?.data?.errors?.[0]?.msg ||
-      error.message ||
-      "Failed to restore product";
+    const errorMessage = error.response?.data?.message || "Failed to archive product";
     throw new Error(errorMessage);
   }
 };
@@ -134,17 +100,12 @@ export const uploadProductImage = async (productId, file) => {
     const formData = new FormData();
     formData.append("productImage", file);
 
-    const response = await apiClient.post(
-      API_ENDPOINTS.products.uploadImage(productId),
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
+    const response = await apiClient.post(API_ENDPOINTS.products.uploadImage(productId), formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return response.data; // { message, imageUrl }
   } catch (error) {
-    const errorMessage =
-      error.response?.data?.message || "Failed to upload image";
+    const errorMessage = error.response?.data?.message || "Failed to upload image";
     throw new Error(errorMessage);
   }
 };
