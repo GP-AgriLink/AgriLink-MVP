@@ -1,10 +1,11 @@
 import { validationResult } from "express-validator";
 import Product from "../models/Product.js";
+import Farm from "../models/Farm.js";
 
 /**
  * @desc    Create a new product
  * @route   POST /api/products
- * @access  Private
+ * @access  Private (Farmer only)
  */
 const createProduct = async (req, res) => {
   const errors = validationResult(req);
@@ -13,14 +14,23 @@ const createProduct = async (req, res) => {
   }
 
   try {
-    const { name, price, unit, stock } = req.body;
-    req.body;
+    // Find the Farm ID associated with the logged-in user
+    const farm = await Farm.findOne({ user: req.user._id });
+    if (!farm) {
+      return res
+        .status(404)
+        .json({ message: "Farm profile not found for this user." });
+    }
+
+    const { name, price, unit, stock,categories } = req.body;
+
     const newProduct = new Product({
       name,
       price,
       unit,
       stock,
-      farmer: req.farmer._id, // This ID comes from the 'protect' middleware!
+      categories,
+      farmer: farm._id, // Use the Farm's ID, not the User's ID
     });
 
     const product = await newProduct.save();
@@ -32,40 +42,84 @@ const createProduct = async (req, res) => {
 };
 
 /**
- * @desc    Get all products for the logged-in farmer (including archived)
+ * @desc    Get all products for the logged-in farmer (paginated)
  * @route   GET /api/products/myproducts
  * @access  Private
  */
 const getMyProducts = async (req, res) => {
-  try {
-    // This query intentionally fetches ALL products, including archived ones,
-    // so the farmer can see and potentially restore them from their dashboard.
-    const products = await Product.find({ farmer: req.farmer._id });
-    res.json(products);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
+    try {
+        const limit = Number(req.query.limit) || 10; // Default 10 per page
+        const page = Number(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
+        const farm = await Farm.findOne({ user: req.user._id });
+        if (!farm) {
+            return res.status(404).json({ message: 'Farm profile not found.' });
+        }
+
+        // Base query
+        const query = { farmer: farm._id };
+        if (req.query.category) {
+            query.categories = { $in: [req.query.category] };
+        }
+
+        // Get total count
+        const total = await Product.countDocuments(query);
+        // Get paginated data
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: products,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
 };
 
 /**
- * @desc    Get all active, non-archived products for a specific farm
+ * @desc    Get all active, non-archived products for a specific farm (paginated)
  * @route   GET /api/products/farm/:farmId
  * @access  Public
  */
 const getProductsByFarm = async (req, res) => {
-  try {
-    // Find products by the farm ID in the URL, and only show 'active' ones
-    const products = await Product.find({
-      farmer: req.params.farmId,
-      status: "active",
-      isArchived: false, // Only show products that are not archived
-    });
-    res.json(products);
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
+    try {
+        const limit = Number(req.query.limit) || 10;
+        const page = Number(req.query.page) || 1;
+        const skip = (page - 1) * limit;
+
+        const query = {
+            farmer: req.params.farmId,
+            status: 'active',
+            isArchived: false
+        };
+
+        if (req.query.category) {
+            query.categories = { $in: [req.query.category] };
+        }
+
+        const total = await Product.countDocuments(query);
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(limit);
+
+        res.json({
+            data: products,
+            page,
+            pages: Math.ceil(total / limit),
+            total,
+        });
+        
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
 };
 
 /**
@@ -81,8 +135,11 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // --- CRITICAL: Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
+    // Find the user's farm to check for ownership
+    const farm = await Farm.findOne({ user: req.user._id });
+
+    // CRITICAL: Ownership Check
+    if (product.farmer.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 
@@ -96,6 +153,7 @@ const updateProduct = async (req, res) => {
       status,
       stock,
       isArchived,
+      categories
     } = req.body;
     if (name) product.name = name;
     if (description) product.description = description;
@@ -105,6 +163,7 @@ const updateProduct = async (req, res) => {
     if (status) product.status = status;
     if (stock !== undefined) product.stock = stock;
     if (isArchived !== undefined) product.isArchived = isArchived;
+    if (categories) product.categories = categories;
 
     product = await product.save();
     res.json(product);
@@ -127,8 +186,11 @@ const archiveProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // --- CRITICAL: Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
+    // Find the user's farm to check for ownership
+    const farm = await Farm.findOne({ user: req.user._id });
+
+    // CRITICAL: Ownership Check
+    if (product.farmer.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 
@@ -145,40 +207,24 @@ const archiveProduct = async (req, res) => {
 };
 
 /**
- * @desc    Upload an image for a product
- * @route   POST /api/products/:id/upload-image
- * @access  Private
+ * @desc    Get a list of all unique product categories
+ * @route   GET /api/products/categories
+ * @access  Public
  */
-const uploadProductImage = async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+const getAllCategories = async (req, res) => {
+    try {
+        // 'distinct' scans the 'categories' field across all products
+        // and returns an array of unique values.
+        const categories = await Product.find().distinct('categories');
+        res.json(categories);
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
     }
-
-    // --- Ownership Check ---
-    if (product.farmer.toString() !== req.farmer._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    if (!req.file || !req.file.base64) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
-
-    // Store base64 string directly in the database
-    product.imageUrl = req.file.base64;
-    await product.save();
-
-    res.json({
-      message: "Image uploaded successfully",
-      imageUrl: product.imageUrl,
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
-  }
 };
+
+
+
 
 export {
   createProduct,
@@ -186,5 +232,5 @@ export {
   getProductsByFarm,
   updateProduct,
   archiveProduct,
-  uploadProductImage, // Add new export
+  getAllCategories
 };

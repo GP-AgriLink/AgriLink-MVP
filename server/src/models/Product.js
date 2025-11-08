@@ -36,6 +36,12 @@ const productSchema = new Schema(
       default: "active",
     },
 
+    categories: {
+        type: [String], 
+        required: false,
+        index: true // Add an index for faster searching
+    },
+
     // --- Inventory Management ---
     stock: {
       type: Number,
