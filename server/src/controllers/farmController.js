@@ -136,7 +136,7 @@ const getFarmById = async (req, res) => {
  */
 const getNearbyFarms = async (req, res) => {
     const { longitude, latitude, distance } = req.query;
-    const maxDistance = distance || 10000;
+    const maxDistance = distance || 10000; // 10km default
 
     if (!longitude || !latitude) {
         return res.status(400).json({ message: 'Please provide longitude and latitude' });
@@ -146,37 +146,57 @@ const getNearbyFarms = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
 
-    const query = {
-        location: {
-            $nearSphere: {
-                $geometry: {
-                    type: 'Point',
-                    coordinates: [parseFloat(longitude), parseFloat(latitude)]
-                },
-                $maxDistance: parseInt(maxDistance)
-            }
-        }
-    };
-
     try {
-        // Note: .countDocuments() for $nearSphere is tricky.
-        // A simpler way for pagination with geo queries is to fetch all results
-        // and paginate in the application layer if performance allows.
-        // For pure Mongoose pagination with geo queries, a more complex aggregation pipeline is needed.
-        // For now, let's just paginate the results normally.
-        
-        const total = await Farm.countDocuments(query);
-        const farms = await Farm.find(query)
-            .select('farmName specialties location')
-            .skip(skip)
-            .limit(limit);
+        // We must use an aggregation pipeline for $geoNear
+        const results = await Farm.aggregate([
+            {
+                // $geoNear MUST be the first stage.
+                // It finds documents and sorts them by distance automatically.
+                $geoNear: {
+                    near: {
+                        type: 'Point',
+                        coordinates: [parseFloat(longitude), parseFloat(latitude)]
+                    },
+                    distanceField: 'distance', // This adds a 'distance' field to each document
+                    maxDistance: parseInt(maxDistance),
+                    spherical: true, // Use spherical geometry (like $nearSphere)
+                }
+            },
+            {
+                // Select only the fields we want to return
+                $project: {
+                    farmName: 1,
+                    specialties: 1,
+                    location: 1,
+                    distance: 1 // We can also return the calculated distance
+                }
+            },
+            {
+                // $facet allows us to run two pipelines at once:
+                // one for the paginated data and one for the total count.
+                $facet: {
+                    data: [
+                        { $skip: skip },
+                        { $limit: limit }
+                    ],
+                    pagination: [
+                        { $count: 'total' }
+                    ]
+                }
+            }
+        ]);
+
+        const data = results[0].data;
+        // Get the total, or 0 if no results were found
+        const total = results[0].pagination[0] ? results[0].pagination[0].total : 0; 
 
         res.json({
-            data: farms,
+            data: data,
             page,
             pages: Math.ceil(total / limit),
             total,
         });
+
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');

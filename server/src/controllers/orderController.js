@@ -41,7 +41,7 @@ const createOrder = async (req, res) => {
     }, 0);
 
     const newOrder = new Order({
-      farmer: farmId, // This is the Farm's ID
+      farm: farmId, // This is the Farm's ID
       user: userId, // This is the Customer's ID
       orderItems,
       totalAmount,
@@ -75,9 +75,8 @@ const getMyOrders = async (req, res) => {
             if (!farm) {
                 return res.status(404).json({ message: 'Farm profile not found.' });
             }
-            query = { farmer: farm._id };
+            query = { farm: farm._id };
         }
-
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
             .sort({ createdAt: -1 }) // Keep the sort
@@ -107,19 +106,33 @@ const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     const newStatus = req.body.status;
 
+    // Check if the order exists
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // --- Ownership Check ---
+    // Check if the order is properly linked to a farm
+    if (!order.farm) {
+      return res.status(500).json({ message: "Order is not linked to a farm (Data Error)" });
+    }
+
+    // Find the farm profile for the logged-in farmer
     const farm = await Farm.findOne({ user: req.user._id });
-    if (order.farmer.toString() !== farm._id.toString()) {
+
+    // Check if the farmer has a farm profile
+    if (!farm) {
+      return res.status(404).json({ message: "Farmer profile not found" });
+    }
+
+    // --- CRITICAL: Ownership Check (The Fix) ---
+    // Compare the order's 'farm' field with the logged-in farmer's farm ID
+    if (order.farm.toString() !== farm._id.toString()) {
       return res
         .status(401)
         .json({ message: "Not authorized to update this order" });
     }
 
-    // --- NEW: State Machine Logic ---
+    // --- State Machine Logic ---
     const currentStatus = order.status;
 
     // Check for final states
@@ -144,16 +157,17 @@ const updateOrderStatus = async (req, res) => {
       "Completed",
       "Cancelled",
     ];
-    if (!validStatuses.includes(newStatus)) {
+    if (!newStatus || !validStatuses.includes(newStatus)) {
       return res
         .status(400)
-        .json({ message: `"${newStatus}" is not a valid status.` });
+        .json({ message: `"${newStatus}" is not a valid or provided status.` });
     }
 
     // All checks passed, update the status.
     order.status = newStatus;
     const updatedOrder = await order.save();
     res.json(updatedOrder);
+
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");

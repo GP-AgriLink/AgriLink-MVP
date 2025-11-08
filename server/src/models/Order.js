@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 const { Schema } = mongoose;
 
 const orderSchema = new Schema({
-    farmer: { // Now links to the Farm
+    farm: { // Now links to the Farm
         type: Schema.Types.ObjectId,
         ref: 'Farm',
         required: true

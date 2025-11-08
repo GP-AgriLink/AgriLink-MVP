@@ -15,7 +15,7 @@ const farmSchema = new mongoose.Schema({
     avatarUrl: { type: String }, // Can be separate from user avatar
     specialties: [String],
     location: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
+        type: { type: String, enum: ['Point'] },
         coordinates: { type: [Number] } // [longitude, latitude]
     }
 }, {
