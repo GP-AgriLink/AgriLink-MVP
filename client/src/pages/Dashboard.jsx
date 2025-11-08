@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import OrdersPage from "./OrdersPage";
-import MyProductsPage from "./FarmProductsPage";
 import ProfilePage from "./ProfilePage";
 import AddProduct from "../components/FarmProduct/AddProduct";
 import EditProduct from "../components/FarmProduct/EditProduct";
-import { createProduct, updateProduct } from "../services/farmProductApi";
+import { createProduct, updateProduct, uploadProductImage } from "../services/farmProductApi";
+import { useProducts } from "../context/ProductsContext";
+import DashboardProductsView from "../components/Dashboard/DashboardProductsView";
 import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
+import { toast } from "react-toastify";
+
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,6 +38,19 @@ const Dashboard = () => {
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
+  const handleFilterChange = (filter) => {
+    setActiveView("products");
+    setOpenAccordion("products");
+    setActiveFilter(filter);
+  };
+
+  const { refreshProducts, setLoading } = useProducts();
+
+  useEffect(() => {
+    if (activeView === "products" && !activeFilter) {
+      setActiveFilter("active");
+    }
+  }, [activeView, activeFilter]);
 
   useEffect(() => {
     if (location.state?.activeView && location.state.activeView !== lastNavStateRef.current) {
@@ -95,11 +111,9 @@ const Dashboard = () => {
     }
   }, [activeView, openAccordion, activeFilter]);
 
-  // Effect to disable navbar sticky behavior when sidebar is open on mobile
   useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = "hidden";
-      // Add class to body to indicate sidebar is open
       document.body.classList.add("sidebar-open");
     } else {
       document.body.style.overflow = "";
@@ -122,32 +136,46 @@ const Dashboard = () => {
   };
 
   const handleAddProductSubmit = async (productData) => {
+    setLoading(true);
     try {
       await createProduct(productData);
+      toast.success("Product created successfully!");
       setIsAddProductOpen(false);
-      if (window.refreshProducts) {
-        window.refreshProducts();
-      }
+      refreshProducts();
     } catch (error) {
       console.error("Failed to create product:", error);
+      toast.error(error.message || "Failed to create product");
+      setLoading(false);
       throw error;
     }
   };
 
-  const handleEditProductSubmit = async (productData) => {
+  const handleEditProductSubmit = async (productData, imageFile) => {
+    setLoading(true);
     try {
       if (!productToEdit?._id && !productToEdit?.id) {
         throw new Error("Product ID is missing");
       }
       const productId = productToEdit._id || productToEdit.id;
-      await updateProduct(productId, productData);
+
+      let finalProductData = { ...productData };
+
+      if (imageFile) {
+        toast.info("Uploading new image...");
+        const uploadResponse = await uploadProductImage(productId, imageFile);
+        finalProductData.imageUrl = uploadResponse.imageUrl;
+      }
+
+      await updateProduct(productId, finalProductData);
+
+      toast.success("Product updated successfully!");
       setIsEditProductOpen(false);
       setProductToEdit(null);
-      if (window.refreshProducts) {
-        window.refreshProducts();
-      }
+      refreshProducts();
     } catch (error) {
       console.error("Failed to update product:", error);
+      toast.error(error.message || "Failed to update product");
+      setLoading(false);
       throw error;
     }
   };
@@ -162,13 +190,12 @@ const Dashboard = () => {
         );
       case "products":
         return (
-          <div className="min-h-[400px] py-12 text-center">
-            <MyProductsPage
-              onEdit={handleEditProduct}
-              onAddNew={handleAddProduct}
-              activeFilter={activeFilter || "active"}
-            />
-          </div>
+          <DashboardProductsView
+            onEdit={handleEditProduct}
+            onAddNew={handleAddProduct}
+            activeFilter={activeFilter || "active"}
+            onFilterChange={handleFilterChange}
+          />
         );
       case "profile":
         return (

@@ -1,102 +1,65 @@
-import { useState, useEffect } from "react";
+import { useProducts } from "../context/ProductsContext";
 import ProductList from "../components/FarmProduct/ProductList";
-import {
-  getMyProducts,
-  archiveProduct,
-  restoreProduct,
-} from "../services/farmProductApi";
+import { archiveProduct, updateProduct } from "../services/farmProductApi";
+import { toast } from "react-toastify";
 
 /**
  * MyProductsPage
  * Product inventory management interface for farmers
- * Handles fetching, archiving, and restoring products
  * @param {Function} onEdit - Handler for product edit action
  * @param {Function} onAddNew - Handler for new product creation
+ * @param {string} activeFilter - The currently selected filter
+ * @param {Function} onFilterChange - Handler to change the filter
  */
-const MyProductsPage = ({ onEdit, onAddNew }) => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const MyProductsPage = ({ onEdit, onAddNew, activeFilter, onFilterChange }) => {
+  const { products, loading, error, refreshProducts, setLoading } = useProducts();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  useEffect(() => {
-    window.refreshProducts = fetchProducts;
-    return () => {
-      delete window.refreshProducts;
-    };
-  }, []);
-
-  const fetchProducts = async () => {
+  const handleArchiveProduct = async (productId) => {
     setLoading(true);
-    setError(null);
     try {
-      const data = await getMyProducts();
-      // Handle different response formats
-      const productsArray = Array.isArray(data)
-        ? data
-        : Array.isArray(data.products)
-          ? data.products
-          : [];
-      setProducts(productsArray);
+      await archiveProduct(productId);
+      toast.success("Product archived.");
+      refreshProducts();
     } catch (err) {
-      console.error("Error fetching products:", err);
-      setError(err.message || "Failed to load products");
-    } finally {
+      console.error("Error archiving product:", err);
+      toast.error("Failed to archive product. Please try again.");
       setLoading(false);
     }
   };
 
-  const handleArchiveProduct = async (productId) => {
-    try {
-      await archiveProduct(productId);
-      // Optimistically update UI
-      setProducts((prev) =>
-        prev.map((p) =>
-          (p._id || p.id) === productId
-            ? { ...p, isArchived: true }
-            : p
-        )
-      );
-    } catch (err) {
-      console.error("Error archiving product:", err);
-      alert("Failed to archive product. Please try again.");
-    }
-  };
-
   const handleRestoreProduct = async (productId) => {
+    setLoading(true);
+    const productToRestore = products.find((p) => (p._id || p.id) === productId);
+    if (!productToRestore) {
+      toast.error("Error: Product not found.");
+      setLoading(false);
+      return;
+    }
+
+    const stock = productToRestore.stock || 0;
+    const updateData = {
+      isArchived: false,
+      status: stock > 0 ? "active" : "inactive",
+    };
+
     try {
-      const restoredProduct = await restoreProduct(productId);
-      // Update with response data from server
-      setProducts((prev) =>
-        prev.map(p => (p._id || p.id) === productId ? restoredProduct : p)
-      );
+      await updateProduct(productId, updateData);
+      toast.success("Product restored.");
+      refreshProducts();
     } catch (err) {
       const errorMessage = err.message || "Failed to restore product. Please try again.";
-      alert(errorMessage);
+      toast.error(errorMessage);
+      setLoading(false);
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
-          <p className="text-gray-600 text-lg font-medium">Loading products...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center bg-red-50 p-8 rounded-xl border border-red-200 max-w-md">
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="max-w-md rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-16 w-16 text-red-500 mx-auto mb-4"
+            className="mx-auto mb-4 h-16 w-16 text-red-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -108,11 +71,11 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-red-700 font-semibold mb-2">Error Loading Products</p>
-          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <p className="mb-2 font-semibold text-red-700">Error Loading Products</p>
+          <p className="mb-4 text-sm text-red-600">{error}</p>
           <button
-            onClick={fetchProducts}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+            onClick={refreshProducts}
+            className="rounded-lg bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
           >
             Try Again
           </button>
@@ -122,14 +85,16 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
   }
 
   return (
-    <div className="min-h-screen px-4 sm:px-8 md:px-12 lg:px-20 xl:px-16 2xl:px-8 3xl:px-8 py-2">
-      <div className="max-w-[1600px] mx-auto">
+    <div className="px-4 py-2 sm:px-8 md:px-12 lg:px-16 2xl:px-8 3xl:px-8">
+      <div className="mx-auto max-w-[1600px]">
         <ProductList
           products={products}
+          activeFilter={activeFilter}
           onEdit={onEdit}
           onArchive={handleArchiveProduct}
           onRestore={handleRestoreProduct}
           onAddNew={onAddNew}
+          onFilterChange={onFilterChange}
         />
       </div>
     </div>

@@ -1,160 +1,106 @@
 import { useMemo } from "react";
-import ProductTable from "./ProductTable";
+import ProductListHeader from "./ProductListHeader";
+// import ProductStats from "./ProductStats";
+import FilteredProductList from "./FilteredProductList";
 import EmptyState from "./EmptyState";
 
 /**
  * ProductList
  * Displays product inventory split into active and archived sections
  * @param {Array} products - Complete list of products
+ * @param {string} activeFilter - The currently selected filter ("active", "inactive", "archived")
  * @param {Function} onEdit - Handler for product edit action
  * @param {Function} onArchive - Handler to archive a product
  * @param {Function} onRestore - Handler to restore an archived product
  * @param {Function} onAddNew - Handler to create new product
+ * @param {Function} onFilterChange - Handler to change the active filter
  */
 const ProductList = ({
   products,
+  activeFilter,
   onEdit,
   onArchive,
   onRestore,
-  onAddNew
+  onAddNew,
+  onFilterChange,
 }) => {
-  const activeProducts = useMemo(() => {
-    return products.filter(p => !p.isArchived && p.status !== 'inactive');
+  // Memoize all product filter lists
+  const { activeProducts, inactiveProducts, archivedProducts } = useMemo(() => {
+    const active = [];
+    const inactive = [];
+    const archived = [];
+
+    products.forEach((p) => {
+      if (p.isArchived) {
+        archived.push(p);
+      } else if (p.status === "inactive" || p.stock === 0) {
+        inactive.push(p);
+      } else {
+        active.push(p);
+      }
+    });
+
+    return { activeProducts: active, inactiveProducts: inactive, archivedProducts: archived };
   }, [products]);
 
-  const archivedProducts = useMemo(() => {
-    return products.filter(p => p.isArchived);
-  }, [products]);
+  // Handler for stat block clicks
+  const handleStatClick = (filter) => {
+    onFilterChange(filter);
+  };
 
-  const inactiveProducts = useMemo(() => {
-    return products.filter(p => !p.isArchived && p.status === 'inactive');
-  }, [products]);
-
-  const activeCount = activeProducts.length;
-  const archivedCount = archivedProducts.length;
-  const inactiveCount = inactiveProducts.length;
-  const outOfStockCount = activeProducts.filter(
-    p => p.stock === 0 || p.status === "out-of-stock"
-  ).length;
+  // If there are no products at all, show the main empty state
+  if (products.length === 0) {
+    return (
+      <section className="space-y-8">
+        <ProductListHeader onAddNew={onAddNew} />
+        <EmptyState onAddNew={onAddNew} />
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-8">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
-            My Products
-          </h2>
-          <div className="flex gap-2">
-            {activeCount > 0 && (
-              <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
-                {activeCount} Active
-              </span>
-            )}
-            {inactiveCount > 0 && (
-              <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
-                {inactiveCount} Inactive
-              </span>
-            )}
-            {outOfStockCount > 0 && (
-              <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full text-sm font-medium">
-                {outOfStockCount} Out of Stock
-              </span>
-            )}
-          </div>
-        </div>
+      <ProductListHeader onAddNew={onAddNew} />
 
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={onAddNew}
-            className="px-4 py-2 bg-emerald-600 text-white rounded-md font-medium hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm text-sm"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Add New Product
-          </button>
-        </div>
-      </div>
+      {/* Statistics Section - Now passes activeFilter */}
+      {/* <ProductStats products={products} activeFilter={activeFilter} onStatClick={handleStatClick} /> */}
 
-      {/* Active Products Table or Empty State */}
-      {activeProducts.length > 0 ? (
-        <ProductTable
+      {/* Active Products List - Default */}
+      {(activeFilter === "active" || !activeFilter) && (
+        <FilteredProductList
           products={activeProducts}
-          isArchived={false}
           onEdit={onEdit}
           onArchive={onArchive}
           onRestore={onRestore}
+          emptyTitle="No Active Products"
+          emptyMessage="You have no active products. Try adding a new product or restoring an archived one."
         />
-      ) : (
-        <EmptyState onAddNew={onAddNew} />
       )}
 
-      {/* Archived Products Section */}
-      {archivedProducts.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Archived Products
-            </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="bg-gray-100 text-gray-700 px-4 py-1 rounded-full text-sm font-medium">
-                {archivedCount} Archived
-              </span>
-            </div>
-          </div>
-
-          <p className="text-gray-500 text-left text-sm">
-            Products that have been archived can be restored at any time.
-          </p>
-
-          <ProductTable
-            products={archivedProducts}
-            isArchived={true}
-            onEdit={onEdit}
-            onArchive={onArchive}
-            onRestore={onRestore}
-          />
-        </section>
+      {/* Inactive Products List */}
+      {activeFilter === "inactive" && (
+        <FilteredProductList
+          products={inactiveProducts}
+          onEdit={onEdit}
+          onArchive={onArchive}
+          onRestore={onRestore}
+          emptyTitle="No Inactive Products"
+          emptyMessage="These are products that are out of stock or manually set to 'inactive'."
+        />
       )}
 
-      {/* Inactive Products Section */}
-      {inactiveProducts.length > 0 && (
-        <section className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Inactive Products
-            </h2>
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="bg-gray-100 text-gray-700 px-4 py-1 rounded-full text-sm font-medium">
-                {inactiveCount} Inactive
-              </span>
-            </div>
-          </div>
-
-          <p className="text-gray-500 text-left text-sm">
-            Products marked as inactive are hidden from customers but can be reactivated.
-          </p>
-
-          <ProductTable
-            products={inactiveProducts}
-            isArchived={false}
-            onEdit={onEdit}
-            onArchive={onArchive}
-            onRestore={onRestore}
-          />
-        </section>
+      {/* Archived Products List */}
+      {activeFilter === "archived" && (
+        <FilteredProductList
+          products={archivedProducts}
+          isArchived={true}
+          onEdit={onEdit}
+          onArchive={onArchive}
+          onRestore={onRestore}
+          emptyTitle="No Archived Products"
+          emptyMessage="Products you archive will appear here. You can restore them at any time."
+        />
       )}
     </section>
   );
