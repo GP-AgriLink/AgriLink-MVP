@@ -1,24 +1,25 @@
 import { Routes, Route, Link, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+// import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import MainLayout from "./components/Layout/MainLayout";
-import { ProductsProvider } from "./context/ProductsContext";
-import FarmerSignup from "./pages/FarmRegister";
-import FarmerLogin from "./pages/FarmLogin";
-import EditProfile from "./pages/EditProfile";
-import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
-import FarmStorePage from "./pages/FarmStorePage";
-import CartPage from "./pages/CartPage";
-import DiscoverPage from "./pages/DiscoverPage";
+// import { ProductsProvider } from "./context/ProductsContext";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+// import EditProfile from "./pages/EditProfile";
+// import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
+// import ResetPasswordPage from "./pages/ResetPasswordPage";
+// import NotFound from "./pages/NotFound";
+// import Dashboard from "./pages/Dashboard";
+// import FarmStorePage from "./pages/FarmStorePage";
+// import CartPage from "./pages/CartPage";
+// import DiscoverPage from "./pages/DiscoverPage";
 
 function App() {
   return (
     <AuthProvider>
       <MainLayout>
         <Routes>
+          {/* --- ACTIVE ROUTES --- */}
           <Route
             path="/"
             element={
@@ -54,12 +55,20 @@ function App() {
               </div>
             }
           />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
 
+          {/* ---------------------- */}
+
+          {/* --- COMMENTED OUT ROUTES --- */}
+          {/*
           <Route
             path="/about"
             element={
               <div className="container mx-auto px-6 py-12">
-                <h1 className="text-4xl font-bold text-gray-900">About Page</h1>
+                <h1 className="text-4xl font-bold text-gray-900">
+                  About Page
+                </h1>
               </div>
             }
           />
@@ -67,24 +76,25 @@ function App() {
             path="/contact"
             element={
               <div className="container mx-auto px-6 py-12">
-                <h1 className="text-4xl font-bold text-gray-900">Contact Page</h1>
+                <h1 className="text-4xl font-bold text-gray-900">
+                  Contact Page
+                </h1>
               </div>
             }
           />
           <Route path="/discover" element={<DiscoverPage />} />
 
-          <Route path="/login" element={<FarmerLogin />} />
-          <Route path="/register" element={<FarmerSignup />} />
           <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
-          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          <Route
+            path="/reset-password/:token"
+            element={<ResetPasswordPage />}
+          />
 
           <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
                 <ProductsProvider>
-                  {" "}
-                  {/* Wrap Dashboard */}
                   <Dashboard />
                 </ProductsProvider>
               </ProtectedRoute>
@@ -96,8 +106,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <ProductsProvider>
-                  {" "}
-                  {/* Wrap EditProfile */}
                   <EditProfile />
                 </ProductsProvider>
               </ProtectedRoute>
@@ -108,6 +116,8 @@ function App() {
           <Route path="/farm/:id" element={<FarmStorePage />} />
 
           <Route path="*" element={<NotFound />} />
+          */}
+          {/* --------------------------- */}
         </Routes>
       </MainLayout>
     </AuthProvider>
