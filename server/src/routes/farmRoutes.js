@@ -1,25 +1,43 @@
-import express from "express";
+import express from 'express';
 import {
-  getAllFarms,
-  getFarmById,
-  getNearbyFarms,
-} from "../controllers/farmController.js";
+    getMyFarmProfile,
+    updateMyFarmProfile,
+    getAllFarms,
+    getFarmById,
+    getNearbyFarms
+} from '../controllers/farmController.js';
+import { protect, isFarmer } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
+
+// --- Farmer Private Routes ---
+
+// @route   GET /api/farms/myfarm
+// @desc    Get the logged-in farmer's own farm profile
+// @access  Private (Farmer only)
+router.get('/myfarm', protect, isFarmer, getMyFarmProfile);
+
+// @route   PUT /api/farms/myfarm
+// @desc    Create or update the logged-in farmer's farm profile
+// @access  Private (Farmer only)
+router.put('/myfarm', protect, isFarmer, updateMyFarmProfile);
+
+
+// --- Public Routes ---
 
 // @route   GET /api/farms/nearby
 // @desc    Get farms within a certain radius
 // @access  Public
-// 2. Add the new route here
-router.get("/nearby", getNearbyFarms);
+router.get('/nearby', getNearbyFarms);
 
 // @route   GET /api/farms
-// @desc    Get a list of all farms for the homepage map
+// @desc    Get all farms for the homepage map
 // @access  Public
-router.get("/", getAllFarms);
+router.get('/', getAllFarms);
 
 // @route   GET /api/farms/:id
 // @desc    Get the public profile of a single farm
 // @access  Public
-router.get("/:id", getFarmById);
+router.get('/:id', getFarmById);
 
 export default router;

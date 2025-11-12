@@ -9,11 +9,13 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./src/config/db.js";
-import farmerRoutes from "./src/routes/farmerRoutes.js";
+import userRoutes from './src/routes/userRoutes.js';
 import productRoutes from "./src/routes/productRoutes.js";
 import farmRoutes from "./src/routes/farmRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
 import { notFound, errorHandler } from "./src/middleware/errorMiddleware.js";
+import uploadRoutes from './src/routes/uploadRoutes.js';
+import cartRoutes from './src/routes/cartRoutes.js';
 import cors from "cors";
 
 // --- Configuration ---
@@ -63,11 +65,13 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- API Routes ---
-app.use("/api/farmers", farmerRoutes);
+app.use('/api/users', userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/farms", farmRoutes);
 app.use("/api/orders", orderRoutes);
 
+app.use('/api/uploads', uploadRoutes);
+app.use('/api/cart', cartRoutes);
 // --- Error Handling Middleware ---
 // Custom middleware to handle 404 Not Found errors.
 app.use(notFound);

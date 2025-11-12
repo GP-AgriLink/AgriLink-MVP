@@ -3,12 +3,12 @@
  * @description Middleware to protect routes by verifying a JWT.
  */
 import jwt from "jsonwebtoken";
-import Farmer from "../models/Farmer.js";
+import User from "../models/User.js"; // Import User, not Farmer
 
 /**
  * Middleware function that checks for a valid JWT in the Authorization header.
- * If valid, it decodes the payload, finds the associated farmer, and attaches
- * the farmer object to the request (`req.farmer`) for use in subsequent controllers.
+ * If valid, it decodes the payload, finds the associated user, and attaches
+ * the user object to the request (`req.user`) for use in subsequent controllers.
  */
 const protect = async (req, res, next) => {
   let token;
@@ -25,12 +25,18 @@ const protect = async (req, res, next) => {
       // Verify the token's signature and expiration.
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Find the farmer by the ID from the token's payload.
+       // Find the user by the ID from the token's payload.
       // .select('-password') prevents the hashed password from being returned.
-      req.farmer = await Farmer.findById(decoded.id).select("-password");
+      req.user = await User.findById(decoded.id).select("-password");
+
+      if (!req.user) {
+        return res
+          .status(401)
+          .json({ message: "Not authorized, user not found" });
+      }
 
       // Proceed to the next middleware or the route's controller.
-      return next();
+      next();
     } catch (error) {
       return res.status(401).json({ message: "Not authorized, token failed" });
     }
@@ -42,4 +48,19 @@ const protect = async (req, res, next) => {
   }
 };
 
-export { protect };
+/**
+ * @desc    Authorize specific roles
+ */
+const isFarmer = (req, res, next) => {
+  if (req.user && req.user.role === "farmer") {
+    next();
+  } else {
+    res.status(403); // Forbidden
+    return res
+      .status(403)
+      .json({ message: "Access denied. Farmer role required." });
+  }
+};
+
+export { protect, isFarmer };
+

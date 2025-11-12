@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext"; // Import useCart for instant updates
 import Logo from "../common/Logo";
-import avatarPlaceholder from "../../assets/avatar-placeholder.svg";
+import avatarPlaceholder from "/avatar-placeholder.svg";
 
 const ORDER_COUNT_REFRESH_INTERVAL = 600000; // 10 minutes
 
