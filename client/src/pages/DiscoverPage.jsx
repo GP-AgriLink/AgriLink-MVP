@@ -193,7 +193,7 @@ const DiscoverPage = () => {
             center={initialCenter}
             zoom={13}
             scrollWheelZoom={true}
-            className="w-full h-full rounded-2xl"
+            className="w-full h-full rounded-2xl z-0"
             whenCreated={(mapInstance) => (mapRef.current = mapInstance)}
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
