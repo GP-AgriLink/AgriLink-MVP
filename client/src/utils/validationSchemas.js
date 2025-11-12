@@ -4,9 +4,16 @@
  * * Import: import { loginValidationSchema } from '../utils/validationSchemas';
  */
 
-import * as Yup from 'yup';
-import { sanitizeEmail, sanitizeName, sanitizeFarmName, sanitizePhone, sanitizeString, sanitizeTextArea } from './sanitizers';
-import { validateEgyptianPhone } from './validators';
+import * as Yup from "yup";
+import {
+  sanitizeEmail,
+  sanitizeName,
+  sanitizeFarmName,
+  sanitizePhone,
+  sanitizeString,
+  sanitizeTextArea,
+} from "./sanitizers";
+import { validateEgyptianPhone } from "./validators";
 
 // --- Reusable Regex and Messages ---
 // UPDATED: Added Arabic character range \u0621-\u064A
@@ -15,13 +22,20 @@ const nameInvalidCharsMessage = "Name can only contain letters, spaces, hyphens,
 
 // Farm name regex: letters, spaces, hyphens, periods, underscores allowed
 const farmNameRegex = /^[a-zA-Z\u0621-\u064A\s'\-._ ]+$/;
-const farmNameInvalidCharsMessage = "Farm name can only contain letters, spaces, hyphens, periods, underscores";
+const farmNameInvalidCharsMessage =
+  "Farm name can only contain letters, spaces, hyphens, periods, underscores";
 
 // Email validation
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const trustedEmailDomains = [
-  'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 
-  'icloud.com', 'zoho.com', 'yandex.com', 'live.com'
+  "gmail.com",
+  "yahoo.com",
+  "outlook.com",
+  "hotmail.com",
+  "icloud.com",
+  "zoho.com",
+  "yandex.com",
+  "live.com",
 ];
 
 // Optional version for profile fields
@@ -45,43 +59,57 @@ export const loginValidationSchema = Yup.object({
 /**
  * Registration validation schema
  */
-export const registrationValidationSchema = Yup.object({
-  farmName: Yup.string()
-    .matches(farmNameRegex, farmNameInvalidCharsMessage)
-    .min(3, "Farm name must be at least 3 characters")
-    .max(100, "Farm name exceeds maximum length")
-    .required("Farm name is required"),
+export const registrationValidationSchema = (role) =>
+  Yup.object({
+    farmName: Yup.string().when([], {
+      is: () => role === "farmer",
+      then: (schema) =>
+        schema
+          .matches(farmNameRegex, farmNameInvalidCharsMessage)
+          .min(3, "Farm name must be at least 3 characters")
+          .max(100, "Farm name exceeds maximum length")
+          .required("Farm name is required"),
+      otherwise: (schema) => schema.notRequired(),
+    }),
 
-  email: Yup.string()
-    .matches(emailRegex, "Please enter a valid email address")
-    .test('trusted-domain', 'Please use a trusted email provider (Gmail, Yahoo, Outlook, etc.)', function(value) {
-      if (!value) return true;
-      const domain = value.toLowerCase().split('@')[1];
-      return trustedEmailDomains.includes(domain);
-    })
-    .max(255, "Email exceeds maximum length")
-    .required("Email is required"),
+    email: Yup.string()
+      .matches(emailRegex, "Please enter a valid email address")
+      .test(
+        "trusted-domain",
+        "Please use a trusted email provider (Gmail, Yahoo, Outlook, etc.)",
+        function (value) {
+          if (!value) return true;
+          const domain = value.toLowerCase().split("@")[1];
+          return trustedEmailDomains.includes(domain);
+        }
+      )
+      .max(255, "Email exceeds maximum length")
+      .required("Email is required"),
 
-  phoneNumber: Yup.string()
-    .transform(sanitizePhone)
-    .test('is-egyptian-mobile', 'Please enter a valid Egyptian mobile number (e.g., 01012345678, 01221234567)', function (value) {
-      return !value || validateEgyptianPhone(value);
-    })
-    .required("Phone number is required"),
+    phoneNumber: Yup.string()
+      .transform(sanitizePhone)
+      .test(
+        "is-egyptian-mobile",
+        "Please enter a valid Egyptian mobile number (e.g., 01012345678, 01221234567)",
+        function (value) {
+          return !value || validateEgyptianPhone(value);
+        }
+      )
+      .required("Phone number is required"),
 
-  password: Yup.string()
-    .min(6, "Password must be at least 6 characters")
-    .max(128, "Password exceeds maximum length")
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/,
-      "Password must include uppercase, lowercase, number, and special character (@$!%*?&)"
-    )
-    .required("Password is required"),
+    password: Yup.string()
+      .min(6, "Password must be at least 6 characters")
+      .max(128, "Password exceeds maximum length")
+      .matches(
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{6,}$/,
+        "Password must include uppercase, lowercase, number, and special character (@$!%*?&)"
+      )
+      .required("Password is required"),
 
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref("password"), null], "Passwords must match")
-    .required("Please confirm your password"),
-});
+    confirmPassword: Yup.string()
+      .oneOf([Yup.ref("password"), null], "Passwords must match")
+      .required("Please confirm your password"),
+  });
 
 /**
  * Profile validation schema
@@ -103,17 +131,21 @@ export const profileValidationSchema = Yup.object({
     .matches(farmNameRegex, farmNameInvalidCharsMessage)
     .min(3, "Farm name must be at least 3 characters")
     .max(100, "Farm name exceeds maximum length")
-    .required("Farm name is required"), 
-  
+    .required("Farm name is required"),
+
   email: Yup.string()
     .email("Please enter a valid email address")
     .max(255, "Email exceeds maximum length"),
 
   phoneNumber: Yup.string()
     .transform(sanitizePhone)
-    .test('is-egyptian-mobile', 'Please enter a valid Egyptian mobile number (e.g., 01012345678, 01221234567)', function (value) {
-      return !value || validateEgyptianPhone(value);
-    })
+    .test(
+      "is-egyptian-mobile",
+      "Please enter a valid Egyptian mobile number (e.g., 01012345678, 01221234567)",
+      function (value) {
+        return !value || validateEgyptianPhone(value);
+      }
+    )
     .required("Phone number is required"), // Added required check
 
   farmBio: Yup.string()
@@ -132,13 +164,13 @@ export const profileValidationSchema = Yup.object({
       "Password must include uppercase, lowercase, number, and special character (@$!%*?&)"
     ),
 
-  confirmPassword: Yup.string()
-    .when('password', {
-      is: (password) => password && password.length > 0,
-      then: (schema) => schema
+  confirmPassword: Yup.string().when("password", {
+    is: (password) => password && password.length > 0,
+    then: (schema) =>
+      schema
         .oneOf([Yup.ref("password"), null], "Passwords must match")
         .required("Please confirm your password"),
-    }),
+  }),
 });
 
 /**
@@ -157,8 +189,10 @@ export const productValidationSchema = Yup.object({
     .typeError("Price must be a valid number")
     .min(0.01, "Price must be at least $0.01")
     .max(999999.99, "Price exceeds maximum value")
-    .test('decimal-places', 'Price can have at most 2 decimal places',
-      value => !value || /^\d+(\.\d{1,2})?$/.test(value.toString())
+    .test(
+      "decimal-places",
+      "Price can have at most 2 decimal places",
+      (value) => !value || /^\d+(\.\d{1,2})?$/.test(value.toString())
     )
     .required("Price is required"),
 

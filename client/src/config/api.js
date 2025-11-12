@@ -2,40 +2,58 @@ import axios from "axios";
 import { getAuthToken, clearAuthData } from "../services/authService";
 import { sanitizeFormData } from "../utils/sanitizers";
 import { toast } from "react-toastify";
-// Import toast for interceptor errors
 
 // 1. Centralized API Configuration
-export const API_BASE_URL =
-  import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
+export const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
+/**
+ * API Endpoints.
+ * All old /api/farmers routes are deprecated and replaced by /api/users.
+ * Profile management is now split between /api/users/profile and /api/farms/myfarm.
+ */
 export const API_ENDPOINTS = {
+  // /api/users (Replaces old /api/farmers)
   auth: {
-    login: "/api/farmers/login",
-    register: "/api/farmers/register",
-    forgotPassword: "/api/farmers/forgot-password",
-    resetPassword: "/api/farmers/reset-password",
+    login: "/api/users/login",
+    register: "/api/users/register",
+    forgotPassword: "/api/users/forgot-password",
+    resetPassword: (token) => `/api/users/reset-password/${token}`,
   },
-  farmers: {
-    profile: "/api/farmers/profile",
-    uploadPicture: "/api/farmers/profile/upload-picture",
+  // User-specific profile (firstName, lastName, avatarUrl)
+  users: {
+    profile: "/api/users/profile",
   },
+  // Farm-specific profile (farmBio, location) and public discovery
   farms: {
+    myFarm: "/api/farms/myfarm", // Farmer-only GET/PUT for their own farm profile
     allFarms: "/api/farms",
-    nearby: "/api/farms/nearby",
+    nearby: "/api/farms/nearby", // e.g., /api/farms/nearby?longitude=...
     byId: (farmId) => `/api/farms/${farmId}`,
   },
-  orders: {
-    myOrders: "/api/orders/myorders",
-    incomingCount: "/api/orders/count/incoming",
-    create: "/api/orders",
-    updateStatus: (orderId) => `/api/orders/${orderId}/status`,
-  },
+  // Product management (Farmer) and public discovery
   products: {
-    myProducts: "/api/products/myproducts",
-    create: "/api/products",
-    byId: (productId) => `/api/products/${productId}`,
-    publicByFarm: (farmId) => `/api/products/farm/${farmId}`,
-    uploadImage: (productId) => `/api/products/${productId}/upload-image`,
+    create: "/api/products", // POST
+    myProducts: "/api/products/myproducts", // GET (Farmer-only)
+    byId: (productId) => `/api/products/${productId}`, // PUT, DELETE (Farmer-only)
+    publicByFarm: (farmId) => `/api/products/farm/${farmId}`, // GET (Public)
+    categories: "/api/products/categories", // GET (Public)
+  },
+  // Order management (Customer & Farmer)
+  orders: {
+    create: "/api/orders", // POST (Customer)
+    myOrders: "/api/orders/myorders", // GET (Customer or Farmer)
+    updateStatus: (orderId) => `/api/orders/${orderId}/status`, // PUT (Farmer-only)
+  },
+  // Cart management (Customer)
+  cart: {
+    getCart: "/api/cart", // GET
+    addItem: "/api/cart/item", // POST
+    removeItem: (productId) => `/api/cart/item/${productId}`, // DELETE
+    clearCart: "/api/cart", // DELETE
+  },
+  // Centralized file uploads
+  uploads: {
+    uploadImage: "/api/uploads", // POST
   },
 };
 
@@ -58,17 +76,18 @@ apiClient.interceptors.request.use(
     }
 
     // Sanitize data on POST/PUT requests
-    const isModifyingRequest =
-      config.method === "post" || config.method === "put";
-    const isJsonContent =
-      config.headers["Content-Type"] === "application/json";
-    const skipSanitization =
-      config.headers["X-Skip-Sanitization"] === "true";
+    const isModifyingRequest = config.method === "post" || config.method === "put";
+    const isJsonContent = config.headers["Content-Type"] === "application/json";
+    const skipSanitization = config.headers["X-Skip-Sanitization"] === "true";
+
+    // Check for FormData
+    const isFormData = config.data instanceof FormData;
 
     if (
       isModifyingRequest &&
       config.data &&
       isJsonContent &&
+      !isFormData && // Do not sanitize FormData
       !skipSanitization
     ) {
       config.data = sanitizeFormData(config.data);
@@ -89,13 +108,12 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error.response?.status;
-    const errorMessage =
-      error.response?.data?.message || "An unexpected error occurred";
+    const errorMessage = error.response?.data?.message || "An unexpected error occurred";
 
     if (status === 401) {
       // Unauthorized: Token expired or invalid
       console.warn("Unauthorized: Session expired or invalid token");
-      clearAuthData();
+      clearAuthData(); // This function will be provided by the new authService
       toast.error("Your session has expired. Please log in again.");
       // Delay redirect slightly to allow toast to be seen
       setTimeout(() => {
@@ -104,7 +122,7 @@ apiClient.interceptors.response.use(
         }
       }, 1500);
     } else if (status === 403) {
-      // Forbidden
+      // Forbidden (e.g., Customer trying to access Farmer route)
       console.error("Forbidden: Insufficient permissions");
       toast.error("You are not authorized to perform this action.");
     } else if (status && status >= 500) {

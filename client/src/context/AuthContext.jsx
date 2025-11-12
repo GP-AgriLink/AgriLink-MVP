@@ -1,45 +1,30 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import * as authService from '../services/authService';
-import { getIncomingOrdersCount } from '../services/orderApi'; // Import the API function
+import { createContext, useContext, useState, useEffect } from "react";
+import * as authService from "../services/authService";
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
 
+// Re-export helper functions from the new authService
 export const getAuthToken = authService.getAuthToken;
 export const clearAuthData = authService.clearAuthData;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // Add order count state to the context
-  const [incomingOrdersCount, setIncomingOrdersCount] = useState(0);
-  // Add avatar state to the context
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState("");
 
-  // Create a reusable function to fetch and set the count
-  const fetchAndSetOrderCount = async () => {
-    try {
-      const count = await getIncomingOrdersCount();
-      setIncomingOrdersCount(count);
-      localStorage.setItem('incomingOrdersCount', count.toString());
-    } catch (error) {
-      console.error("Failed to fetch order count:", error);
-      setIncomingOrdersCount(0); // Reset on error
-      localStorage.setItem('incomingOrdersCount', '0');
-    }
-  };
-
-  // Function to update avatar
+  // Function to update avatar (no change, this is still valid)
   const updateAvatar = (newAvatarUrl) => {
-    setAvatarUrl(newAvatarUrl);
-    localStorage.setItem('avatarUrl', newAvatarUrl);
+    const url = newAvatarUrl || "";
+    setAvatarUrl(url);
+    localStorage.setItem("avatarUrl", url);
   };
 
   useEffect(() => {
@@ -47,20 +32,14 @@ export const AuthProvider = ({ children }) => {
     const token = authService.getAuthToken();
 
     if (currentUser && token) {
-      setUser(currentUser);
-      // Load count immediately from storage for quick UI
-      const storedCount = localStorage.getItem('incomingOrdersCount');
-      if (storedCount) {
-        setIncomingOrdersCount(parseInt(storedCount, 10));
-      }
+      setUser(currentUser); // User object now contains 'role'
       // Load avatar from storage
-      const storedAvatar = localStorage.getItem('avatarUrl');
+      const storedAvatar = localStorage.getItem("avatarUrl");
       if (storedAvatar) {
         setAvatarUrl(storedAvatar);
       }
-      // Fetch a fresh count on initial load
-      fetchAndSetOrderCount();
     } else if (currentUser || token) {
+      // Clean up if data is partial/corrupt
       authService.clearAuthData();
     }
 
@@ -68,39 +47,37 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
+    // This effect handles cross-tab state synchronization
     const handleStorageChange = (e) => {
-      if ((e.key === 'user' || e.key === 'token') && !e.newValue) {
+      // On logout in another tab
+      if ((e.key === "user" || e.key === "token") && !e.newValue) {
         authService.clearAuthData();
         setUser(null);
-        setIncomingOrdersCount(0); // Reset count on logout
-        setAvatarUrl(''); // Reset avatar on logout
-      }
-      // Also sync count changes from other tabs
-      if (e.key === 'incomingOrdersCount' && e.newValue) {
-        setIncomingOrdersCount(parseInt(e.newValue, 10));
+        setAvatarUrl("");
       }
       // Sync avatar changes from other tabs
-      if (e.key === 'avatarUrl' && e.newValue) {
-        setAvatarUrl(e.newValue);
+      if (e.key === "avatarUrl") {
+        setAvatarUrl(e.newValue || "");
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-
+    // This interval handles manual deletion of localStorage
     const intervalId = setInterval(() => {
       const currentUser = authService.getCurrentUser();
       const token = authService.getAuthToken();
 
       if (user && (!currentUser || !token)) {
+        // User state exists but token/user in storage was manually deleted
         authService.clearAuthData();
         setUser(null);
-        setIncomingOrdersCount(0); // Reset count on manual clear
-        setAvatarUrl(''); // Reset avatar on manual clear
+        setAvatarUrl("");
       }
     }, 1000);
 
+    window.addEventListener("storage", handleStorageChange);
+
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("storage", handleStorageChange);
       clearInterval(intervalId);
     };
   }, [user]);
@@ -109,16 +86,14 @@ export const AuthProvider = ({ children }) => {
     const result = await authService.login(email, password);
     if (result.success) {
       setUser(result.user);
-      fetchAndSetOrderCount(); // Fetch count on login
     }
     return result;
   };
 
-  const register = async (farmName, email, password, phoneNumber) => {
-    const result = await authService.register(farmName, email, password, phoneNumber);
+  const register = async (farmName, email, password, phoneNumber, role) => {
+    const result = await authService.register(farmName, email, password, phoneNumber, role);
     if (result.success) {
       setUser(result.user);
-      setIncomingOrdersCount(0); // New user has 0 orders
     }
     return result;
   };
@@ -126,9 +101,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
-    setIncomingOrdersCount(0); // Reset count on logout
-    setAvatarUrl(''); // Reset avatar on logout
-    localStorage.removeItem('avatarUrl');
+    setAvatarUrl("");
+    localStorage.removeItem("avatarUrl");
   };
 
   const value = {
@@ -137,17 +111,11 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
-    incomingOrdersCount, // Pass state
-    fetchAndSetOrderCount, // Pass updater function
-    avatarUrl, // Pass avatar state
-    updateAvatar, // Pass avatar updater function
+    avatarUrl,
+    updateAvatar,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
 };
 
 export default AuthContext;
