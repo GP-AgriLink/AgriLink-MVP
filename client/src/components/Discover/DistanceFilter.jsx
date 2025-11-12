@@ -1,110 +1,164 @@
-import { useState } from 'react';
-import { Search, Map } from 'lucide-react';
+// client/components/DistanceFilter.jsx
+import { useState, useEffect } from "react";
+import { FaSeedling } from "react-icons/fa";
 
-const options = [
-  { label: '1 km', value: 1000 },
-  { label: '10 km (Default)', value: 10000 },
-  { label: '100 km', value: 100000 },
-  { label: '1000 km', value: 1000000 },
-];
+const DISTANCES = [10, 25, 40, 100, Infinity]; // km
 
-const DistanceFilter = ({ onFilterChange, isLoading, defaultFilter }) => {
-  const [mode, setMode] = useState(defaultFilter.mode);
-  const [distance, setDistance] = useState(defaultFilter.distance);
-  const [customKm, setCustomKm] = useState('');
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
-  const handleModeChange = (newMode, newDistance = null) => {
-    setMode(newMode);
-    if (newMode === 'all') {
-      onFilterChange({ mode: 'all' });
-    } else if (newMode === 'nearby' && newDistance) {
-      setDistance(newDistance);
-      onFilterChange({ mode: 'nearby', distance: newDistance });
+const DistanceFilter = ({ userCoords }) => {
+  const [selectedDistance, setSelectedDistance] = useState(10);
+  const [farms, setFarms] = useState([]);
+  const [filteredFarms, setFilteredFarms] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchFarms = async () => {
+      setLoading(true);
+      try {
+        const url =
+          !userCoords || selectedDistance === Infinity
+            ? "http://localhost:5000/api/farms"
+            : `http://localhost:5000/api/farms/nearby?longitude=${userCoords.longitude}&latitude=${userCoords.latitude}&distance=${selectedDistance * 1000}`;
+
+        const res = await fetch(url);
+        console.log(res);
+        const data = await res.json();
+        console.log("Farms from API:", data);
+        setFarms(data);
+      } catch (err) {
+        console.error(err);
+        setFarms([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchFarms();
+  }, [userCoords, selectedDistance]);
+
+  useEffect(() => {
+    if (!farms.length) {
+      setFilteredFarms([]);
+      return;
     }
-  };
 
-  const handleCustomSubmit = (e) => {
-    e.preventDefault();
-    const distanceInMeters = parseFloat(customKm) * 1000;
-    if (distanceInMeters > 0) {
-      setDistance(distanceInMeters);
-      setMode('nearby');
-      onFilterChange({ mode: 'nearby', distance: distanceInMeters });
-    }
-  };
+    const newFarms = farms.filter((farm) => {
+      if (!userCoords || selectedDistance === Infinity) return true;
+
+      const latitude = farm.location?.coordinates?.[1];
+      const longitude = farm.location?.coordinates?.[0];
+
+      if (latitude == null || longitude == null) return false;
+
+      const distance = getDistanceFromLatLonInKm(
+        userCoords.latitude,
+        userCoords.longitude,
+        latitude,
+        longitude
+      );
+
+      return distance <= selectedDistance;
+    });
+
+    setFilteredFarms(newFarms);
+  }, [farms, userCoords, selectedDistance]);
+
+  const latitudes = filteredFarms.map(f => f.location?.coordinates?.[1]).filter(Boolean);
+  const longitudes = filteredFarms.map(f => f.location?.coordinates?.[0]).filter(Boolean);
+
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+
+  const padding = 0.05;
+  const latRange = maxLat - minLat || 1;
+  const lngRange = maxLng - minLng || 1;
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-lg border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-900 border-b pb-3 mb-4">Filter by Distance</h3>
-      <fieldset disabled={isLoading}>
-        <legend className="sr-only">Distance Options</legend>
-        <div className="space-y-3">
-          {options.map((option) => (
-            <label
-              key={option.value}
-              className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${mode === 'nearby' && distance === option.value
-                  ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500'
-                  : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <span className="font-medium text-gray-800">{option.label}</span>
-              <input
-                type="radio"
-                name="distance"
-                value={option.value}
-                checked={mode === 'nearby' && distance === option.value}
-                onChange={() => handleModeChange('nearby', option.value)}
-                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
-              />
-            </label>
-          ))}
+    <div className="p-4 rounded-xl shadow-lg border border-gray-200 bg-white">
+      <h2 className="text-xl font-bold text-gray-800 mb-4">Nearby Farms</h2>
 
-          {/* View All Farms Option */}
-          <label
-            className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-all ${mode === 'all'
-                ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500'
-                : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-              } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            <span className="font-medium text-gray-800">View All Farms</span>
-            <input
-              type="radio"
-              name="distance"
-              value="all"
-              checked={mode === 'all'}
-              onChange={() => handleModeChange('all')}
-              className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300"
-            />
-          </label>
-        </div>
-      </fieldset>
-
-      {/* Custom Input Section */}
-      <form onSubmit={handleCustomSubmit} className="mt-6 pt-4 border-t">
-        <label htmlFor="custom-distance" className="block text-sm font-semibold text-gray-700 mb-2">
-          Custom Distance (km)
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="number"
-            id="custom-distance"
-            value={customKm}
-            onChange={(e) => setCustomKm(e.target.value)}
-            disabled={isLoading}
-            min="1"
-            placeholder="e.g., 25"
-            className="flex-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-          />
+      {/* Distance Buttons */}
+      <div className="flex gap-2 flex-wrap mb-4">
+        {DISTANCES.map((dist) => (
           <button
-            type="submit"
-            disabled={isLoading || !customKm}
-            className="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
-            aria-label="Search custom distance"
+            key={dist}
+            onClick={() => setSelectedDistance(dist)}
+            className={`px-4 py-2 rounded-xl font-semibold text-sm transition ${selectedDistance === dist
+              ? "bg-emerald-600 text-white shadow-md"
+              : "bg-gray-200 text-gray-700 hover:bg-green-100"
+              }`}
           >
-            <Search className="h-5 w-5" />
+            {dist === Infinity ? "Show all farms" : `${dist} km`}
           </button>
+        ))}
+      </div>
+
+      {/* Scrollable Map Box */}
+      <div className="relative w-full h-96 rounded-2xl bg-green-50 border border-gray-300 overflow-auto">
+        <div className="relative w-[150%] h-[150%]">
+          {loading && <p className="text-center text-gray-500 mt-10">Loading farms...</p>}
+
+          {!loading && filteredFarms.length === 0 && (
+            <p className="text-gray-500 text-center mt-10">No farms within selected distance.</p>
+          )}
+
+          {filteredFarms.map((farm) => {
+            const latitude = farm.location?.coordinates?.[1];
+            const longitude = farm.location?.coordinates?.[0];
+            if (latitude == null || longitude == null) return null;
+
+            const top = padding * 100 + ((maxLat - latitude) / latRange) * (100 - padding * 2 * 100);
+            const left = padding * 100 + ((longitude - minLng) / lngRange) * (100 - padding * 2 * 100);
+
+            const distance =
+              userCoords != null
+                ? getDistanceFromLatLonInKm(
+                  userCoords.latitude,
+                  userCoords.longitude,
+                  latitude,
+                  longitude
+                ).toFixed(1)
+                : null;
+
+            return (
+              <div
+                key={farm._id}
+                className="absolute flex flex-col items-center cursor-pointer group"
+                style={{ top: `${top}%`, left: `${left}%` }}
+                title={`${farm.farmName} - ${farm.specialties?.join(", ") || "No info"}`}
+              >
+                {/* Glow Circle */}
+                <div className="absolute -bottom-6 w-16 h-16 bg-green-200 rounded-full opacity-20 blur-2xl z-0"></div>
+
+                {/* Marker Icon */}
+                <FaSeedling className="text-green-600 text-5xl z-10" />
+
+                {/* Info Box */}
+                <div className="mt-2 p-3 w-44 bg-white border border-gray-200 rounded-xl shadow-lg flex flex-col items-center z-10">
+                  <span className="font-semibold text-sm text-gray-800">{farm.farmName}</span>
+                  <span className="text-xs text-gray-500">{farm.specialties?.join(", ") || "No info"}</span>
+                  {distance && (
+                    <span className="text-[10px] text-gray-400 mt-1">{distance} km away</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </form>
+      </div>
     </div>
   );
 };
