@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { FaSeedling, FaMapMarkerAlt } from "react-icons/fa";
 import {
   MapContainer,
   TileLayer,
@@ -9,9 +8,8 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import { renderToString } from "react-dom/server";
+import { FaSeedling, FaMapMarkerAlt } from "react-icons/fa";
 import "leaflet/dist/leaflet.css";
-
-const DISTANCES = [10, 25, 40, 100, Infinity];
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -44,7 +42,17 @@ function SetBounds({ bounds }) {
   return null;
 }
 
-const DistanceFilter = ({ userCoords }) => {
+const DISTANCES = [10, 25, 40, 100, Infinity];
+
+// Custom icon
+const seedlingIcon = L.divIcon({
+  html: renderToString(<FaSeedling className="text-green-600 text-5xl" />),
+  className: "bg-transparent border-0",
+  iconSize: [30, 42],
+  iconAnchor: [15, 42],
+});
+
+const FarmsDisplay = ({ userCoords }) => {
   const [selectedDistance, setSelectedDistance] = useState(10);
   const [farms, setFarms] = useState([]);
   const [filteredFarms, setFilteredFarms] = useState([]);
@@ -53,19 +61,18 @@ const DistanceFilter = ({ userCoords }) => {
 
   // Fetch farms from API
   useEffect(() => {
+    if (!userCoords) return;
     const fetchFarms = async () => {
       setLoading(true);
       try {
         const url =
-          !userCoords || selectedDistance === Infinity
+          selectedDistance === Infinity
             ? "http://localhost:5000/api/farms"
             : `http://localhost:5000/api/farms/nearby?longitude=${userCoords.longitude
             }&latitude=${userCoords.latitude}&distance=${selectedDistance * 1000
             }`;
-
         const res = await fetch(url);
         const responseData = await res.json();
-        console.log("✅ Farms from API:", responseData);
         setFarms(responseData.data || []);
       } catch (err) {
         console.error(err);
@@ -77,34 +84,15 @@ const DistanceFilter = ({ userCoords }) => {
     fetchFarms();
   }, [userCoords, selectedDistance]);
 
-  // Filter farms based on distance
+  // Client-side filtering
   useEffect(() => {
     if (!farms.length) {
       setFilteredFarms([]);
       return;
     }
-
     const withLocation = farms.filter((f) => f.location?.coordinates);
-    const isApiFiltered = userCoords && selectedDistance !== Infinity;
-
-    if (isApiFiltered) {
-      setFilteredFarms(withLocation);
-    } else {
-      const newFarms = withLocation.filter((farm) => {
-        if (!userCoords || selectedDistance === Infinity) return true;
-        const latitude = farm.location.coordinates[1];
-        const longitude = farm.location.coordinates[0];
-        const distance = getDistanceFromLatLonInKm(
-          userCoords.latitude,
-          userCoords.longitude,
-          latitude,
-          longitude
-        );
-        return distance <= selectedDistance;
-      });
-      setFilteredFarms(newFarms);
-    }
-  }, [farms, userCoords, selectedDistance]);
+    setFilteredFarms(withLocation);
+  }, [farms]);
 
   // Reverse geocoding for farm locations
   useEffect(() => {
@@ -112,18 +100,12 @@ const DistanceFilter = ({ userCoords }) => {
       const results = {};
       await Promise.all(
         filteredFarms.map(async (farm) => {
-
-          console.log("Farm Object:", farm);
-          console.log("Farm Bio:", farm.farmBio);
-
           const [lng, lat] = farm.location.coordinates;
           try {
             const res = await fetch(
               `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`
             );
             const data = await res.json();
-            console.log(farm._id, data.address);
-
             results[farm._id] =
               data.address?.city ||
               data.address?.town ||
@@ -144,14 +126,7 @@ const DistanceFilter = ({ userCoords }) => {
     if (filteredFarms.length > 0) fetchLocations();
   }, [filteredFarms]);
 
-  const seedlingIcon = L.divIcon({
-    html: renderToString(<FaSeedling className="text-green-600 text-5xl" />),
-    className: "bg-transparent border-0",
-    iconSize: [30, 42],
-    iconAnchor: [15, 42],
-  });
-
-  // Calculate map bounds
+  // Calculate map bounds 
   const latitudes = filteredFarms
     .map((f) => f.location?.coordinates?.[1])
     .filter(Boolean);
@@ -168,37 +143,54 @@ const DistanceFilter = ({ userCoords }) => {
       : null;
 
   return (
-    <div className="p-4 rounded-xl shadow-lg border border-gray-200 bg-white">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Nearby Farms</h2>
+    <div className="container mx-auto px-4 py-16">
+      <h2 className="mb-6 text-3xl font-bold text-gray-900">
+        Farms Near You
+      </h2>
 
-      <div className="flex gap-2 flex-wrap mb-4">
+      <div className="mb-6 flex flex-wrap gap-2">
         {DISTANCES.map((dist) => (
           <button
             key={dist}
             onClick={() => setSelectedDistance(dist)}
-            className={`px-4 py-2 rounded-xl font-semibold text-sm transition ${selectedDistance === dist
-              ? "bg-emerald-600 text-white shadow-md"
-              : "bg-gray-200 text-gray-700 hover:bg-green-100"
+            className={`rounded-full px-5 py-2 font-semibold transition ${selectedDistance === dist
+              ? "bg-emerald-600 text-white"
+              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
           >
-            {dist === Infinity ? "Show all farms" : `${dist} km`}
+            {dist === Infinity ? "Show all farms" : `Within ${dist} km`}
           </button>
         ))}
       </div>
 
-      <div className="relative w-full h-96 rounded-2xl border border-gray-300 overflow-hidden mb-6 bg-green-50">
+      <div className="relative h-[50vh] w-full rounded-2xl shadow-lg z-0">
+        {loading && (
+          <div className="absolute top-0 left-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-white bg-opacity-75">
+            <p className="text-gray-600">Loading farms...</p>
+          </div>
+        )}
+
+        {!loading && filteredFarms.length === 0 && (
+          <div className="absolute top-0 left-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-gray-50 bg-opacity-75">
+            <p className="text-gray-500">
+              No farms found within the selected distance.
+            </p>
+          </div>
+        )}
+
         <MapContainer
-          className="w-full h-full"
-          bounds={bounds || [[51.505, -0.09], [51.51, -0.1]]}
+          className="h-full w-full rounded-2xl bg-green-800"
+          bounds={bounds || [[userCoords.latitude, userCoords.longitude]]}
           scrollWheelZoom={true}
         >
-          <TileLayer
-            className="opacity-70"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <SetBounds bounds={bounds} />
+
+          {userCoords && (
+            <Marker position={[userCoords.latitude, userCoords.longitude]}>
+              <Popup>Your Location</Popup>
+            </Marker>
+          )}
 
           {filteredFarms.map((farm) => {
             const [lng, lat] = farm.location.coordinates;
@@ -211,7 +203,6 @@ const DistanceFilter = ({ userCoords }) => {
                   lng
                 ).toFixed(1)
                 : null;
-
             const locationName = farmLocations[farm._id] || "Loading...";
 
             return (
@@ -221,12 +212,9 @@ const DistanceFilter = ({ userCoords }) => {
                     <div className="flex gap-1 mb-4">
                       <img
                         className="w-20 rounded-lg object-cover"
-                        src={
-                          farm.avatarUrl || []
-                        }
+                        src={farm.avatarUrl || "https://via.placeholder.com/100"}
                         alt={`${farm.farmName} image`}
                       />
-
                       <div>
                         <div className="p-4">
                           <div className="mb-2">
@@ -246,14 +234,13 @@ const DistanceFilter = ({ userCoords }) => {
                       </div>
                     </div>
 
-
-                    <div className="flex items-center text-sm text-gray-700 mb-3">
+                    <div className="flex items-center text-sm text-gray-700 mb-3 px-1">
                       <FaMapMarkerAlt className="text-gray-400 mr-2 flex-shrink-0" />
                       <span>{locationName}</span>
                     </div>
 
                     {farm.specialties?.length > 0 && (
-                      <div className="mb-4">
+                      <div className="mb-4 px-1">
                         <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">
                           Specialties
                         </h4>
@@ -270,9 +257,12 @@ const DistanceFilter = ({ userCoords }) => {
                       </div>
                     )}
 
-                    <a href={`/farm/${farm._id}`} target="_blank">
+                    <a
+                      href={`/farm/${farm._id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <button
-                        rel="noopener noreferrer"
                         className="block w-full text-center px-4 py-2 bg-emerald-600 text-white font-semibold text-sm rounded-lg shadow-md transition-all duration-300 ease-in-out hover:bg-white hover:text-emerald-600 hover:shadow-lg border border-gray-200"
                       >
                         Visit Store
@@ -283,26 +273,28 @@ const DistanceFilter = ({ userCoords }) => {
               </Marker>
             );
           })}
+
+          <style>
+            {`
+              .leaflet-popup-content-wrapper {
+                border: 1px solid #d1d5db;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                background: #F0FDFB;
+              }
+              .leaflet-popup-content-wrapper:hover {
+                outline: none;
+                border-color: #10b981;
+                box-shadow: 0 0 0 2px #10b98140;
+              }
+              .leaflet-popup-close-button{
+                padding: 1rem 2rem;
+              }
+            `}
+          </style>
         </MapContainer>
-
-        {loading && (
-          <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-white bg-opacity-75 z-[1000]">
-            <p className="text-center text-gray-600 font-semibold p-4 bg-white rounded-lg shadow-lg">
-              Loading farms...
-            </p>
-          </div>
-        )}
-
-        {!loading && filteredFarms.length === 0 && (
-          <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center bg-gray-50 bg-opacity-75 z-[1000]">
-            <p className="text-center text-gray-500 p-4 bg-white rounded-lg shadow-lg">
-              No farms with location in selected distance.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );
 };
 
-export default DistanceFilter;
+export default FarmsDisplay;
