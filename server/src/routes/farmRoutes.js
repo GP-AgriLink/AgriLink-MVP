@@ -4,13 +4,19 @@ import {
     updateMyFarmProfile,
     getAllFarms,
     getFarmById,
-    getNearbyFarms
+    getNearbyFarms,
+    getFarmStats
 } from '../controllers/farmController.js';
 import { protect, isFarmer } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // --- Farmer Private Routes ---
+
+// @route   GET /api/farms/myfarm/stats
+// @desc    Get dashboard stats for the logged-in farmer
+// @access  Private (Farmer only)
+router.get('/myfarm/stats', protect, isFarmer, getFarmStats);
 
 // @route   GET /api/farms/myfarm
 // @desc    Get the logged-in farmer's own farm profile
