@@ -1,0 +1,190 @@
+import React, { useState, useEffect } from 'react';
+
+const LeafIcon = ({ className }) => (
+    <svg
+        className={className}
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        xmlns="http://www.w3.org/2000/svg"
+    >
+        <path d="M17.01 11.23C15.54 8.24 12.3 6 8.5 6 4.36 6 1 9.36 1 13.5c0 3.19 1.93 5.9 4.6 7.02.59.25 1.25.13 1.7-.31.45-.44.57-1.1.31-1.7-.51-1.2-.77-2.52-.77-3.9 0-3.32 2.68-6 6-6 1.38 0 2.69.47 3.71 1.25.44.33.99.33 1.43 0 .44-.33.56-.95.23-1.43zM6.5 22c.31 0 .6-.18.73-.46.33-.7.15-1.53-.41-1.95-.56-.42-1.39-.24-1.72.45-.33.7.15 1.53.84 1.95.17.13.36.19.56.19z" />
+    </svg>
+);
+
+// --- Category Card Component ---
+const CategoryCard = ({ imageSrc, name, description }) => {
+    return (
+        <div className="group relative max-w-xl w-80 h-80 overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+            <img
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                src={imageSrc}
+                alt={name}
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+
+            <div className="relative flex h-full flex-col justify-end p-6">
+                <h3 className="flex items-center gap-2 text-3xl font-bold text-white">
+                    <LeafIcon className="h-5 w-5 flex-shrink-0 text-green-700" />
+                    {name}
+                    <LeafIcon className="h-5 w-5 flex-shrink-0 text-green-700" />
+                </h3>
+
+                <p className="mt-1 text-base leading-relaxed text-gray-200">
+                    {description}
+                </p>
+            </div>
+        </div>
+    );
+};
+
+
+// --- Main Section Component ---
+const categoryDetails = {
+    Vegetable: {
+        description: "Fresh, crisp vegetables sourced directly from local farms.",
+        imageSrc: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=600&q=80"
+    },
+    Organic: {
+        description: "Certified organic produce grown without synthetic pesticides or fertilizers.",
+        imageSrc: "https://images.unsplash.com/photo-1518843875459-a63668da084d?auto=format&fit=crop&w=600&q=80"
+    },
+    Dairy: {
+        description: "Creamy milk, rich cheeses, and fresh dairy products from pasture-raised cows.",
+        imageSrc: "https://images.unsplash.com/photo-1559598467-f8b76c8155d0?auto=format&fit=crop&w=600&q=80"
+    },
+    Fruit: {
+        description: "Sweet, juicy, and seasonal fruits picked at the peak of ripeness.",
+        imageSrc: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80"
+    },
+    Poultry: {
+        description: "High-quality, free-range chicken and farm-fresh eggs.",
+        imageSrc: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=600&q=80"
+    },
+    default: {
+        description: "Explore our collection of high-quality farm products.",
+        imageSrc: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80"
+    }
+};
+
+
+const CategoriesSection = () => {
+    const [categories, setCategories] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setIsLoading(true);
+                setError(null);
+                // console.log("Attempting to fetch categories...");
+
+                // --- CHANGED ---
+                // Using the correct URL from your API docs
+                const response = await fetch('http://localhost:5000/api/products/categories');
+
+                if (!response.ok) {
+                    throw new Error('Something went wrong!');
+                }
+
+                const data = await response.json(); // data is now ["Vegetable", "Organic", ...]
+                // console.log("Data received:", data);
+
+                // --- CHANGED ---
+                // Set the state directly to the array we received
+                // setCategories(data);
+                // Check if data is an array
+                if (Array.isArray(data)) {
+                    setCategories(data);
+                } else {
+                    // console.error("Data is not an array:", data);
+                    throw new Error("Received data is not in the expected format (array).");
+                }
+
+            } catch (err) {
+                // console.error("Fetch failed:", err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    // 1. Show a loading message
+    if (isLoading) {
+        return (
+            <section className="bg-white py-16 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+                    <h2 className="text-2xl font-semibold text-gray-600">
+                        Loading Best Selling Categories...
+                    </h2>
+                </div>
+            </section>
+        );
+    }
+
+    // 2. Show an error message
+    if (error) {
+        return (
+            <section className="bg-white py-16 sm:py-24">
+                <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
+                    <h2 className="text-2xl font-semibold text-red-600">
+                        Error: {error}
+                    </h2>
+                </div>
+            </section>
+        );
+    }
+
+    // 3. Show the categories
+    return (
+        <section className="py-16 sm:py-24 mb-10">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+
+                {/* Section Header */}
+                <div className="mx-auto mb-12 max-w-2xl text-center">
+                    <p className="text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
+                        Best Selling Categories
+                    </p>
+                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                        Explore products from our most popular farm categories.
+                    </h2>
+                    <div className="mx-auto mt-5 w-20 h-1 bg-green-700"></div>
+                </div>
+
+                {/* Categories Grid */}
+                <div className="mx-auto grid max-w-lg gap-2 lg:max-w-none lg:grid-cols-3">
+
+                    {categories.map((categoryName) => {
+                        const details = categoryDetails[categoryName] || categoryDetails.default;
+
+                        return (
+                            <CategoryCard
+                                key={categoryName}
+                                name={categoryName}
+                                description={details.description}
+                                imageSrc={details.imageSrc}
+                            />
+                        );
+                    })}
+
+                </div>
+
+                {/* "View All" Button */}
+                <div className="mt-16 text-center">
+                    <button className="rounded-full bg-green-100 px-8 py-4 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200">
+                        Explore All Categories
+                    </button>
+                </div>
+
+            </div>
+        </section>
+    );
+};
+
+export default CategoriesSection;

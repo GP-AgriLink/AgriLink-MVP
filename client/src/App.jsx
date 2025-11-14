@@ -12,7 +12,7 @@ import RegisterPage from "./pages/RegisterPage";
 // import Dashboard from "./pages/Dashboard";
 // import FarmStorePage from "./pages/FarmStorePage";
 // import CartPage from "./pages/CartPage";
-// import DiscoverPage from "./pages/DiscoverPage";
+import LandingPage from "./pages/LandingPage";
 
 function App() {
   return (
@@ -82,8 +82,11 @@ function App() {
               </div>
             }
           />
-          <Route path="/discover" element={<DiscoverPage />} />
+        */}
 
+          <Route path="/discover" element={<LandingPage />} />
+
+          {/*
           <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
           <Route
             path="/reset-password/:token"

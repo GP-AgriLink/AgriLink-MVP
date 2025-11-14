@@ -73,7 +73,8 @@ const FarmsDisplay = ({ userCoords }) => {
             }`;
         const res = await fetch(url);
         const responseData = await res.json();
-        setFarms(responseData.data || []);
+        console.log("Data" + responseData);
+        setFarms(responseData.data || responseData || []);
       } catch (err) {
         console.error(err);
         setFarms([]);
@@ -259,7 +260,6 @@ const FarmsDisplay = ({ userCoords }) => {
 
                     <a
                       href={`/farm/${farm._id}`}
-                      target="_blank"
                       rel="noopener noreferrer"
                     >
                       <button
