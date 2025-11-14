@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import apiClient, { API_ENDPOINTS } from "../config/api.js";
 import FarmInfo from "../components/FarmStore/FarmInfo.jsx";
@@ -8,216 +8,180 @@ import Slider from "../components/FarmStore/slider.jsx";
 
 const FarmStorePage = () => {
   const { id } = useParams();
-  const [products, setProducts] = useState([]);
-  const [farm, setFarm] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 6;
+  const [farm, setFarm] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const [allCategories, setAllCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState(
+    searchParams.getAll("category") || []
+  );
+
+  const sidebarRef = useRef();
+
+  const debounceRef = useRef(null);
+  useEffect(() => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+    }, 500);
+    return () => clearTimeout(debounceRef.current);
+  }, [searchTerm]);
 
   useEffect(() => {
-    const fetchFarmData = async () => {
+    const fetchData = async () => {
       try {
         setIsLoading(true);
-        setError(null);
-
         const [farmRes, productRes] = await Promise.all([
           apiClient.get(API_ENDPOINTS.farms.byId(id)),
-          apiClient.get(API_ENDPOINTS.products.publicByFarm(id)),
+          apiClient.get(`${API_ENDPOINTS.products.publicByFarm(id)}`),
         ]);
 
         setFarm(farmRes.data);
-        setProducts(Array.isArray(productRes.data) ? productRes.data : []);
+        const productData = productRes.data;
+        setProducts(Array.isArray(productData.data) ? productData.data : []);
+
+        const cats = productData.data.flatMap((p) => p.categories || []);
+        setAllCategories([...new Set(cats)]);
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load farm data. Please try again later.");
+        console.error(err);
       } finally {
         setIsLoading(false);
       }
     };
-
-    if (id) fetchFarmData();
+    if (id) fetchData();
   }, [id]);
 
-  // === Loader ===
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F8FFFC]">
-        <motion.div
-          className="relative flex items-center justify-center"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-        >
-          <span className="w-12 h-12 rounded-full grid place-items-center bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-lg z-10">
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M4.5 3.75c5.25.75 9 5.25 9.75 9.75.75-4.5 4.5-9 9.75-9.75-.75 5.25-3.75 9-9.75 11.25 2.25 1.5 5.25 3.75 6 6-4.5-1.5-7.5-3.75-9-6-1.5 2.25-4.5 4.5-9 6 .75-2.25 3.75-4.5 6-6C8.25 12.75 5.25 9 4.5 3.75Z"></path>
-            </svg>
-          </span>
+  useEffect(() => {
+    searchParams.delete("category");
+    selectedCategories.forEach((cat) => searchParams.append("category", cat));
+    setSearchParams(searchParams);
+  }, [selectedCategories]);
 
-          <motion.span
-            className="absolute w-20 h-20 border-4 border-emerald-400 border-t-transparent rounded-full"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          ></motion.span>
-        </motion.div>
-      </div>
+  const displayedProducts = products
+    .filter((p) =>
+      selectedCategories.length === 0
+        ? true
+        : p.categories?.some((cat) => selectedCategories.includes(cat))
+    )
+    .filter((p) =>
+      debouncedSearch ? p.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) : true
     );
-  }
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F8FFFC]">
-        <h3 className="text-xl font-semibold text-red-600 mb-2">
-          Something went wrong
-        </h3>
-        <p className="text-gray-600">{error}</p>
-      </div>
-    );
-  }
+  const toggleCategory = (cat) => {
+    if (cat === "All") {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories((prev) =>
+        prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+      );
+    }
+  };
 
-  // === Pagination Logic ===
-  const indexOfLastProduct = currentPage * productsPerPage;
-  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = products.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct
-  );
-  const totalPages = Math.ceil(products.length / productsPerPage);
+  const openSidebar = () => {
+    if (sidebarRef.current) sidebarRef.current.style.transform = "translateX(0)";
+  };
+  const closeSidebar = () => {
+    if (sidebarRef.current) sidebarRef.current.style.transform = "translateX(-100%)";
+  };
 
-  // === Main Page ===
   return (
     <motion.div
-      className="bg-[#F8FFFC] min-h-screen"
+      className="min-h-screen bg-[#F8FFFC]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {farm && (
-          <div className="mb-12">
-            <Slider key={farm._id} />
-          </div>
-        )}
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        {farm && <Slider key={farm._id} farm={farm} products={displayedProducts} />}
 
-        {/* HEADER */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8">
-          <div className="mb-4 sm:mb-0">
-            <h2 className="text-3xl font-bold text-[#0a3832] capitalize">
-              {farm ? `Shop ${farm.farmName}'s harvest` : ""}
-            </h2>
-            <p className="text-md text-[#4a7c6f] mt-1">
-              Add items to your basket and we'll coordinate a climate-friendly
-              delivery window.
-            </p>
-          </div>
-
-          {/* Product Count Tag */}
-          <span
-            className="
-              text-xs font-semibold uppercase tracking-wider
-              px-3 py-1.5
-              rounded-full
-              self-start sm:self-center
-              text-[#008c7a]
-              bg-[#e6fcf7]
-              border border-[#84dcc6]
-            "
-          >
-            {products.length} Products
-          </span>
+        <div className="mb-8 mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <input
+            type="text"
+            placeholder="Search product by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full rounded-lg border border-[#84dcc6] px-4 py-2 text-gray-700 shadow-sm focus:border-[#2a9d8f] focus:ring-2 focus:ring-[#2a9d8f] sm:w-1/2"
+          />
         </div>
 
-        {/* MAIN GRID */}
-        <div className="lg:grid lg:grid-cols-12 lg:gap-12 mt-8">
-          {/* Products Section */}
+        <div className="mb-8 flex flex-wrap gap-2">
+          <motion.button
+            key="all"
+            onClick={() => toggleCategory("All")}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className={`rounded-full border px-3 py-1 text-sm ${
+              selectedCategories.length === 0
+                ? "border-[#008c7a] bg-[#008c7a] text-white shadow"
+                : "border-[#84dcc6] bg-white text-[#008c7a] hover:bg-[#e6fcf7]"
+            }`}
+          >
+            All
+          </motion.button>
+
+          {allCategories.map((cat) => (
+            <motion.button
+              key={cat}
+              onClick={() => toggleCategory(cat)}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.2 }}
+              className={`rounded-full border px-3 py-1 text-sm ${
+                selectedCategories.includes(cat)
+                  ? "border-[#008c7a] bg-[#008c7a] text-white shadow"
+                  : "border-[#84dcc6] bg-white text-[#008c7a] hover:bg-[#e6fcf7]"
+              }`}
+            >
+              {cat}
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="mt-8 lg:grid lg:grid-cols-12 lg:gap-12">
           <main className="lg:col-span-8">
-            {products.length === 0 ? (
+            {displayedProducts.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6 }}
-                className="text-center py-16 bg-white rounded-2xl shadow-xl border border-[#84dcc6]"
+                className="rounded-2xl bg-white py-16 text-center"
               >
-                <h3 className="text-xl font-bold text-[#0a3832] mb-2">
-                  No products to show yet
+                <h3 className="mb-2 text-xl font-bold text-[#0a3832]">
+                  {debouncedSearch ? "No results found" : "No products to show yet"}
                 </h3>
-                <p className="text-base text-[#4a7c6f]">
-                  Please check back later for fresh items from this farm.
-                </p>
               </motion.div>
             ) : (
-              <>
-                <motion.div
-                  key={currentPage}
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                >
-                  {currentProducts.map((product) => (
-                    <ProductCard key={product._id} product={product} />
-                  ))}
-                </motion.div>
-
-                {totalPages > 0 && (
-                  <motion.div
-                    key={`pagination-${currentPage}`}
-                    className="flex justify-center mt-10 space-x-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                  >
-                    <button
-                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="px-4 py-2 rounded-full border border-[#84dcc6] text-[#008c7a] hover:bg-[#e6fcf7] disabled:opacity-50"
-                    >
-                      Prev
-                    </button>
-
-                    {[...Array(totalPages)].map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentPage(i + 1)}
-                        className={`px-4 py-2 rounded-full border ${currentPage === i + 1
-                          ? "bg-[#008c7a] text-white"
-                          : "border-[#84dcc6] text-[#008c7a] hover:bg-[#e6fcf7]"
-                          }`}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
-
-                    <button
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(p + 1, totalPages))
-                      }
-                      disabled={currentPage === totalPages}
-                      className="px-4 py-2 rounded-full border border-[#84dcc6] text-[#008c7a] hover:bg-[#e6fcf7] disabled:opacity-50"
-                    >
-                      Next
-                    </button>
+              <motion.div
+                className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  hidden: { opacity: 0 },
+                  visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+                }}
+              >
+                {displayedProducts.map((p) => (
+                  <motion.div key={p._id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+                    <ProductCard product={p} />
                   </motion.div>
-                )}
-              </>
+                ))}
+              </motion.div>
             )}
           </main>
 
-          {/* Farm Info Sidebar */}
           <motion.aside
-            className="lg:col-span-4 mt-12 lg:mt-0"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
+            ref={sidebarRef}
+            className="mt-12 lg:col-span-4 lg:mt-0"
+            initial={{ x: -300 }}
+            animate={{ x: 0 }}
+            transition={{ duration: 0.3 }}
           >
             <FarmInfo farm={farm} />
           </motion.aside>

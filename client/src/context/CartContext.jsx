@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
+import { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import apiClient, { API_ENDPOINTS } from "../config/api.js";
 
 const CartContext = createContext();
 
@@ -11,7 +12,7 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     // Load cart from localStorage on initial render
     try {
-      const itemsFromStorage = JSON.parse(localStorage.getItem('cartItems')) || [];
+      const itemsFromStorage = JSON.parse(localStorage.getItem("cartItems")) || [];
       setCartItems(itemsFromStorage);
     } catch (error) {
       console.error("Failed to parse cart items from localStorage", error);
@@ -24,7 +25,7 @@ export const CartProvider = ({ children }) => {
     // Enforce single-farm rule
     if (newCart.length > 1) {
       const firstFarmId = newCart[0].farmer;
-      const allFromSameFarm = newCart.every(item => item.farmer === firstFarmId);
+      const allFromSameFarm = newCart.every((item) => item.farmer === firstFarmId);
       if (!allFromSameFarm) {
         toast.error("You can only order from one farm at a time.", { autoClose: 3000 });
         // Find the first item from a different farm and reject the update
@@ -32,35 +33,48 @@ export const CartProvider = ({ children }) => {
       }
     }
     setCartItems(newCart);
-    localStorage.setItem('cartItems', JSON.stringify(newCart));
+    localStorage.setItem("cartItems", JSON.stringify(newCart));
   };
 
-  const addToCart = (product) => {
-    const existingItem = cartItems.find(item => item._id === product._id);
-    let newCart;
-    if (existingItem) {
-      newCart = cartItems.map(item =>
-        item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+  const addToCart = async (product) => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("User not logged in");
+
+      const res = await apiClient.get(API_ENDPOINTS.cart.getCart, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const backendCart = res.data.items;
+
+      const existingItem = backendCart.find((item) => item.product._id === product._id);
+      const newQuantity = existingItem ? existingItem.quantity + 1 : 1;
+
+      const addRes = await apiClient.post(
+        API_ENDPOINTS.cart.addItem,
+        { productId: product._id, quantity: newQuantity },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-    } else {
-      const cartItem = {
-        _id: product._id,
-        name: product.name,
-        price: product.price,
-        unit: product.unit,
-        imageUrl: product.imageUrl,
-        stock: product.stock,
-        farmer: typeof product.farmer === 'object' ? product.farmer._id : product.farmer,
-        quantity: 1
-      };
-      newCart = [...cartItems, cartItem];
+
+      const localExisting = cartItems.find((item) => item._id === product._id);
+      let newCart;
+      if (localExisting) {
+        newCart = cartItems.map((item) =>
+          item._id === product._id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      } else {
+        newCart = [...cartItems, { ...product, quantity: 1 }];
+      }
+      updateCart(newCart);
+
+      toast.success(`${product.name} added to cart!`, { autoClose: 1500 });
+    } catch (err) {
+      toast.error("Failed to add product. Try again.", { autoClose: 2000 });
     }
-    updateCart(newCart);
-    toast.success(`${product.name} added to cart!`, { autoClose: 1500 }); // Dynamic timing
   };
 
   const removeFromCart = (productId) => {
-    const newCart = cartItems.filter(item => item._id !== productId);
+    const newCart = cartItems.filter((item) => item._id !== productId);
     updateCart(newCart);
     toast.info("Item removed from cart.", { autoClose: 1500 });
   };
@@ -70,7 +84,7 @@ export const CartProvider = ({ children }) => {
       removeFromCart(productId);
       return;
     }
-    const newCart = cartItems.map(item =>
+    const newCart = cartItems.map((item) =>
       item._id === productId ? { ...item, quantity: newQuantity } : item
     );
     updateCart(newCart);
@@ -90,9 +104,5 @@ export const CartProvider = ({ children }) => {
     cartCount: cartItems.length,
   };
 
-  return (
-    <CartContext.Provider value={value}>
-      {children}
-    </CartContext.Provider>
-  );
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 };
