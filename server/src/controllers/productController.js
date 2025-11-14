@@ -30,7 +30,7 @@ const createProduct = async (req, res) => {
       unit,
       stock,
       categories,
-      farmer: farm._id, // Use the Farm's ID, not the User's ID
+      farm: farm._id, // Use the Farm's ID, not the User's ID
     });
 
     const product = await newProduct.save();
@@ -58,7 +58,7 @@ const getMyProducts = async (req, res) => {
         }
 
         // --- Build the base query ---
-        const query = { farmer: farm._id };
+        const query = { farm: farm._id };
 
         // --- Add category filter if it exists ---
         if (req.query.category) {
@@ -104,7 +104,7 @@ const getProductsByFarm = async (req, res) => {
         const skip = (page - 1) * limit;
 
         const query = {
-            farmer: req.params.farmId,
+            farm: req.params.farmId,
             status: 'active',
             isArchived: false
         };
@@ -156,7 +156,7 @@ const updateProduct = async (req, res) => {
     const farm = await Farm.findOne({ user: req.user._id });
 
     // CRITICAL: Ownership Check
-    if (product.farmer.toString() !== farm._id.toString()) {
+    if (product.farm.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 
@@ -207,7 +207,7 @@ const archiveProduct = async (req, res) => {
     const farm = await Farm.findOne({ user: req.user._id });
 
     // CRITICAL: Ownership Check
-    if (product.farmer.toString() !== farm._id.toString()) {
+    if (product.farm.toString() !== farm._id.toString()) {
       return res.status(401).json({ message: "Not authorized" });
     }
 

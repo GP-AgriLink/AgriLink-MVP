@@ -1,8 +1,8 @@
 import Farm from '../models/Farm.js';
 import User from '../models/User.js';
 
-import Product from '../models/Product.js'; // Import Product
-import Order from '../models/Order.js';   // Import Order
+import Product from '../models/Product.js';
+import Order from '../models/Order.js';   
 import mongoose from 'mongoose';
 
 /**
@@ -81,7 +81,6 @@ const updateMyFarmProfile = async (req, res) => {
 };
 
 
-// --- Public Routes (These were already correct) ---
 
 /**
  * @desc    Get all farms for the homepage map (paginated)
@@ -214,16 +213,16 @@ const getNearbyFarms = async (req, res) => {
  */
 const getFarmStats = async (req, res) => {
     try {
-        // 1. Find the farmer's farm ID
+        // Find the farmer's farm ID
         const farm = await Farm.findOne({ user: req.user._id });
         if (!farm) {
             return res.status(404).json({ message: 'Farm profile not found.' });
         }
         const farmId = farm._id;
 
-        // 2. Run Product Stats Aggregation
+        // Run Product Stats Aggregation
         const productStats = await Product.aggregate([
-            { $match: { farmer: farmId } }, // Match only this farmer's products
+            { $match: { farm: farmId } }, // Match only this farmer's products
             {
                 $group: {
                     _id: {
@@ -235,7 +234,7 @@ const getFarmStats = async (req, res) => {
             }
         ]);
 
-        // 3. Run Order Stats Aggregation
+        // Run Order Stats Aggregation
         const orderStats = await Order.aggregate([
             { $match: { farm: farmId } }, // Match only this farm's orders
             {
@@ -246,7 +245,7 @@ const getFarmStats = async (req, res) => {
             }
         ]);
 
-        // 4. Process the raw stats into a clean object
+        // Process the raw stats into a clean object
         const stats = {
             products: { active: 0, inactive: 0, archived: 0 },
             orders: { Incoming: 0, "Ready for Delivery": 0, Completed: 0, Cancelled: 0 }
