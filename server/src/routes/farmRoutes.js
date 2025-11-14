@@ -5,7 +5,8 @@ import {
     getAllFarms,
     getFarmById,
     getNearbyFarms,
-    getFarmStats
+    getFarmStats,
+    getPublicStats
 } from '../controllers/farmController.js';
 import { protect, isFarmer } from '../middleware/authMiddleware.js';
 
@@ -35,6 +36,11 @@ router.put('/myfarm', protect, isFarmer, updateMyFarmProfile);
 // @desc    Get farms within a certain radius
 // @access  Public
 router.get('/nearby', getNearbyFarms);
+
+// @route   GET /api/farms/stats
+// @desc    Get public platform statistics
+// @access  Public
+router.get('/stats', getPublicStats);
 
 // @route   GET /api/farms
 // @desc    Get all farms for the homepage map
