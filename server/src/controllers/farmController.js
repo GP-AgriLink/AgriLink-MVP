@@ -1,6 +1,10 @@
 import Farm from '../models/Farm.js';
 import User from '../models/User.js';
 
+import Product from '../models/Product.js'; // Import Product
+import Order from '../models/Order.js';   // Import Order
+import mongoose from 'mongoose';
+
 /**
  * @desc    Get the logged-in farmer's own farm profile
  * @route   GET /api/farms/myfarm
@@ -203,11 +207,83 @@ const getNearbyFarms = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Get dashboard statistics for the logged-in farmer
+ * @route   GET /api/farms/myfarm/stats
+ * @access  Private (Farmer only)
+ */
+const getFarmStats = async (req, res) => {
+    try {
+        // 1. Find the farmer's farm ID
+        const farm = await Farm.findOne({ user: req.user._id });
+        if (!farm) {
+            return res.status(404).json({ message: 'Farm profile not found.' });
+        }
+        const farmId = farm._id;
+
+        // 2. Run Product Stats Aggregation
+        const productStats = await Product.aggregate([
+            { $match: { farmer: farmId } }, // Match only this farmer's products
+            {
+                $group: {
+                    _id: {
+                        status: "$status",
+                        isArchived: "$isArchived"
+                    },
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // 3. Run Order Stats Aggregation
+        const orderStats = await Order.aggregate([
+            { $match: { farm: farmId } }, // Match only this farm's orders
+            {
+                $group: {
+                    _id: "$status", // Group by the status field
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        // 4. Process the raw stats into a clean object
+        const stats = {
+            products: { active: 0, inactive: 0, archived: 0 },
+            orders: { Incoming: 0, "Ready for Delivery": 0, Completed: 0, Cancelled: 0 }
+        };
+
+        // Process product stats
+        productStats.forEach(stat => {
+            if (stat._id.isArchived) {
+                stats.products.archived += stat.count;
+            } else if (stat._id.status === 'active') {
+                stats.products.active += stat.count;
+            } else {
+                stats.products.inactive += stat.count;
+            }
+        });
+
+        // Process order stats
+        orderStats.forEach(stat => {
+            if (stats.orders.hasOwnProperty(stat._id)) {
+                stats.orders[stat._id] = stat.count;
+            }
+        });
+
+        res.json(stats);
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
 
 export {
     getMyFarmProfile,
     updateMyFarmProfile,
     getAllFarms,
     getFarmById,
-    getNearbyFarms
+    getNearbyFarms,
+    getFarmStats
 };

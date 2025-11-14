@@ -42,13 +42,13 @@ const createProduct = async (req, res) => {
 };
 
 /**
- * @desc    Get all products for the logged-in farmer (paginated)
+ * @desc    Get all products for the logged-in farmer (paginated & searchable)
  * @route   GET /api/products/myproducts
  * @access  Private
  */
 const getMyProducts = async (req, res) => {
     try {
-        const limit = Number(req.query.limit) || 10; // Default 10 per page
+        const limit = Number(req.query.limit) || 10;
         const page = Number(req.query.page) || 1;
         const skip = (page - 1) * limit;
 
@@ -57,15 +57,24 @@ const getMyProducts = async (req, res) => {
             return res.status(404).json({ message: 'Farm profile not found.' });
         }
 
-        // Base query
+        // --- Build the base query ---
         const query = { farmer: farm._id };
+
+        // --- Add category filter if it exists ---
         if (req.query.category) {
             query.categories = { $in: [req.query.category] };
         }
 
-        // Get total count
+        // --- ADD SEARCH LOGIC ---
+        if (req.query.search) {
+            query.name = { 
+                $regex: req.query.search, // The search term
+                $options: 'i' // 'i' for case-insensitivity
+            };
+        }
+
+        // --- Get total count and paginated data ---
         const total = await Product.countDocuments(query);
-        // Get paginated data
         const products = await Product.find(query)
             .skip(skip)
             .limit(limit);
@@ -102,6 +111,14 @@ const getProductsByFarm = async (req, res) => {
 
         if (req.query.category) {
             query.categories = { $in: [req.query.category] };
+        }
+
+        // --- ADD SEARCH LOGIC ---
+        if (req.query.search) {
+            query.name = { 
+                $regex: req.query.search, 
+                $options: 'i' 
+            };
         }
 
         const total = await Product.countDocuments(query);
