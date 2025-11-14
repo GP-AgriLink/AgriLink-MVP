@@ -3,11 +3,10 @@ const { Schema } = mongoose;
 
 const productSchema = new Schema(
   {
-    farmer: {
-      // This is the crucial link to the Farmer
-      type: Schema.Types.ObjectId,
-      ref: "Farmer",
-      required: true,
+    farm: { 
+        type: Schema.Types.ObjectId,
+        ref: 'Farm', 
+        required: true
     },
     name: {
       type: String,
