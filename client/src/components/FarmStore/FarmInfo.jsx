@@ -1,8 +1,7 @@
-import React, {useEffect, useState} from "react";
+import React, { useEffect, useState } from "react";
+import { reverseGeocodeSmart } from "../../utils/geoCode.js";
 
-/**
- * Mock fallback data for farms when API fields are missing.
- */
+// Fallback data in case farm is missing fields
 const MOCK_FARM_DATA = {
   highlightsDescription: "Farm has no description yet.",
   certifications: ["Certified soon"],
@@ -13,66 +12,56 @@ const MOCK_FARM_DATA = {
   ],
 };
 
-/**
- * Green dot list item used across the sidebar.
- */
-const GreenDotListItem = ({children}) => (
-  <li className="text-sm text-gray-700 flex items-start">
-    <span className="block w-2 h-2 bg-[#2a9d8f] rounded-full mt-1.5 mr-3 flex-shrink-0"></span>
+// Green dot list item
+const GreenDotListItem = ({ children }) => (
+  <li className="flex items-start text-sm text-gray-700">
+    <span className="mr-3 mt-1.5 block h-2 w-2 flex-shrink-0 rounded-full bg-[#2a9d8f]"></span>
     <span>{children}</span>
   </li>
 );
 
-/**
- *  reverse-geocoding (tries both lat/lon and lon/lat orders).
- */
-const reverseGeocodeSmart = async (coords) => {
-  if (!coords || coords.length < 2) return null;
-
-  const a = Number(coords[0]);
-  const b = Number(coords[1]);
-  if (Number.isNaN(a) || Number.isNaN(b)) return null;
-
-  const candidates = [
-    {lat: b, lon: a},
-    {lat: a, lon: b},
-  ];
-
-  const results = await Promise.all(
-    candidates.map(async (c) => {
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${encodeURIComponent(
-            c.lat
-          )}&lon=${encodeURIComponent(c.lon)}&format=json&accept-language=en`
-        );
-        if (!res.ok) return null;
-        const data = await res.json();
-        const display = data?.display_name || "";
-        return display.length > 0 ? display : null;
-      } catch {
-        return null;
-      }
-    })
-  );
-
-  const valid = results.filter(Boolean);
-  if (valid.length === 0) return null;
-
-  // Prefer longer / more descriptive result
-  valid.sort((a, b) => b.length - a.length);
-  return valid[0];
-};
-
-/**
- * FarmInfo component
- */
-const FarmInfo = ({farm}) => {
+const FarmInfo = ({ farm }) => {
   const [locationName, setLocationName] = useState("");
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
 
-  if (!farm) return null;
+  // RESOLVE LOCATION
 
+  useEffect(() => {
+    if (!farm?.location?.coordinates) {
+      setLocationName("");
+      return;
+    }
+
+    let mounted = true;
+    const resolve = async () => {
+      setIsResolvingLocation(true);
+      const name = await reverseGeocodeSmart(farm.location.coordinates);
+      if (mounted) {
+        setLocationName(name || "");
+        setIsResolvingLocation(false);
+      }
+    };
+    resolve();
+
+    return () => {
+      mounted = false;
+    };
+  }, [farm]);
+
+  // ---------------------------
+  // HANDLE CASE WHEN FARM NOT LOADED
+  // ---------------------------
+  if (!farm) {
+    return (
+      <aside className="h-fit rounded-3xl border border-gray-100 bg-white p-6 shadow-xl lg:p-8">
+        <p className="text-gray-700">Loading farm info…</p>
+      </aside>
+    );
+  }
+
+  // ---------------------------
+  // DESTRUCTURE FARM DATA
+  // ---------------------------
   const {
     farmName = "Unnamed Farm",
     farmBio = MOCK_FARM_DATA.highlightsDescription,
@@ -80,70 +69,35 @@ const FarmInfo = ({farm}) => {
     certifications = MOCK_FARM_DATA.certifications,
     pickupDelivery = MOCK_FARM_DATA.pickupDelivery,
     avatarUrl,
-    location,
   } = farm;
 
-  useEffect(() => {
-    let mounted = true;
-    const resolve = async () => {
-      if (!location?.coordinates) {
-        setLocationName("");
-        return;
-      }
-      setIsResolvingLocation(true);
-      const name = await reverseGeocodeSmart(location.coordinates);
-      if (mounted) {
-        setLocationName(name || "");
-        setIsResolvingLocation(false);
-      }
-    };
-    resolve();
-    return () => {
-      mounted = false;
-    };
-  }, [location]);
-
+  // ---------------------------
+  // JSX
+  // ---------------------------
   return (
-    <aside
-      className="
-        bg-white
-        rounded-3xl
-        p-6 lg:p-8
-        h-fit
-        shadow-xl
-        border border-gray-100
-      "
-    >
+    <aside className="h-fit rounded-3xl border border-gray-100 bg-white p-6 shadow-xl lg:p-8">
       {/* Farm Title */}
-      <h3 className="text-xl font-bold text-gray-900 mb-3">
-        {farmName || "Farm Highlights"}
-      </h3>
+      <h3 className="mb-3 text-xl font-bold text-gray-900">{farmName}</h3>
 
       {/* Avatar */}
       {avatarUrl && (
-        <img
-          src={avatarUrl}
-          alt={farmName}
-          className="w-20 h-20 rounded-full mb-4 object-cover"
-        />
+        <img src={avatarUrl} alt={farmName} className="mb-4 h-20 w-20 rounded-full object-cover" />
       )}
 
       {/* Bio */}
-      {farmBio && (
-        <p className="text-sm text-gray-600 leading-relaxed mb-6">{farmBio}</p>
-      )}
+      {farmBio && <p className="mb-6 text-sm leading-relaxed text-gray-600">{farmBio}</p>}
 
       {/* Specialties */}
       {specialties.length > 0 && (
         <div className="mb-6">
-          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
             Specialties
           </h4>
           <div className="flex flex-wrap gap-2">
             {specialties.map((s, i) => (
               <span
                 key={i}
-                className="bg-teal-100 text-teal-800 text-xs font-semibold px-3 py-1.5 rounded-full"
+                className="rounded-full bg-teal-100 px-3 py-1.5 text-xs font-semibold text-teal-800"
               >
                 {s}
               </span>
@@ -155,10 +109,10 @@ const FarmInfo = ({farm}) => {
       {/* Certifications */}
       {certifications.length > 0 && (
         <div className="mb-6 hidden sm:block">
-          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
             Certifications
           </h4>
-          <div className="bg-emerald-50/60 rounded-2xl p-4">
+          <div className="rounded-2xl bg-emerald-50/60 p-4">
             <ul className="space-y-2">
               {certifications.map((c, idx) => (
                 <GreenDotListItem key={idx}>{c}</GreenDotListItem>
@@ -171,10 +125,10 @@ const FarmInfo = ({farm}) => {
       {/* Pickup & Delivery */}
       {pickupDelivery.length > 0 && (
         <div className="mb-6 hidden sm:block">
-          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
             Pickup & Delivery
           </h4>
-          <div className="bg-emerald-50/60 rounded-2xl p-4">
+          <div className="rounded-2xl bg-emerald-50/60 p-4">
             <ul className="space-y-2">
               {pickupDelivery.map((p, idx) => (
                 <GreenDotListItem key={idx}>{p}</GreenDotListItem>
@@ -186,13 +140,10 @@ const FarmInfo = ({farm}) => {
 
       {/* Location */}
       <div>
-        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">
-          Location
-        </h4>
-
-        <div className="bg-emerald-50/60 rounded-2xl p-4">
+        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">Location</h4>
+        <div className="rounded-2xl bg-emerald-50/60 p-4 transition-all duration-700 ease-in-out">
           {isResolvingLocation ? (
-            <p className="text-sm text-gray-700">Resolving location…</p>
+            <p className="animate-pulse text-sm text-gray-700">Resolving location…</p>
           ) : locationName ? (
             <ul className="space-y-2">
               <GreenDotListItem>{locationName}</GreenDotListItem>

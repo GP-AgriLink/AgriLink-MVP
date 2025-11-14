@@ -114,7 +114,6 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
 
           <Route path="/farm/:id" element={<FarmStorePage />} />
-
           <Route path="*" element={<NotFound />} />
           */}
           {/* --------------------------- */}
