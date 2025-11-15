@@ -1,29 +1,18 @@
-import { useState, useMemo } from "react";
 import ProductRow from "./ProductRow";
 import EmptyState from "./EmptyState";
 import { Search } from "lucide-react";
-
-const ITEMS_PER_PAGE = 6; // Set items per page to 6
-
-/**
- * Sanitizes and prepares a string for case-insensitive search.
- * @param {string} str - The string to sanitize
- * @returns {string} - The lowercased, trimmed string
- */
-const sanitizeSearchTerm = (str) => {
-  return str.trim().toLowerCase();
-};
+import { useProducts } from "../../context/ProductsContext";
 
 /**
  * FilteredProductList
  * Displays a paginated and searchable list of products for a specific filter.
+ * This component now gets its search state from ProductsContext.
+ *
  * @param {Array} products - Pre-filtered list of products (e.g., only active)
  * @param {boolean} isArchived - Whether this list is for archived products
  * @param {Function} onEdit - Handler for edit action
  * @param {Function} onArchive - Handler for archive action
  * @param {Function} onRestore - Handler for restore action
- * @param {string} emptyTitle - Title for empty state
- * @param {string} emptyMessage - Message for empty state
  */
 const FilteredProductList = ({
   products,
@@ -34,34 +23,24 @@ const FilteredProductList = ({
   emptyTitle,
   emptyMessage,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
+  // Get all necessary state from the context
+  const {
+    page: currentPage,
+    totalPages,
+    goToPage: handlePageChange,
+    activeSearch, // The current search term from context
+    setSearchQuery, // The function to update the search term in context
+  } = useProducts();
 
-  const filteredProducts = useMemo(() => {
-    const sanitizedTerm = sanitizeSearchTerm(searchTerm);
-    if (!sanitizedTerm) {
-      return products;
-    }
-    return products.filter((product) => product.name.toLowerCase().includes(sanitizedTerm));
-  }, [products, searchTerm]);
-
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  const handlePageChange = (page) => {
-    if (page < 1 || page > totalPages) return;
-    setCurrentPage(page);
-  };
-
+  // This handler now updates the global context, triggering a server refetch
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset to first page on new search
+    setSearchQuery(e.target.value);
   };
 
   const themColor = isArchived ? "gray" : products.length === 0 ? "orange" : "emerald";
 
-  if (products.length === 0) {
+  // This logic is now: "If the server returned no products, AND we were not searching for anything"
+  if (products.length === 0 && !activeSearch) {
     return <EmptyState title={emptyTitle} message={emptyMessage} />;
   }
 
@@ -73,8 +52,8 @@ const FilteredProductList = ({
           <input
             type="text"
             placeholder="Search by product name..."
-            value={searchTerm}
-            onChange={handleSearchChange}
+            value={activeSearch} // Bind to context value
+            onChange={handleSearchChange} // Bind to context setter
             className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
@@ -82,7 +61,7 @@ const FilteredProductList = ({
         <span
           className={`bg-${themColor}-100 text-${themColor}-700 rounded-full px-4 py-1 text-sm font-medium`}
         >
-          {filteredProducts.length} {filteredProducts.length === 1 ? "Product" : "Products"}
+          {products.length} {products.length === 1 ? "Product" : "Products"}
         </span>
       </div>
 
@@ -97,13 +76,13 @@ const FilteredProductList = ({
           <div className="col-span-1 text-center">Price</div>
           <div className="col-span-1 text-center">Stock</div>
           <div className="col-span-4 text-start">Description</div>
-          <div className="col-span-3 text-end pe-3">Actions</div>
+          <div className="col-span-3 pe-3 text-end">Actions</div>
         </div>
 
         {/* Table Body */}
-        {currentProducts.length > 0 ? (
+        {products.length > 0 ? (
           <div>
-            {currentProducts.map((product, i) => (
+            {products.map((product, i) => (
               <ProductRow
                 key={product._id || product.id}
                 product={product}
@@ -116,6 +95,7 @@ const FilteredProductList = ({
             ))}
           </div>
         ) : (
+          // This view is shown when products.length is 0 but activeSearch IS NOT empty
           <div className="p-10 text-center">
             <p className="font-semibold text-gray-700">No products match your search.</p>
             <p className="mt-1 text-sm text-gray-500">

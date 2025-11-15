@@ -1,11 +1,22 @@
 import { useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
+import AddProduct from "../components/FarmProduct/AddProduct";
+import EditProduct from "../components/FarmProduct/EditProduct";
+import { uploadImage } from "../services/uploadService";
+import { createProduct, updateProduct } from "../services/farmProductApi";
+import { useProducts } from "../context/ProductsContext";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // useEffect for handling body scroll when mobile sidebar is open
+  // --- Modal State & Logic Lives Here ---
+  const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isEditProductOpen, setIsEditProductOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState(null);
+  const { setLoading, refreshProducts } = useProducts();
+
   useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = "hidden";
@@ -20,6 +31,75 @@ const Dashboard = () => {
       document.body.classList.remove("sidebar-open");
     };
   }, [isSidebarOpen]);
+
+  const handleAddProduct = () => {
+    setIsAddProductOpen(true);
+  };
+
+  const handleEditProduct = (product) => {
+    setProductToEdit(product);
+    setIsEditProductOpen(true);
+  };
+
+  const handleAddProductSubmit = async (sanitizedData, imageFile) => {
+    setLoading(true); // Use context's loading
+    let finalData = { ...sanitizedData };
+
+    try {
+      if (imageFile) {
+        toast.info("Uploading image...");
+        const uploadResponse = await uploadImage(imageFile);
+        finalData.imageUrl = uploadResponse.imageUrl;
+      }
+
+      await createProduct(finalData);
+      toast.success("Product Created");
+      setIsAddProductOpen(false);
+      refreshProducts(); // This will set loading to false
+    } catch (error) {
+      console.error("Failed to create product:", error);
+      toast.error(error.message || "Failed to create product");
+      setLoading(false); // Manually stop loading on error
+      throw error; // Re-throw to keep the modal open
+    }
+  };
+
+  const handleEditProductSubmit = async (changedData, imageFile) => {
+    if (Object.keys(changedData).length === 0 && !imageFile) {
+      toast.info("No changes to save.");
+      setIsEditProductOpen(false);
+      setProductToEdit(null);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      if (!productToEdit?._id && !productToEdit?.id) {
+        throw new Error("Product ID is missing");
+      }
+      const productId = productToEdit._id || productToEdit.id;
+
+      let finalUpdateData = { ...changedData };
+
+      if (imageFile) {
+        toast.info("Uploading new image...");
+        const uploadResponse = await uploadImage(imageFile);
+        finalUpdateData.imageUrl = uploadResponse.imageUrl;
+      }
+
+      await updateProduct(productId, finalUpdateData);
+
+      toast.success("Product Updated");
+      setIsEditProductOpen(false);
+      setProductToEdit(null);
+      refreshProducts();
+    } catch (error) {
+      console.error("Failed to update product:", error);
+      toast.error(error.message || "Failed to update product");
+      setLoading(false);
+      throw error;
+    }
+  };
 
   return (
     <div className="box-border" style={{ minHeight: "calc(100vh - 200px)" }}>
@@ -60,12 +140,30 @@ const Dashboard = () => {
 
           <main className="max-h-fit flex-1">
             <div className="max-h-[90vh] min-h-fit overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 shadow-lg backdrop-blur-sm">
-              {/* RENDER THE CHILD ROUTE (profile, products, or orders) */}
-              <Outlet />
+              {/* Pass handlers to children via Outlet context */}
+              <Outlet context={{ onAddNew: handleAddProduct, onEdit: handleEditProduct }} />
             </div>
           </main>
         </div>
       </div>
+
+      {/* Modals are rendered here, outside the <main> element,
+          so they can cover the entire page */}
+      <AddProduct
+        isOpen={isAddProductOpen}
+        onClose={() => setIsAddProductOpen(false)}
+        onSubmit={handleAddProductSubmit}
+      />
+
+      <EditProduct
+        isOpen={isEditProductOpen}
+        onClose={() => {
+          setIsEditProductOpen(false);
+          setProductToEdit(null);
+        }}
+        onSubmit={handleEditProductSubmit}
+        product={productToEdit}
+      />
     </div>
   );
 };
