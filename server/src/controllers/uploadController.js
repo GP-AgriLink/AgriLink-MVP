@@ -12,7 +12,7 @@ const uploadImage = (req, res) => {
     // req.file.path contains the secure URL.
     res.status(201).json({
         message: 'Image uploaded successfully',
-        imageUrl: req.file.path 
+        imageUrl: req.file.url 
     });
 };
 
