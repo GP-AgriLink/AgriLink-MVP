@@ -1,25 +1,28 @@
-import { Routes, Route, Link, Navigate } from "react-router-dom";
+import { Routes, Route, Link, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-// import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import MainLayout from "./components/Layout/MainLayout";
-// import { ProductsProvider } from "./context/ProductsContext";
+import { ProductsProvider } from "./context/ProductsContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-// import EditProfile from "./pages/EditProfile";
-// import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
-// import ResetPasswordPage from "./pages/ResetPasswordPage";
-// import NotFound from "./pages/NotFound";
-// import Dashboard from "./pages/Dashboard";
-// import FarmStorePage from "./pages/FarmStorePage";
+import EditProfile from "./pages/EditProfile";
+import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import FarmStorePage from "./pages/FarmStorePage";
 // import CartPage from "./pages/CartPage";
-// import DiscoverPage from "./pages/DiscoverPage";
+import DiscoverPage from "./pages/DiscoverPage";
+import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
+import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
+import OrdersPage from "./pages/OrdersPage";
 
 function App() {
   return (
     <AuthProvider>
       <MainLayout>
         <Routes>
-          {/* --- ACTIVE ROUTES --- */}
+          {/* --- PUBLIC ROUTES --- */}
           <Route
             path="/"
             element={
@@ -57,18 +60,11 @@ function App() {
           />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-
-          {/* ---------------------- */}
-
-          {/* --- COMMENTED OUT ROUTES --- */}
-          {/*
           <Route
             path="/about"
             element={
               <div className="container mx-auto px-6 py-12">
-                <h1 className="text-4xl font-bold text-gray-900">
-                  About Page
-                </h1>
+                <h1 className="text-4xl font-bold text-gray-900">About Page</h1>
               </div>
             }
           />
@@ -76,19 +72,12 @@ function App() {
             path="/contact"
             element={
               <div className="container mx-auto px-6 py-12">
-                <h1 className="text-4xl font-bold text-gray-900">
-                  Contact Page
-                </h1>
+                <h1 className="text-4xl font-bold text-gray-900">Contact Page</h1>
               </div>
             }
           />
           <Route path="/discover" element={<DiscoverPage />} />
-
-          <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
-          <Route
-            path="/reset-password/:token"
-            element={<ResetPasswordPage />}
-          />
+          <Route path="/farm/:id" element={<FarmStorePage />} />
 
           <Route
             path="/dashboard"
@@ -99,24 +88,31 @@ function App() {
                 </ProductsProvider>
               </ProtectedRoute>
             }
-          />
+          >
+            {/* Default child route: /dashboard -> /dashboard/profile */}
+            <Route index element={<Navigate to="profile" replace />} />
 
+            {/* Child routes */}
+            <Route path="profile" element={<DashboardProfileView />} />
+            <Route path="products" element={<DashboardProductsView />} />
+            <Route path="orders" element={<OrdersPage />} />
+          </Route>
+
+          
+          <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route
             path="/edit-profile"
             element={
               <ProtectedRoute>
-                <ProductsProvider>
-                  <EditProfile />
-                </ProductsProvider>
+                <EditProfile />
               </ProtectedRoute>
             }
           />
-          <Route path="/cart" element={<CartPage />} />
+          {/* <Route path="/cart" element={<CartPage />} /> */}
 
           <Route path="/farm/:id" element={<FarmStorePage />} />
           <Route path="*" element={<NotFound />} />
-          */}
-          {/* --------------------------- */}
         </Routes>
       </MainLayout>
     </AuthProvider>

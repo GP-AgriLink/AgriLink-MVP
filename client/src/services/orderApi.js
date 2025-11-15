@@ -8,7 +8,9 @@ import apiClient, { API_ENDPOINTS } from "../config/api";
 export const getMyOrders = async () => {
   try {
     const { data } = await apiClient.get(API_ENDPOINTS.orders.myOrders);
-    return data || []; // Ensure an array is always returned
+    // The server returns a paginated object { data: [...] }, not just the array.
+    // We must return data.data to get the array of orders.
+    return data.data || []; // Ensure an array is always returned
   } catch (error) {
     console.error("Error fetching farmer orders:", error);
     throw error; // Re-throw for the component to handle (e.g., setLoading)
@@ -22,9 +24,7 @@ export const getMyOrders = async () => {
  */
 export const getIncomingOrdersCount = async () => {
   try {
-    const { data } = await apiClient.get(
-      API_ENDPOINTS.orders.incomingCount
-    );
+    const { data } = await apiClient.get(API_ENDPOINTS.orders.incomingCount);
     return data.count || 0;
   } catch (error) {
     console.error("Error fetching incoming orders count:", error);
@@ -46,10 +46,7 @@ export const updateOrderStatus = async (orderId, status) => {
   }
 
   try {
-    const { data } = await apiClient.put(
-      API_ENDPOINTS.orders.updateStatus(orderId),
-      { status }
-    );
+    const { data } = await apiClient.put(API_ENDPOINTS.orders.updateStatus(orderId), { status });
     return data;
   } catch (error) {
     console.error("Error updating order status:", error);

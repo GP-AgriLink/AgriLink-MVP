@@ -12,12 +12,11 @@ export const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhos
  * Profile management is now split between /api/users/profile and /api/farms/myfarm.
  */
 export const API_ENDPOINTS = {
-  // /api/users (Replaces old /api/farmers)
   auth: {
-    login: "/api/users/login",
-    register: "/api/users/register",
-    forgotPassword: "/api/users/forgot-password",
-    resetPassword: (token) => `/api/users/reset-password/${token}`,
+    login: "/api/users/login", // POST
+    register: "/api/users/register", // POST
+    forgotPassword: "/api/users/forgot-password", // POST
+    resetPassword: (token) => `/api/users/reset-password/${token}`, // POST
   },
   // User-specific profile (firstName, lastName, avatarUrl)
   users: {
@@ -25,10 +24,12 @@ export const API_ENDPOINTS = {
   },
   // Farm-specific profile (farmBio, location) and public discovery
   farms: {
-    myFarm: "/api/farms/myfarm", // Farmer-only GET/PUT for their own farm profile
+    myFarm: "/api/farms/myfarm", // GET/PUT (Protected, Farmer Only)
+    myFarmStats: "/api/farms/myfarm/stats", // (Protected, Farmer Only)
     allFarms: "/api/farms",
-    nearby: "/api/farms/nearby", // e.g., /api/farms/nearby?longitude=...
+    nearby: "/api/farms/nearby", // GET (Public, e.g., /api/farms/nearby?longitude=...)
     byId: (farmId) => `/api/farms/${farmId}`,
+    publicStats: "/api/farms/stats", // GET (Public)
   },
   // Product management (Farmer) and public discovery
   products: {
@@ -40,7 +41,7 @@ export const API_ENDPOINTS = {
   },
   // Order management (Customer & Farmer)
   orders: {
-    create: "/api/orders", // POST (Customer)
+    create: "/api/orders", // POST (Protected)
     myOrders: "/api/orders/myorders", // GET (Customer or Farmer)
     updateStatus: (orderId) => `/api/orders/${orderId}/status`, // PUT (Farmer-only)
   },
@@ -57,7 +58,7 @@ export const API_ENDPOINTS = {
   },
 };
 
-const REQUEST_TIMEOUT = 10000; // 10-second timeout
+const REQUEST_TIMEOUT = 30000; // 30-second timeout
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
