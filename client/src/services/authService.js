@@ -1,7 +1,3 @@
-/**
- * Handles all authentication operations via the /api/users endpoints.
- * Manages user data and token persistence in localStorage.
- */
 import apiClient, { API_ENDPOINTS } from "../config/api";
 
 const USER_STORAGE_KEY = "user";
@@ -36,17 +32,46 @@ export const getCurrentUser = () => {
 
 /**
  * Save user data and token to localStorage
- * @param {object} userData - User data including token
+ * @param {object} userData - User data from login/register response
  */
 export const saveAuthData = (userData) => {
-  if (!userData || !userData.token) {
-    console.error("Invalid user data: token is required", userData);
-    throw new Error("Invalid user data: token is required");
+  if (!userData || !userData.token || !userData._id) {
+    console.error("Invalid user data: token and _id are required", userData);
+    throw new Error("Invalid user data: token and _id are required");
   }
-  // Store the user object (which includes role)
-  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
+
+  const userToSave = {
+    _id: userData._id,
+    email: userData.email,
+    role: userData.role,
+    avatarUrl: userData.avatarUrl || "",
+  };
+
+  localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
   // Store the token separately for the API interceptor
   localStorage.setItem(TOKEN_STORAGE_KEY, userData.token);
+};
+
+/**
+ * Updates the user object in localStorage.
+ * Used to keep the Navbar in sync after a profile edit.
+ * @param {object} updatedUser - The fresh user object from the API
+ */
+export const updateUserInStorage = (updatedUser) => {
+  try {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    const userToSave = {
+      ...currentUser,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      avatarUrl: updatedUser.avatarUrl,
+    };
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userToSave));
+  } catch (error) {
+    console.error("Failed to update user in storage:", error);
+  }
 };
 
 /**
@@ -56,6 +81,7 @@ export const clearAuthData = () => {
   localStorage.removeItem(USER_STORAGE_KEY);
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem("dashboardActiveView");
+  localStorage.removeItem("avatarUrl");
 };
 
 /**
@@ -80,19 +106,23 @@ export const login = async (email, password) => {
       email,
       password,
     });
-    const userData = response.data; // { _id, email, role, token }
+    const userData = response.data;
 
     if (!userData.token) {
       throw new Error("No token received from server");
     }
 
     saveAuthData(userData);
-    return { success: true, user: userData };
+    return { success: true, user: getCurrentUser() };
   } catch (error) {
-    const errorMessage =
-      error.response?.data?.message ||
-      error.response?.data?.errors?.[0]?.msg ||
-      "Login failed. Please try again.";
+    let errorMessage = "Login failed. Please try again.";
+    if (error.response?.status === 401) {
+      errorMessage = "Invalid email or password. Please try again.";
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (error.response?.data?.errors) {
+      errorMessage = error.response.data.errors[0].msg;
+    }
     console.error("Login error:", errorMessage);
     return { success: false, error: errorMessage };
   }
@@ -113,8 +143,8 @@ export const register = async (farmName, email, password, phoneNumber, role) => 
     const payload = {
       email,
       password,
-      phone: phoneNumber, // Map to 'phone' key
-      role: role, // Pass the dynamic role
+      phone: phoneNumber,
+      role: role,
     };
 
     // Conditionally add farmName only if role is 'farmer'
@@ -124,13 +154,13 @@ export const register = async (farmName, email, password, phoneNumber, role) => 
 
     const response = await apiClient.post(API_ENDPOINTS.auth.register, payload);
 
-    const userData = response.data; // { _id, email, role, token }
+    const userData = response.data;
     if (!userData.token) {
       throw new Error("No token received from server");
     }
 
     saveAuthData(userData);
-    return { success: true, user: userData };
+    return { success: true, user: getCurrentUser() };
   } catch (error) {
     if (error.response?.data?.errors) {
       const firstError = error.response.data.errors[0];
@@ -158,11 +188,6 @@ export const logout = () => {
   }
 };
 
-/**
- * Send password reset email
- * @param {string} email - User email
- * @returns {Promise<{success: boolean, error?: string}>}
- */
 export const forgotPassword = async (email) => {
   try {
     await apiClient.post(API_ENDPOINTS.auth.forgotPassword, { email });
@@ -175,15 +200,8 @@ export const forgotPassword = async (email) => {
   }
 };
 
-/**
- * Reset password with token
- * @param {string} token - Reset token from email
- * @param {string} newPassword - New password
- * @returns {Promise<{success: boolean, error?: string}>}
- */
 export const resetPassword = async (token, newPassword) => {
   try {
-    // Endpoint is now a function: /api/users/reset-password/:token
     await apiClient.put(API_ENDPOINTS.auth.resetPassword(token), {
       password: newPassword,
     });
@@ -196,10 +214,6 @@ export const resetPassword = async (token, newPassword) => {
   }
 };
 
-/**
- * Verify if token is still valid
- * @returns {Promise<boolean>}
- */
 export const verifyToken = async () => {
   try {
     const token = getAuthToken();
@@ -227,4 +241,5 @@ export default {
   clearAuthData,
   isAuthenticated,
   verifyToken,
+  updateUserInStorage,
 };

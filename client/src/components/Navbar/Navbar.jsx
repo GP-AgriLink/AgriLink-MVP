@@ -7,7 +7,8 @@ import avatarPlaceholder from "/avatar-placeholder.svg";
 import { LogIn, UserPlus } from "lucide-react";
 
 function Navbar() {
-  const { user, logout, avatarUrl } = useAuth();
+  // --- Get the avatar from the user object ---
+  const { user, logout } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
@@ -16,6 +17,9 @@ function Navbar() {
   const profileDropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const hamburgerButtonRef = useRef(null);
+
+  // --- Get the avatar from the user object ---
+  const userAvatar = user?.avatarUrl || avatarPlaceholder;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -93,6 +97,7 @@ function Navbar() {
               </span>
             )}
           </Link>
+
           {!user ? (
             <>
               {/* --- LOGIN BUTTON --- */}
@@ -129,8 +134,9 @@ function Navbar() {
                 >
                   <div className="relative h-full w-full">
                     <div className="h-12 w-12 overflow-hidden rounded-full shadow-lg ring-2 ring-emerald-500/30 transition-all group-hover:ring-emerald-500/60">
+                      {/* --- Use userAvatar --- */}
                       <img
-                        src={avatarUrl || avatarPlaceholder}
+                        src={userAvatar}
                         alt={user.email}
                         className="h-full w-full object-cover"
                       />
@@ -144,8 +150,9 @@ function Navbar() {
                     <div className="border-b border-emerald-100/75 px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 overflow-hidden rounded-full shadow-md ring-2 ring-emerald-200">
+                          {/* --- Use userAvatar --- */}
                           <img
-                            src={avatarUrl || avatarPlaceholder}
+                            src={userAvatar}
                             alt={user.email}
                             className="h-full w-full object-cover"
                           />
@@ -160,6 +167,7 @@ function Navbar() {
                     </div>
 
                     <div className="py-2">
+                      {/* ... (Dropdown menu items) ... */}
                       <button
                         onClick={() => handleNavigateToDashboard("orders")}
                         className="group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
@@ -438,7 +446,7 @@ function Navbar() {
                   <div className="relative">
                     <div className="h-14 w-14 overflow-hidden rounded-xl shadow-md ring-2 ring-emerald-200">
                       <img
-                        src={avatarUrl || avatarPlaceholder}
+                        src={userAvatar}
                         alt={user.email}
                         className="h-full w-full object-cover"
                       />
