@@ -54,7 +54,7 @@ const RegisterForm = ({ role }) => {
 
         // User object includes role
         if (result.user.role === "farmer") {
-          navigate("/dashboard", { state: { activeView: "profile" } });
+          navigate("/dashboard");
         } else {
           navigate("/discover"); // Customers go to discover page
         }

@@ -12,7 +12,6 @@ import { sanitizeName, sanitizePhone, sanitizeTextArea, sanitizeArray } from "..
 import { validateCoordinates, validateFile } from "../utils/validators";
 import { validateEgyptianPhone } from "../utils/validators";
 
-// ... (Constants, Map components, and other functions remain the same) ...
 const REDIRECT_DELAY = 1000;
 const NAME_REGEX = /^[a-zA-Z\u0621-\u064A\s'-]{2,50}$/;
 const FARM_NAME_REGEX = /^[a-zA-Z\u0621-\u064A\s'-]{3,100}$/;
@@ -152,8 +151,6 @@ export default function EditProfile() {
     }
     return error;
   };
-
-  // ... (isFormValid, useEffect[fetchProfileData], handleChange, Specialties handlers remain the same) ...
 
   const isFormValid = () => {
     const requiredFields = ["farmName", "phoneNumber"];
@@ -327,13 +324,9 @@ export default function EditProfile() {
         sanitizedData.farmBio = sanitizeTextArea(formData.farmBio);
       }
 
-      // --- THIS IS THE FIX ---
-      // We ONLY send the avatarUrl (which is now a Cloudinary URL)
-      // We DO NOT send the base64 string anymore.
       if (formData.avatarUrl?.trim()) {
         sanitizedData.avatarUrl = formData.avatarUrl;
       }
-      // ----------------------
 
       if (formData.specialties && formData.specialties.length > 0) {
         sanitizedData.specialties = sanitizeArray(formData.specialties);
@@ -367,7 +360,7 @@ export default function EditProfile() {
       });
 
       setTimeout(() => {
-        navigate("/dashboard", { state: { activeView: "profile" } });
+        navigate("/dashboard/profile");
       }, REDIRECT_DELAY);
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -384,8 +377,6 @@ export default function EditProfile() {
       setIsLoading(false);
     }
   };
-
-  // ... (useEffect[locationInputRef], getInputClasses, ValidationStatus remain the same) ...
 
   useEffect(() => {
     const input = locationInputRef.current;
@@ -489,7 +480,6 @@ export default function EditProfile() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ... (Rest of the form JSX remains the same) ... */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-medium text-gray-700">First Name</label>

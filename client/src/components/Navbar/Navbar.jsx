@@ -4,28 +4,21 @@ import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import Logo from "../common/Logo";
 import avatarPlaceholder from "/avatar-placeholder.svg";
-// --- Added new icons for the buttons ---
 import { LogIn, UserPlus } from "lucide-react";
 
 function Navbar() {
-  // Get V2-compliant context data.
-  // REMOVED: incomingOrdersCount, fetchAndSetOrderCount
   const { user, logout, avatarUrl } = useAuth();
   const { cartCount } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-  // REMOVED: isDropdownOpen and dropdownRef, as they are no longer needed
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const profileDropdownRef = useRef(null);
   const mobileMenuRef = useRef(null);
   const hamburgerButtonRef = useRef(null);
 
-  // REMOVED: useEffect for fetchAndSetOrderCount, as it's deprecated.
-
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // REMOVED: logic for dropdownRef
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
         setIsProfileDropdownOpen(false);
       }
@@ -50,8 +43,6 @@ function Navbar() {
     setIsProfileDropdownOpen(false);
   };
 
-  // REMOVED: toggleDropdown function
-
   const toggleProfileDropdown = () => {
     setIsProfileDropdownOpen(!isProfileDropdownOpen);
   };
@@ -63,7 +54,7 @@ function Navbar() {
   const handleNavigateToDashboard = (view) => {
     setIsProfileDropdownOpen(false);
     setIsMobileMenuOpen(false);
-    navigate("/dashboard", { state: { activeView: view } });
+    navigate(`/dashboard/${view}`);
   };
 
   return (
@@ -103,7 +94,6 @@ function Navbar() {
             )}
           </Link>
           {!user ? (
-            // --- UPDATED: Replaced dropdown with two separate buttons ---
             <>
               {/* --- LOGIN BUTTON --- */}
               <Link
@@ -128,32 +118,8 @@ function Navbar() {
               </Link>
             </>
           ) : (
-            // --- Authenticated User View (V2 Corrected) ---
+            // --- Authenticated User View ---
             <>
-              <button
-                onClick={() => handleNavigateToDashboard("orders")}
-                className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-gray-50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-400/80 hover:bg-gradient-to-br hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:shadow-xl hover:shadow-emerald-500/40"
-                aria-label="My Orders"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="stroke-slate-600 transition-colors group-hover:stroke-white"
-                >
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <path d="M16 10a4 4 0 0 1-8 0"></path>
-                </svg>
-                {/* REMOVED: Deprecated incomingOrdersCount span */}
-              </button>
-
               <div className="relative" ref={profileDropdownRef}>
                 <button
                   onClick={toggleProfileDropdown}
@@ -195,10 +161,10 @@ function Navbar() {
 
                     <div className="py-2">
                       <button
-                        onClick={() => handleNavigateToDashboard("products")}
-                        className="group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:to-emerald-50"
+                        onClick={() => handleNavigateToDashboard("orders")}
+                        className="group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
                       >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 shadow-sm transition-all group-hover:from-teal-500/20 group-hover:to-emerald-500/20">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 shadow-sm transition-all group-hover:from-emerald-500/20 group-hover:to-teal-500/20">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="18"
@@ -209,18 +175,47 @@ function Navbar() {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className="stroke-teal-600 transition-colors group-hover:stroke-teal-700"
+                            className="stroke-emerald-600 transition-colors group-hover:stroke-emerald-700"
                           >
-                            <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
                           </svg>
                         </div>
                         <span className="transition-transform group-hover:translate-x-0.5">
-                          My Products
+                          My Orders
                         </span>
                       </button>
+
+                      {user?.role === "farmer" && (
+                        <button
+                          onClick={() => handleNavigateToDashboard("products")}
+                          className="group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium text-gray-700 transition-all hover:bg-gradient-to-r hover:from-teal-50 hover:to-emerald-50"
+                        >
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/10 to-emerald-500/10 shadow-sm transition-all group-hover:from-teal-500/20 group-hover:to-emerald-500/20">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="stroke-teal-600 transition-colors group-hover:stroke-teal-700"
+                            >
+                              <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                              <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                              <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                          </div>
+                          <span className="transition-transform group-hover:translate-x-0.5">
+                            My Products
+                          </span>
+                        </button>
+                      )}
 
                       <button
                         onClick={() => handleNavigateToDashboard("profile")}
@@ -281,20 +276,20 @@ function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-gray-50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-400/80 hover:bg-gradient-to-br hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:shadow-xl hover:shadow-emerald-500/40"
+                className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-red-600/60 hover:bg-red-50 hover:shadow-xl hover:shadow-red-500/30"
                 aria-label="Logout"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  className="stroke-slate-600 transition-colors group-hover:stroke-white"
+                  className="stroke-red-600 transition-colors group-hover:stroke-red-700"
                 >
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                   <polyline points="16 17 21 12 16 7"></polyline>
@@ -305,7 +300,7 @@ function Navbar() {
           )}
         </div>
 
-        {/* --- Mobile Menu Toggle (Unchanged) --- */}
+        {/* --- Mobile Menu Toggle --- */}
         <button
           ref={hamburgerButtonRef}
           onClick={toggleMobileMenu}
@@ -490,6 +485,7 @@ function Navbar() {
                     </span>
                   )}
                 </Link>
+
                 <button
                   onClick={() => handleNavigateToDashboard("orders")}
                   className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-emerald-100 hover:to-teal-100"
@@ -515,34 +511,35 @@ function Navbar() {
                     </div>
                     <span>My Orders</span>
                   </div>
-                  {/* REMOVED: Deprecated incomingOrdersCount span */}
                 </button>
 
-                <button
-                  onClick={() => handleNavigateToDashboard("products")}
-                  className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-teal-100 hover:to-emerald-100"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/20 to-emerald-500/20 shadow-sm">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="stroke-teal-600"
-                    >
-                      <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
-                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                      <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                      <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                    </svg>
-                  </div>
-                  <span>My Products</span>
-                </button>
+                {user?.role === "farmer" && (
+                  <button
+                    onClick={() => handleNavigateToDashboard("products")}
+                    className="flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-teal-50 to-emerald-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-teal-100 hover:to-emerald-100"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500/20 to-emerald-500/20 shadow-sm">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="stroke-teal-600"
+                      >
+                        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line>
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                      </svg>
+                    </div>
+                    <span>My Products</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleNavigateToDashboard("profile")}
@@ -595,9 +592,9 @@ function Navbar() {
 
                 <button
                   onClick={handleLogout}
-                  className="group flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-slate-50 to-gray-50 px-4 py-3.5 font-semibold text-slate-700 shadow-sm transition-all hover:bg-gradient-to-r hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:text-white"
+                  className="group flex w-full items-center gap-3 rounded-xl px-4 py-3.5 font-medium text-red-600 transition-all hover:bg-red-50"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-500/20 to-gray-500/20 shadow-sm transition-all group-hover:bg-white/20">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 shadow-sm transition-all group-hover:bg-red-500/20">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -608,14 +605,14 @@ function Navbar() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="stroke-slate-600 transition-colors group-hover:stroke-white"
+                      className="stroke-red-600 transition-colors"
                     >
                       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                       <polyline points="16 17 21 12 16 7"></polyline>
                       <line x1="21" y1="12" x2="9" y2="12"></line>
                     </svg>
                   </div>
-                  <span>Logout</span>
+                  <span className="transition-transform group-hover:translate-x-0.5">Logout</span>
                 </button>
               </>
             )}
