@@ -40,34 +40,36 @@ const CategoryCard = ({ imageSrc, name, description }) => {
     );
 };
 
-
 const categoryDetails = {
-    Vegetable: {
+    Vegetables: {
         description: "Fresh, crisp vegetables sourced directly from local farms.",
-        imageSrc: "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?auto=format&fit=crop&w=600&q=80"
+        imageSrc: "../../../public/Category/Vegetables.png"
     },
     Organic: {
         description: "Certified organic produce grown without synthetic pesticides or fertilizers.",
-        imageSrc: "https://images.unsplash.com/photo-1518843875459-a63668da084d?auto=format&fit=crop&w=600&q=80"
+        imageSrc: "../../../public/Category/Organic.jpg"
     },
     Dairy: {
         description: "Creamy milk, rich cheeses, and fresh dairy products from pasture-raised cows.",
-        imageSrc: "https://images.unsplash.com/photo-1559598467-f8b76c8155d0?auto=format&fit=crop&w=600&q=80"
+        imageSrc: "../../../public/Category/Dairy.png"
     },
-    Fruit: {
+    Fruits: {
         description: "Sweet, juicy, and seasonal fruits picked at the peak of ripeness.",
-        imageSrc: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=600&q=80"
+        imageSrc: "../../../public/Category/Fruits.png"
     },
-    Poultry: {
-        description: "High-quality, free-range chicken and farm-fresh eggs.",
-        imageSrc: "https://images.unsplash.com/photo-1587593810167-a84920ea0781?auto=format&fit=crop&w=600&q=80"
+    Grains: {
+        description: "Locally harvested grains, from hearty oats to golden wheat.",
+        imageSrc: "../../../public/Category/Grains.png"
+    },
+    Herbs: {
+        description: "Aromatic, fresh-cut herbs like basil, mint, and rosemary to elevate your cooking.",
+        imageSrc: "../../../public/Category/Herbs.jpg"
     },
     default: {
         description: "Explore our collection of high-quality farm products.",
-        imageSrc: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80"
+        imageSrc: "../../../public/Category/all.png"
     }
 };
-
 
 const CategoriesSection = () => {
     const [categories, setCategories] = useState([]);
@@ -134,15 +136,15 @@ const CategoriesSection = () => {
 
                 <div className="mx-auto mb-12 max-w-2xl text-center">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
-                        Best Selling Categories
+                        Categories
                     </p>
                     <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                        Explore products from our most popular farm categories.
+                        Shop all farm categories
                     </h2>
                     <div className="mx-auto mt-5 w-20 h-1 bg-green-700"></div>
                 </div>
 
-                <div className="mx-auto grid max-w-lg gap-2 lg:max-w-none lg:grid-cols-3">
+                <div className="sm:grid lg:flex justify-around mx-auto max-w-lg gap-2 lg:max-w-none lg:grid-cols-3">
 
                     {categories.map((categoryName) => {
                         const details = categoryDetails[categoryName] || categoryDetails.default;

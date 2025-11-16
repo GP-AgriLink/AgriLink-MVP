@@ -27,12 +27,72 @@ function StatSkeleton() {
 
 function CounterSection() {
 
-    const [stats] = useState({
-        farmsRegistered: 120,
-        governoratescovered: 27,
-        productsListed: 85,
-        ordersCompleted: 430,
-    });
+    // const [stats] = useState({
+    //     farmsRegistered: 120,
+    //     customersJoined: 27,
+    //     productsListed: 85,
+    //     ordersCompleted: 430,
+    // });
+
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            const token = localStorage.getItem("token");
+
+            try {
+                const response = await fetch('http://localhost:5000/api/farms/stats', {
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                setStats(data);
+
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    if (loading) {
+        return (
+            <section className="py-16 bg-gray-50">
+                <div className="container mx-auto max-w-7xl px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <StatSkeleton />
+                        <StatSkeleton />
+                        <StatSkeleton />
+                        <StatSkeleton />
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (error) {
+        return (
+            <section className="py-16 bg-red-50">
+                <div className="container mx-auto max-w-7xl px-6 lg:px-8 text-center">
+                    <p className="text-red-700 font-medium">
+                        Error loading statistics: {error}
+                    </p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="py-16">
@@ -47,8 +107,8 @@ function CounterSection() {
                         />
 
                         <StatItem
-                            value={stats.governoratescovered}
-                            label="Governorates Covered"
+                            value={stats.customersJoined}
+                            label="Customers Joined"
                         />
 
                         <StatItem

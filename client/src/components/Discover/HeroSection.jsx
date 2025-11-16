@@ -1,7 +1,7 @@
 const HeroSection = () => {
     const stats = [
         { id: 1, name: 'Farms', value: '120+' },
-        { id: 2, name: 'Governments', value: '27+' },
+        { id: 2, name: 'Customers', value: '27+' },
         { id: 3, name: 'Products', value: '85+' },
     ];
 
