@@ -278,11 +278,63 @@ const getFarmStats = async (req, res) => {
 };
 
 
+/**
+ * @desc    Get public-facing platform statistics
+ * @route   GET /api/farms/stats
+ * @access  Public
+ */
+const getPublicStats = async (req, res) => {
+    try {
+        const [
+            farmCount,
+            productCount,
+            orderCount,
+            totalSalesResult,
+            customerCount
+        ] = await Promise.all([
+            // Count all Farms
+            Farm.countDocuments({}),
+            
+            // Count all visible Products
+            Product.countDocuments({ status: 'active', isArchived: false }),
+            
+            // Count all completed Orders
+            Order.countDocuments({ status: 'Completed' }),
+
+            // Sum the totalAmount of all "Completed" orders
+            Order.aggregate([
+                { $match: { status: 'Completed' } },
+                { $group: { _id: null, total: { $sum: "$totalAmount" } } }
+            ]),
+            
+            // Count all registered 'customer' users
+            User.countDocuments({ role: 'customer' })
+        ]);
+
+        // Helper to safely get the sales total (it returns an array)
+        const totalSales = totalSalesResult[0]?.total || 0;
+
+        res.json({
+            farmsRegistered: farmCount,
+            productsListed: productCount,
+            ordersCompleted: orderCount,
+            totalSalesValue: totalSales,
+            customersJoined: customerCount
+        });
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send('Server Error');
+    }
+};
+
+
 export {
     getMyFarmProfile,
     updateMyFarmProfile,
     getAllFarms,
     getFarmById,
     getNearbyFarms,
-    getFarmStats
+    getFarmStats,
+    getPublicStats
 };

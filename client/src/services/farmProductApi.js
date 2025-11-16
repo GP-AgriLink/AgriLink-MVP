@@ -1,10 +1,3 @@
-/**
- * Product Service
- *
- * Handles all product-related API operations for farmer dashboard
- * Implements sanitization and validation per myprod.md API contract
- */
-
 import apiClient, { API_ENDPOINTS } from "../config/api";
 import { sanitizeProductData } from "../utils/sanitizers";
 
@@ -34,15 +27,45 @@ export const createProduct = async (productData) => {
 /**
  * Get all products for the logged-in farmer (Protected endpoint)
  *
- * @returns {Promise<Array>} Array of product objects
+ * @param {number} page - The page number to retrieve
+ * @param {number} limit - The number of items per page
+ * @param {string} category - The category to filter by
+ * @param {string} search - The search term to filter by name
+ * @returns {Promise<object>} Paginated product object { data: [], page, pages, total }
  */
-export const getMyProducts = async () => {
+export const getMyProducts = async (page = 1, limit = 10, category = "", search = "") => {
   try {
-    const response = await apiClient.get(API_ENDPOINTS.products.myProducts);
-    return response.data || [];
+    const params = { page, limit };
+    if (category) {
+      params.category = category;
+    }
+    if (search) {
+      params.search = search;
+    }
+
+    const response = await apiClient.get(API_ENDPOINTS.products.myProducts, {
+      params,
+    });
+    // Return the full paginated object from the server
+    return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Failed to fetch products";
     throw new Error(errorMessage); // Re-throw for the page to handle
+  }
+};
+
+/**
+ * Get all unique product categories (Public endpoint)
+ *
+ * @returns {Promise<Array>} Array of category strings
+ */
+export const getAllCategories = async () => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.products.categories);
+    return response.data || []; // Returns an array of strings
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch categories";
+    throw new Error(errorMessage);
   }
 };
 
@@ -84,28 +107,6 @@ export const archiveProduct = async (productId) => {
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Failed to archive product";
-    throw new Error(errorMessage);
-  }
-};
-
-/**
- * Upload an image for a product (Protected endpoint)
- *
- * @param {string} productId - Product ID
- * @param {File} file - The image file to upload
- * @returns {Promise<object>} Object containing the new imageUrl
- */
-export const uploadProductImage = async (productId, file) => {
-  try {
-    const formData = new FormData();
-    formData.append("productImage", file);
-
-    const response = await apiClient.post(API_ENDPOINTS.products.uploadImage(productId), formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    return response.data; // { message, imageUrl }
-  } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to upload image";
     throw new Error(errorMessage);
   }
 };

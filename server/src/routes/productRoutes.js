@@ -27,6 +27,8 @@ router.post(
     body("stock", "Stock count must be a non-negative number").isNumeric({
       min: 0,
     }),
+
+    body('imageUrl', 'Image URL is optional').optional().isURL(),
     body('categories', 'Categories must be an array of strings').optional().isArray()
   ],
   createProduct

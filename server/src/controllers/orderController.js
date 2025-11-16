@@ -2,56 +2,138 @@ import { validationResult } from "express-validator";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Farm from "../models/Farm.js";
+import Cart from "../models/Cart.js";
+import mongoose from "mongoose";
+import AppError from "../utils/AppError.js";
 
 /**
- * @desc    Create a new order
+ * @desc    Create new order(s) from the user's cart
  * @route   POST /api/orders
  * @access  Private
  */
 const createOrder = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  // 'farmId' comes from the body, 'user' comes from the token
-  const { farmId, orderItems } = req.body;
-  const userId = req.user._id;
+  // START A MONGOOSE SESSION (for the transaction)
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    for (const item of orderItems) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res
-          .status(404)
-          .json({ message: `Product not found: ${item.name}` });
-      }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({
-          message: `Not enough stock for ${product.name}. Available: ${product.stock}`,
-        });
-      }
-      product.stock -= item.quantity;
-      await product.save();
+    const userId = req.user._id;
+
+    // Get the user's cart (MUST use the session)
+    const cart = await Cart.findOne({ user: userId }).session(session);
+
+    if (!cart || cart.items.length === 0) {
+      throw new AppError("Your cart is empty", 400);
     }
 
-    // --- Calculate totalAmount ---
-    const totalAmount = orderItems.reduce((sum, item) => {
-      return sum + item.quantity * item.unitPrice;
-    }, 0);
+    const farmGroups = new Map();
+    const productsToUpdate = [];
 
-    const newOrder = new Order({
-      farm: farmId, // This is the Farm's ID
-      user: userId, // This is the Customer's ID
-      orderItems,
-      totalAmount,
-    });
+    // --- CRITICAL: RE-VALIDATE CART LOOP ---
+    // This loop checks for stale prices, integrity, and stock.
+    for (const item of cart.items) {
+      const product = await Product.findById(item.product).session(session);
 
-    const order = await newOrder.save();
-    res.status(201).json(order);
+      // Check 1: Product Integrity
+      if (!product || product.isArchived || product.status === "inactive") {
+        throw new AppError(
+          `Product "${item.name}" is no longer available. Please remove it from your cart.`,
+          400
+        );
+      }
+      // Check 2: Stale Price
+      if (product.price !== item.price) {
+        throw new AppError(
+          `The price of "${item.name}" has changed. Please review your cart.`,
+          400
+        );
+      }
+      // Check 3: Stock (Race Condition check)
+      if (product.stock < item.quantity) {
+        throw new AppError(
+          `Not enough stock for "${item.name}". Only ${product.stock} left.`,
+          400
+        );
+      }
+
+      // Group items by farm
+      const farmId = item.farm.toString();
+      if (!farmGroups.has(farmId)) {
+        farmGroups.set(farmId, []);
+      }
+      farmGroups.get(farmId).push(item);
+
+      // Add product to our update list
+      productsToUpdate.push({
+        _id: product._id,
+        stock: product.stock - item.quantity,
+      });
+    }
+
+    //  --- CREATE ORDERS LOOP ---
+    const createdOrders = [];
+    for (const [farmId, items] of farmGroups.entries()) {
+      const totalAmount = items.reduce(
+        (sum, item) => sum + item.quantity * item.price,
+        0
+      );
+
+      const orderItems = items.map((i) => ({
+        productId: i.product,
+        name: i.name,
+        quantity: i.quantity,
+        unitPrice: i.price,
+      }));
+
+      // Create the new order
+      const newOrder = new Order({
+        farm: farmId,
+        user: userId,
+        orderItems: orderItems,
+        totalAmount,
+      });
+
+      // We must save the new order using the session
+      const savedOrder = await newOrder.save({ session });
+      createdOrders.push(savedOrder);
+    }
+
+    // --- UPDATE STOCK (ATOMICALLY) ---
+    // This is safer than looping and saving one-by-one
+    const bulkOps = productsToUpdate.map((p) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: { $set: { stock: p.stock } },
+      },
+    }));
+    await Product.bulkWrite(bulkOps, { session });
+
+    // Clear the user's cart
+    cart.items = [];
+    await cart.save({ session });
+
+    // --- COMMIT THE TRANSACTION ---
+    // If all operations succeeded, commit the changes to the database.
+    await session.commitTransaction();
+
+    res.status(201).json(createdOrders);
   } catch (error) {
+    // --- ABORT THE TRANSACTION ---
+    // If any error occurred, roll back all changes.
+    await session.abortTransaction();
+
     console.error(error.message);
-    res.status(500).send("Server Error");
+
+    // Check if it's our operational error
+    if (error.isOperational) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    // If it's not, it's an unknown server error
+    res.status(500).send("Server Error: Order failed");
+  } finally {
+    // Always end the session
+    session.endSession();
   }
 };
 
@@ -61,39 +143,45 @@ const createOrder = async (req, res) => {
  * @access  Private
  */
 const getMyOrders = async (req, res) => {
-    try {
-        const limit = Number(req.query.limit) || 10;
-        const page = Number(req.query.page) || 1;
-        const skip = (page - 1) * limit;
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
 
-        let query = {};
+    let query = {};
 
-        if (req.user.role === 'customer') {
-            query = { user: req.user._id };
-        } else if (req.user.role === 'farmer') {
-            const farm = await Farm.findOne({ user: req.user._id });
-            if (!farm) {
-                return res.status(404).json({ message: 'Farm profile not found.' });
-            }
-            query = { farm: farm._id };
-        }
-        const total = await Order.countDocuments(query);
-        const orders = await Order.find(query)
-            .sort({ createdAt: -1 }) // Keep the sort
-            .skip(skip)
-            .limit(limit);
-
-        res.json({
-            data: orders,
-            page,
-            pages: Math.ceil(total / limit),
-            total,
-        });
-
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+    if (req.user.role === "customer") {
+      query = { user: req.user._id };
+    } else if (req.user.role === "farmer") {
+      const farm = await Farm.findOne({ user: req.user._id });
+      if (!farm) {
+        return res.status(404).json({ message: "Farm profile not found." });
+      }
+      query = { farm: farm._id };
     }
+
+    // Check for a status in the query string
+    if (req.query.status) {
+      query.status = req.query.status;
+    }
+
+    const total = await Order.countDocuments(query);
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 }) // Keep the sort
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "firstName lastName phone");
+
+    res.json({
+      data: orders,
+      page,
+      pages: Math.ceil(total / limit),
+      total,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
 };
 
 /**
@@ -113,7 +201,9 @@ const updateOrderStatus = async (req, res) => {
 
     // Check if the order is properly linked to a farm
     if (!order.farm) {
-      return res.status(500).json({ message: "Order is not linked to a farm (Data Error)" });
+      return res
+        .status(500)
+        .json({ message: "Order is not linked to a farm (Data Error)" });
     }
 
     // Find the farm profile for the logged-in farmer
@@ -124,7 +214,7 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Farmer profile not found" });
     }
 
-    // --- CRITICAL: Ownership Check (The Fix) ---
+    // --- CRITICAL: Ownership Check ---
     // Compare the order's 'farm' field with the logged-in farmer's farm ID
     if (order.farm.toString() !== farm._id.toString()) {
       return res
@@ -167,7 +257,6 @@ const updateOrderStatus = async (req, res) => {
     order.status = newStatus;
     const updatedOrder = await order.save();
     res.json(updatedOrder);
-
   } catch (error) {
     console.error(error.message);
     res.status(500).send("Server Error");

@@ -5,24 +5,21 @@ import { toast } from "react-toastify";
 
 /**
  * MyProductsPage
- * Product inventory management interface for farmers
  * @param {Function} onEdit - Handler for product edit action
  * @param {Function} onAddNew - Handler for new product creation
- * @param {string} activeFilter - The currently selected filter
- * @param {Function} onFilterChange - Handler to change the filter
  */
-const MyProductsPage = ({ onEdit, onAddNew, activeFilter, onFilterChange }) => {
+const MyProductsPage = ({ onEdit, onAddNew }) => {
   const { products, loading, error, refreshProducts, setLoading } = useProducts();
 
   const handleArchiveProduct = async (productId) => {
     setLoading(true);
     try {
       await archiveProduct(productId);
-      toast.success("Product archived.");
+      toast.success("Product Archived"); // Updated message
       refreshProducts();
     } catch (err) {
       console.error("Error archiving product:", err);
-      toast.error("Failed to archive product. Please try again.");
+      toast.error(err.message || "Failed to archive product"); // Updated message
       setLoading(false);
     }
   };
@@ -31,7 +28,7 @@ const MyProductsPage = ({ onEdit, onAddNew, activeFilter, onFilterChange }) => {
     setLoading(true);
     const productToRestore = products.find((p) => (p._id || p.id) === productId);
     if (!productToRestore) {
-      toast.error("Error: Product not found.");
+      toast.error("Product not found");
       setLoading(false);
       return;
     }
@@ -44,7 +41,7 @@ const MyProductsPage = ({ onEdit, onAddNew, activeFilter, onFilterChange }) => {
 
     try {
       await updateProduct(productId, updateData);
-      toast.success("Product restored.");
+      toast.success("Product Restored"); // Updated message
       refreshProducts();
     } catch (err) {
       const errorMessage = err.message || "Failed to restore product. Please try again.";
@@ -89,12 +86,10 @@ const MyProductsPage = ({ onEdit, onAddNew, activeFilter, onFilterChange }) => {
       <div className="mx-auto max-w-[1600px]">
         <ProductList
           products={products}
-          activeFilter={activeFilter}
           onEdit={onEdit}
           onArchive={handleArchiveProduct}
           onRestore={handleRestoreProduct}
           onAddNew={onAddNew}
-          onFilterChange={onFilterChange}
         />
       </div>
     </div>

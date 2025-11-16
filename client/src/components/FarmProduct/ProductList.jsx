@@ -1,30 +1,13 @@
 import { useMemo } from "react";
 import ProductListHeader from "./ProductListHeader";
-// import ProductStats from "./ProductStats";
+import ProductStats from "./ProductStats";
 import FilteredProductList from "./FilteredProductList";
 import EmptyState from "./EmptyState";
+import { useProducts } from "../../context/ProductsContext";
 
-/**
- * ProductList
- * Displays product inventory split into active and archived sections
- * @param {Array} products - Complete list of products
- * @param {string} activeFilter - The currently selected filter ("active", "inactive", "archived")
- * @param {Function} onEdit - Handler for product edit action
- * @param {Function} onArchive - Handler to archive a product
- * @param {Function} onRestore - Handler to restore an archived product
- * @param {Function} onAddNew - Handler to create new product
- * @param {Function} onFilterChange - Handler to change the active filter
- */
-const ProductList = ({
-  products,
-  activeFilter,
-  onEdit,
-  onArchive,
-  onRestore,
-  onAddNew,
-  onFilterChange,
-}) => {
-  // Memoize all product filter lists
+const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew }) => {
+  const { activeCategory: activeFilter, setFilter: onFilterChange } = useProducts();
+
   const { activeProducts, inactiveProducts, archivedProducts } = useMemo(() => {
     const active = [];
     const inactive = [];
@@ -48,7 +31,6 @@ const ProductList = ({
     onFilterChange(filter);
   };
 
-  // If there are no products at all, show the main empty state
   if (products.length === 0) {
     return (
       <section className="space-y-8">
@@ -63,8 +45,7 @@ const ProductList = ({
       {/* Header Section */}
       <ProductListHeader onAddNew={onAddNew} />
 
-      {/* Statistics Section - Now passes activeFilter */}
-      {/* <ProductStats products={products} activeFilter={activeFilter} onStatClick={handleStatClick} /> */}
+      <ProductStats products={products} activeFilter={activeFilter} onStatClick={handleStatClick} />
 
       {/* Active Products List - Default */}
       {(activeFilter === "active" || !activeFilter) && (

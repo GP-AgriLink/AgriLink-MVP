@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as authService from "../services/authService";
+import { getUserProfile } from "../services/userService";
 
 const AuthContext = createContext(null);
 
@@ -18,46 +19,61 @@ export const clearAuthData = authService.clearAuthData;
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [avatarUrl, setAvatarUrl] = useState("");
 
-  // Function to update avatar (no change, this is still valid)
-  const updateAvatar = (newAvatarUrl) => {
-    const url = newAvatarUrl || "";
-    setAvatarUrl(url);
-    localStorage.setItem("avatarUrl", url);
-  };
+  // This function is called by UserProfileForm.jsx after a successful edit
+  const refreshAuthUser = useCallback((updatedUser) => {
+    if (updatedUser) {
+      // Update the user object in localStorage
+      authService.updateUserInStorage(updatedUser);
+      // Update the user object in state
+      setUser(authService.getCurrentUser());
+    }
+  }, []);
 
   useEffect(() => {
     const currentUser = authService.getCurrentUser();
     const token = authService.getAuthToken();
 
     if (currentUser && token) {
-      setUser(currentUser); // User object now contains 'role'
-      // Load avatar from storage
-      const storedAvatar = localStorage.getItem("avatarUrl");
-      if (storedAvatar) {
-        setAvatarUrl(storedAvatar);
-      }
-    } else if (currentUser || token) {
-      // Clean up if data is partial/corrupt
-      authService.clearAuthData();
-    }
+      // 1. Set user immediately from storage for a responsive UI
+      setUser(currentUser);
 
-    setLoading(false);
-  }, []);
+      // 2. Start a background "hydration" process
+      const hydrateUser = async () => {
+        try {
+          // Fetch the full, fresh user object from the server
+          const freshUser = await getUserProfile();
+          if (freshUser) {
+            // Update localStorage with the full user data (e.g., avatarUrl)
+            authService.updateUserInStorage(freshUser);
+            // Update the state to re-render components (like Navbar)
+            setUser(authService.getCurrentUser());
+          }
+        } catch (error) {
+          // Error will be 401 if token is bad, which is handled by the interceptor
+          console.error("Failed to hydrate user on load:", error);
+        } finally {
+          // 3. Set loading to false only after hydration is complete
+          setLoading(false);
+        }
+      };
+
+      hydrateUser();
+    } else {
+      // No user or token, just stop loading
+      authService.clearAuthData();
+      setLoading(false);
+    }
+  }, []); // Run only once on app mount
 
   useEffect(() => {
-    // This effect handles cross-tab state synchronization
     const handleStorageChange = (e) => {
-      // On logout in another tab
       if ((e.key === "user" || e.key === "token") && !e.newValue) {
         authService.clearAuthData();
         setUser(null);
-        setAvatarUrl("");
       }
-      // Sync avatar changes from other tabs
-      if (e.key === "avatarUrl") {
-        setAvatarUrl(e.newValue || "");
+      if (e.key === "user" && e.newValue) {
+        setUser(JSON.parse(e.newValue));
       }
     };
 
@@ -67,10 +83,8 @@ export const AuthProvider = ({ children }) => {
       const token = authService.getAuthToken();
 
       if (user && (!currentUser || !token)) {
-        // User state exists but token/user in storage was manually deleted
         authService.clearAuthData();
         setUser(null);
-        setAvatarUrl("");
       }
     }, 1000);
 
@@ -86,6 +100,8 @@ export const AuthProvider = ({ children }) => {
     const result = await authService.login(email, password);
     if (result.success) {
       setUser(result.user);
+      // After login, we *could* hydrate here, but the page will reload
+      // and the main useEffect will run, so it's not strictly necessary.
     }
     return result;
   };
@@ -101,8 +117,6 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
-    setAvatarUrl("");
-    localStorage.removeItem("avatarUrl");
   };
 
   const value = {
@@ -111,8 +125,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
-    avatarUrl,
-    updateAvatar,
+    refreshAuthUser,
   };
 
   return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;

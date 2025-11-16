@@ -1,16 +1,16 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext"; 
+import { useAuth } from "../../context/AuthContext";
 import { Formik, Form, Field } from "formik";
 import { toast } from "react-toastify";
 import Logo from "../common/Logo";
-import InputField from "./InputField"; 
+import InputField from "./InputField";
 import { loginValidationSchema } from "../../utils/validationSchemas";
 import { sanitizeEmail } from "../../utils/sanitizers";
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login } = useAuth(); 
+  const { login } = useAuth();
 
   const initialValues = {
     email: "",
@@ -46,7 +46,7 @@ const LoginForm = () => {
 
         // User object includes role
         if (result.user.role === "farmer") {
-          navigate("/dashboard", { state: { activeView: "profile" } });
+          navigate("/dashboard");
         } else {
           navigate("/discover"); // Customers go to discover page
         }

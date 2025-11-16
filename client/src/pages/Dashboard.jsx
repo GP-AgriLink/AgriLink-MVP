@@ -1,115 +1,21 @@
-import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import OrdersPage from "./OrdersPage";
-import ProfilePage from "./ProfilePage";
+import { useState, useEffect } from "react";
+import { Outlet } from "react-router-dom";
+import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
 import AddProduct from "../components/FarmProduct/AddProduct";
 import EditProduct from "../components/FarmProduct/EditProduct";
-import { createProduct, updateProduct, uploadProductImage } from "../services/farmProductApi";
+import { uploadImage } from "../services/uploadService";
+import { createProduct, updateProduct } from "../services/farmProductApi";
 import { useProducts } from "../context/ProductsContext";
-import DashboardProductsView from "../components/Dashboard/DashboardProductsView";
-import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
 import { toast } from "react-toastify";
 
 const Dashboard = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // State for main component view
-  const [activeView, setActiveView] = useState(() => {
-    if (location.state?.activeView) {
-      return location.state.activeView;
-    }
-    return localStorage.getItem("dashboardActiveView") || "profile";
-  });
-
-  // State for accordion
-  const [openAccordion, setOpenAccordion] = useState(() => {
-    return localStorage.getItem("dashboardOpenAccordion") || "";
-  });
-
-  // State for sub-filter
-  const [activeFilter, setActiveFilter] = useState(() => {
-    return localStorage.getItem("dashboardActiveFilter") || null;
-  });
-
-  const lastNavStateRef = useRef(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // --- Modal State & Logic Lives Here ---
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
-  const handleFilterChange = (filter) => {
-    setActiveView("products");
-    setOpenAccordion("products");
-    setActiveFilter(filter);
-  };
-
-  const { refreshProducts, setLoading } = useProducts();
-
-  useEffect(() => {
-    if (activeView === "products" && !activeFilter) {
-      setActiveFilter("active");
-    }
-  }, [activeView, activeFilter]);
-
-  useEffect(() => {
-    if (location.state?.activeView && location.state.activeView !== lastNavStateRef.current) {
-      setActiveView(location.state.activeView);
-      // Also set accordion and default filter when navigating from navbar
-      if (location.state.activeView === "orders") {
-        setOpenAccordion("orders");
-        setActiveFilter("incoming");
-      } else if (location.state.activeView === "products") {
-        setOpenAccordion("products");
-        setActiveFilter("active");
-      } else {
-        setOpenAccordion("");
-        setActiveFilter(null);
-      }
-      lastNavStateRef.current = location.state.activeView;
-      window.history.replaceState({}, document.title);
-    }
-  }, [location.state]);
-
-  useEffect(() => {
-    const handleViewChange = (event) => {
-      const { activeView } = event.detail;
-      if (activeView) {
-        setActiveView(activeView);
-        // Also set accordion and default filter
-        if (activeView === "orders") {
-          setOpenAccordion("orders");
-          setActiveFilter("incoming");
-        } else if (activeView === "products") {
-          setOpenAccordion("products");
-          setActiveFilter("active");
-        } else {
-          setOpenAccordion("");
-          setActiveFilter(null);
-        }
-      }
-    };
-
-    window.addEventListener("dashboardViewChange", handleViewChange);
-    return () => {
-      window.removeEventListener("dashboardViewChange", handleViewChange);
-    };
-  }, []);
-
-  // Save all states to localStorage
-  useEffect(() => {
-    localStorage.setItem("dashboardActiveView", activeView);
-    if (openAccordion) {
-      localStorage.setItem("dashboardOpenAccordion", openAccordion);
-    } else {
-      localStorage.removeItem("dashboardOpenAccordion");
-    }
-    if (activeFilter) {
-      localStorage.setItem("dashboardActiveFilter", activeFilter);
-    } else {
-      localStorage.removeItem("dashboardActiveFilter");
-    }
-  }, [activeView, openAccordion, activeFilter]);
+  const { setLoading, refreshProducts } = useProducts();
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -135,22 +41,37 @@ const Dashboard = () => {
     setIsEditProductOpen(true);
   };
 
-  const handleAddProductSubmit = async (productData) => {
-    setLoading(true);
+  const handleAddProductSubmit = async (sanitizedData, imageFile) => {
+    setLoading(true); // Use context's loading
+    let finalData = { ...sanitizedData };
+
     try {
-      await createProduct(productData);
-      toast.success("Product created successfully!");
+      if (imageFile) {
+        toast.info("Uploading image...");
+        const uploadResponse = await uploadImage(imageFile);
+        finalData.imageUrl = uploadResponse.imageUrl;
+      }
+
+      await createProduct(finalData);
+      toast.success("Product Created");
       setIsAddProductOpen(false);
-      refreshProducts();
+      refreshProducts(); // This will set loading to false
     } catch (error) {
       console.error("Failed to create product:", error);
       toast.error(error.message || "Failed to create product");
-      setLoading(false);
-      throw error;
+      setLoading(false); // Manually stop loading on error
+      throw error; // Re-throw to keep the modal open
     }
   };
 
-  const handleEditProductSubmit = async (productData, imageFile) => {
+  const handleEditProductSubmit = async (changedData, imageFile) => {
+    if (Object.keys(changedData).length === 0 && !imageFile) {
+      toast.info("No changes to save.");
+      setIsEditProductOpen(false);
+      setProductToEdit(null);
+      return;
+    }
+
     setLoading(true);
     try {
       if (!productToEdit?._id && !productToEdit?.id) {
@@ -158,17 +79,17 @@ const Dashboard = () => {
       }
       const productId = productToEdit._id || productToEdit.id;
 
-      let finalProductData = { ...productData };
+      let finalUpdateData = { ...changedData };
 
       if (imageFile) {
         toast.info("Uploading new image...");
-        const uploadResponse = await uploadProductImage(productId, imageFile);
-        finalProductData.imageUrl = uploadResponse.imageUrl;
+        const uploadResponse = await uploadImage(imageFile);
+        finalUpdateData.imageUrl = uploadResponse.imageUrl;
       }
 
-      await updateProduct(productId, finalProductData);
+      await updateProduct(productId, finalUpdateData);
 
-      toast.success("Product updated successfully!");
+      toast.success("Product Updated");
       setIsEditProductOpen(false);
       setProductToEdit(null);
       refreshProducts();
@@ -177,38 +98,6 @@ const Dashboard = () => {
       toast.error(error.message || "Failed to update product");
       setLoading(false);
       throw error;
-    }
-  };
-
-  const renderActiveComponent = () => {
-    switch (activeView) {
-      case "orders":
-        return (
-          <div className="flex min-h-[400px] flex-col py-12 text-center">
-            <OrdersPage activeFilter={activeFilter || "incoming"} />
-          </div>
-        );
-      case "products":
-        return (
-          <DashboardProductsView
-            onEdit={handleEditProduct}
-            onAddNew={handleAddProduct}
-            activeFilter={activeFilter || "active"}
-            onFilterChange={handleFilterChange}
-          />
-        );
-      case "profile":
-        return (
-          <div className="flex min-h-[400px] flex-col py-12 text-center">
-            <ProfilePage />
-          </div>
-        );
-      default:
-        return (
-          <div className="flex min-h-[400px] flex-col py-12 text-center">
-            <ProfilePage />
-          </div>
-        );
     }
   };
 
@@ -246,27 +135,20 @@ const Dashboard = () => {
             />
           )}
 
-          {/* New Sidebar Component */}
-          <DashboardSidebar
-            activeView={activeView}
-            setActiveView={setActiveView}
-            activeFilter={activeFilter}
-            setActiveFilter={setActiveFilter}
-            openAccordion={openAccordion}
-            setOpenAccordion={setOpenAccordion}
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-          />
+          {/* Sidebar Component */}
+          <DashboardSidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
 
           <main className="max-h-fit flex-1">
             <div className="max-h-[90vh] min-h-fit overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 shadow-lg backdrop-blur-sm">
-              {renderActiveComponent()}
+              {/* Pass handlers to children via Outlet context */}
+              <Outlet context={{ onAddNew: handleAddProduct, onEdit: handleEditProduct }} />
             </div>
           </main>
         </div>
       </div>
 
-      {/* Product Modals */}
+      {/* Modals are rendered here, outside the <main> element,
+          so they can cover the entire page */}
       <AddProduct
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
