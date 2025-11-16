@@ -111,7 +111,7 @@ const HeroSection = ({ onLocationSet, userCoords }) => {
     };
 
     return (
-        <div className="relative w-full bg-emerald-50">
+        <div className="relative w-full bg-emerald-50" id="DiscoverSection">
 
             <div className="mx-auto max-w-2xl text-center">
                 <p className="text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
@@ -125,15 +125,12 @@ const HeroSection = ({ onLocationSet, userCoords }) => {
 
             <div className="container mx-auto grid min-h-[70vh] grid-cols-1 items-center gap-12 px-4 py-20 lg:grid-cols-2">
 
-                {/* --- Text and Controls --- */}
                 <div className="text-center lg:text-left">
                     <h1 className="text-5xl font-bold text-gray-900 drop-shadow-sm">
-                        {/* Discover Fresh, Local Farms */}
                         Discover fresh produce,<br />
                         lovely grown near you.
                     </h1>
                     <p className="mt-7 text-xl text-gray-600 w-[600px]">
-                        {/* Find produce, support farmers, and eat fresh. */}
                         Explore AgriLink's interactive farm network map. Hover or click on a marker to learn more about each farm, their growing practices, and shop their seasonal offerings.
                     </p>
 

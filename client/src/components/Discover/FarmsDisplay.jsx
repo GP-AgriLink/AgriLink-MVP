@@ -73,7 +73,6 @@ const FarmsDisplay = ({ userCoords }) => {
             }`;
         const res = await fetch(url);
         const responseData = await res.json();
-        console.log("Data" + responseData);
         setFarms(responseData.data || responseData || []);
       } catch (err) {
         console.error(err);

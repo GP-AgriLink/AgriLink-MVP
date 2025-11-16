@@ -3,7 +3,7 @@ const farmImageUrl = '../../../public/mision.jpeg';
 const LocalFarmSection = () => {
     return (
         <section className="py-16 px-5 overflow-hidden">
-            <div className="max-w-6xl mx-auto flex flex-col-reverse lg:flex-row items-center justify-between gap-10">
+            <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row items-center justify-between gap-10">
 
                 <div className="flex-1 max-w-lg text-center lg:text-left">
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 
 const LeafIcon = ({ className }) => (
     <svg
@@ -13,7 +14,6 @@ const LeafIcon = ({ className }) => (
     </svg>
 );
 
-// --- Category Card Component ---
 const CategoryCard = ({ imageSrc, name, description }) => {
     return (
         <div className="group relative max-w-xl w-80 h-80 overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
@@ -41,7 +41,6 @@ const CategoryCard = ({ imageSrc, name, description }) => {
 };
 
 
-// --- Main Section Component ---
 const categoryDetails = {
     Vegetable: {
         description: "Fresh, crisp vegetables sourced directly from local farms.",
@@ -80,32 +79,22 @@ const CategoriesSection = () => {
             try {
                 setIsLoading(true);
                 setError(null);
-                // console.log("Attempting to fetch categories...");
 
-                // --- CHANGED ---
-                // Using the correct URL from your API docs
                 const response = await fetch('http://localhost:5000/api/products/categories');
 
                 if (!response.ok) {
                     throw new Error('Something went wrong!');
                 }
 
-                const data = await response.json(); // data is now ["Vegetable", "Organic", ...]
-                // console.log("Data received:", data);
+                const data = await response.json();
 
-                // --- CHANGED ---
-                // Set the state directly to the array we received
-                // setCategories(data);
-                // Check if data is an array
                 if (Array.isArray(data)) {
                     setCategories(data);
                 } else {
-                    // console.error("Data is not an array:", data);
                     throw new Error("Received data is not in the expected format (array).");
                 }
 
             } catch (err) {
-                // console.error("Fetch failed:", err);
                 setError(err.message);
             } finally {
                 setIsLoading(false);
@@ -115,7 +104,6 @@ const CategoriesSection = () => {
         fetchCategories();
     }, []);
 
-    // 1. Show a loading message
     if (isLoading) {
         return (
             <section className="bg-white py-16 sm:py-24">
@@ -128,7 +116,6 @@ const CategoriesSection = () => {
         );
     }
 
-    // 2. Show an error message
     if (error) {
         return (
             <section className="bg-white py-16 sm:py-24">
@@ -141,12 +128,10 @@ const CategoriesSection = () => {
         );
     }
 
-    // 3. Show the categories
     return (
         <section className="py-16 sm:py-24 mb-10">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
-                {/* Section Header */}
                 <div className="mx-auto mb-12 max-w-2xl text-center">
                     <p className="text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
                         Best Selling Categories
@@ -157,7 +142,6 @@ const CategoriesSection = () => {
                     <div className="mx-auto mt-5 w-20 h-1 bg-green-700"></div>
                 </div>
 
-                {/* Categories Grid */}
                 <div className="mx-auto grid max-w-lg gap-2 lg:max-w-none lg:grid-cols-3">
 
                     {categories.map((categoryName) => {
@@ -175,12 +159,11 @@ const CategoriesSection = () => {
 
                 </div>
 
-                {/* "View All" Button */}
-                <div className="mt-16 text-center">
-                    <button className="rounded-full bg-green-100 px-8 py-4 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200">
+                <Link to={"/products"} className='flex justify-center'>
+                    <button className="mt-16 rounded-full bg-green-100 px-8 py-4 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200">
                         Explore All Categories
                     </button>
-                </div>
+                </Link>
 
             </div>
         </section>
