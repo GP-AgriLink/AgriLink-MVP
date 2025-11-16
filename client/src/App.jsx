@@ -5,6 +5,14 @@ import MainLayout from "./components/Layout/MainLayout";
 import { ProductsProvider } from "./context/ProductsContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+// import EditProfile from "./pages/EditProfile";
+// import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
+// import ResetPasswordPage from "./pages/ResetPasswordPage";
+// import NotFound from "./pages/NotFound";
+// import Dashboard from "./pages/Dashboard";
+// import FarmStorePage from "./pages/FarmStorePage";
+// import CartPage from "./pages/CartPage";
+import LandingPage from "./pages/LandingPage";
 import EditProfile from "./pages/EditProfile";
 import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -12,7 +20,7 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
 // import CartPage from "./pages/CartPage";
-import DiscoverPage from "./pages/DiscoverPage";
+// import DiscoverPage from "./pages/DiscoverPage";
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
 import OrdersPage from "./pages/OrdersPage";
@@ -76,7 +84,7 @@ function App() {
               </div>
             }
           />
-          <Route path="/discover" element={<DiscoverPage />} />
+          <Route path="/discover" element={<LandingPage />} />
           <Route path="/farm/:id" element={<FarmStorePage />} />
 
           <Route
@@ -98,7 +106,7 @@ function App() {
             <Route path="orders" element={<OrdersPage />} />
           </Route>
 
-          
+
           <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
           <Route

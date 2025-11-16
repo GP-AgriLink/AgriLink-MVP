@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 function Footer() {
   return (
-    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white/90 via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-2 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-50">
+    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white/90 via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-7 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-50">
       <div className="w-full lg:w-5/6 mx-auto px-4 sm:px-6 lg:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-6">
           <div className="flex flex-col items-center md:items-start gap-3">
@@ -25,8 +25,8 @@ function Footer() {
           <div className="flex flex-col items-center md:items-end gap-4">
             <h3 className="text-emerald-900 font-bold text-sm uppercase tracking-wider">Quick Links</h3>
             <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-3">
-              <Link 
-                to="/privacy" 
+              <Link
+                to="/privacy"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Read privacy policy"
               >
@@ -35,9 +35,9 @@ function Footer() {
                 </svg>
                 <span>Privacy Policy</span>
               </Link>
-              
-              <Link 
-                to="/terms" 
+
+              <Link
+                to="/terms"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Review terms of service"
               >
@@ -49,9 +49,9 @@ function Footer() {
                 </svg>
                 <span>Terms of Service</span>
               </Link>
-              
-              <Link 
-                to="/contact" 
+
+              <Link
+                to="/contact"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Contact AgriLink"
               >
@@ -62,8 +62,8 @@ function Footer() {
                 <span>Contact Us</span>
               </Link>
 
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="About AgriLink"
               >
@@ -86,7 +86,7 @@ function Footer() {
           <p className="text-emerald-900/60 text-xs font-medium text-center md:text-left">
             © 2025 AgriLink. All rights reserved. | Built with 🌱 for sustainable agriculture
           </p>
-          
+
           <div className="flex items-center gap-2 text-emerald-700/60 text-xs">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600/60">
               <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
