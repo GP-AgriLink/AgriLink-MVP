@@ -88,7 +88,7 @@ function FarmerSection() {
                         {/* Right Side */}
                         <div className="mt-10 md:mt-0">
                             <img
-                                src="../../../public/farmer.jpg"
+                                src="../../../farmer.jpg"
                                 className="rounded-xl shadow-2xl w-full h-auto object-cover aspect-[4/3]"
                             />
                         </div>

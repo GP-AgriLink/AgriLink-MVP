@@ -1,4 +1,4 @@
-const farmImageUrl = '../../../public/mision.jpeg';
+const farmImageUrl = '../../../mision.jpeg';
 
 const LocalFarmSection = () => {
     return (

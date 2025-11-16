@@ -82,7 +82,7 @@ const HeroSection = () => {
     return (
         <section className="relative h-[75vh] w-full">
             <img
-                src="../../../public/hero.jpg"
+                src="../../../hero.jpg"
                 alt="A vibrant farm field"
                 className="absolute inset-0 h-full w-full object-cover"
             />
