@@ -87,7 +87,8 @@ const getMyOrders = async (req, res) => {
         const orders = await Order.find(query)
             .sort({ createdAt: -1 }) // Keep the sort
             .skip(skip)
-            .limit(limit);
+            .limit(limit)
+            .populate('user', 'firstName lastName phone');
 
         res.json({
             data: orders,
