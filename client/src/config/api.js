@@ -13,21 +13,21 @@ export const API_BASE_URL =
  * Profile management is now split between /api/users/profile and /api/farms/myfarm.
  */
 export const API_ENDPOINTS = {
-  // /api/users (Replaces old /api/farmers)
   auth: {
-    login: "/api/users/login",
-    register: "/api/users/register",
-    forgotPassword: "/api/users/forgot-password",
-    resetPassword: (token) => `/api/users/reset-password/${token}`,
-    profile: "/api/users/profile", // GET/PUT /api/users/profile
+    login: "/api/users/login", // POST
+    register: "/api/users/register", // POST
+    forgotPassword: "/api/users/forgot-password", // POST
+    resetPassword: (token) => `/api/users/reset-password/${token}`, // POST
   },
   
   // Farm-specific profile (farmBio, location) and public discovery
   farms: {
-    myFarm: "/api/farms/myfarm", // Farmer-only GET/PUT for their own farm profile
+    myFarm: "/api/farms/myfarm", // GET/PUT (Protected, Farmer Only)
+    myFarmStats: "/api/farms/myfarm/stats", // (Protected, Farmer Only)
     allFarms: "/api/farms",
-    nearby: "/api/farms/nearby", // e.g., /api/farms/nearby?longitude=...
+    nearby: "/api/farms/nearby", // GET (Public, e.g., /api/farms/nearby?longitude=...)
     byId: (farmId) => `/api/farms/${farmId}`,
+    publicStats: "/api/farms/stats", // GET (Public)
   },
   
   // Product management (Farmer) and public discovery
@@ -41,12 +41,11 @@ export const API_ENDPOINTS = {
   
   // Order management (Customer & Farmer)
   orders: {
-    create: "/api/orders", // POST (Customer) [cite: 6. 🛍️ Cart & Order (Customer Flow)]
-    myOrders: "/api/orders/myorders", // GET (Customer or Farmer) [cite: 6. 🛍️ Cart & Order (Customer Flow)]
-    updateStatus: (orderId) => `/api/orders/${orderId}/status`, // PUT (Farmer-only) [cite: 7. 🧑‍🌾 Order Management (Farmer Flow)]
+    create: "/api/orders", // POST (Protected)
+    myOrders: "/api/orders/myorders", // GET (Customer or Farmer)
+    updateStatus: (orderId) => `/api/orders/${orderId}/status`, // PUT (Farmer-only)
   },
-  
-  // --- CART ENDPOINTS ---
+  // Cart management (Customer)
   cart: {
     getCart: "/api/cart", // GET 
     addItem: "/api/cart/item", // POST 
@@ -61,7 +60,7 @@ export const API_ENDPOINTS = {
   },
 };
 
-const REQUEST_TIMEOUT = 10000; // 10-second timeout
+const REQUEST_TIMEOUT = 30000; // 30-second timeout
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
-import { uploadProductImage } from "../../services/farmProductApi";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { getAllCategories } from "../../services/farmProductApi";
 import { toast } from "react-toastify";
 import LogoSpinner from "../common/LogoSpinner";
+import { sanitizeProductData, sanitizeString } from "../../utils/sanitizers";
 
 /**
  * Supported product units matching server model validation
@@ -14,40 +15,49 @@ const UNIT_OPTIONS = [
   { value: "unit", label: "Unit" },
 ];
 
-/**
- * EditProduct
- * Modal form for editing existing farm products
- * @param {boolean} isOpen - Modal visibility state
- * @param {Function} onClose - Handler to close modal
- * @param {Function} onSubmit - Handler for form submission with updated data
- * @param {Object} product - Product object to edit
- */
+const CATEGORY_OPTIONS = ["Vegetables", "Fruits", "Grains"];
+
+const getDefaultFormData = () => ({
+  name: "",
+  price: "",
+  unit: "",
+  stock: "",
+  description: "",
+  imageUrl: "",
+  status: "active",
+  category: "",
+  customCategory: "",
+});
+
 const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
-  const [formData, setFormData] = useState({
-    name: "",
-    price: "",
-    unit: "",
-    stock: "",
-    description: "",
-    imageUrl: "",
-    status: "active",
-  });
-
-  // New state to hold the selected file object
+  const [formData, setFormData] = useState(getDefaultFormData());
+  const [originalProduct, setOriginalProduct] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-  // State to hold the local preview URL
   const [imagePreview, setImagePreview] = useState("");
-
   const [errors, setErrors] = useState({});
+  const [isValid, setIsValid] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); // This now just means "submitting"
+  const [isUploading, setIsUploading] = useState(false);
   const [imageInputMode, setImageInputMode] = useState("url");
   const fileInputRef = useRef(null);
-  const localPreviewRef = useRef(null); // To manage revoking the object URL
+  const localPreviewRef = useRef(null);
+  const [allCategories, setAllCategories] = useState([]);
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   useEffect(() => {
-    if (product) {
-      setFormData({
+    if (product && isOpen) {
+      const loadedCategory = (product.categories && product.categories[0]) || "";
+      let initialCategory = "";
+      let initialCustomCategory = "";
+
+      if (CATEGORY_OPTIONS.includes(loadedCategory)) {
+        initialCategory = loadedCategory;
+      } else if (loadedCategory) {
+        initialCategory = "Other";
+        initialCustomCategory = loadedCategory;
+      }
+
+      const initialData = {
         name: product.name || "",
         price: product.price?.toString() || "",
         unit: product.unit || "",
@@ -55,12 +65,28 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
         description: product.description || "",
         imageUrl: product.imageUrl || "",
         status: product.status || "active",
-      });
-      // Set the initial preview to the product's existing URL
+        category: initialCategory,
+        customCategory: initialCustomCategory,
+      };
+      setFormData(initialData);
+      setOriginalProduct(initialData);
       setImagePreview(product.imageUrl || "");
+      setErrors({});
+      setIsValid(true);
+      setShowCustomInput(false);
+
+      const fetchCategories = async () => {
+        try {
+          const cats = await getAllCategories();
+          const customCats = cats.filter((c) => !CATEGORY_OPTIONS.includes(c) && c !== "Other");
+          setAllCategories(customCats);
+        } catch (error) {
+          console.error("Failed to fetch categories", error);
+        }
+      };
+      fetchCategories();
     }
 
-    // Clear file state when modal opens or product changes
     setImageFile(null);
     if (localPreviewRef.current) {
       URL.revokeObjectURL(localPreviewRef.current);
@@ -68,72 +94,190 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
     }
   }, [product, isOpen]);
 
+  const sanitizedFormData = useMemo(() => {
+    return {
+      ...sanitizeProductData(formData),
+      category: formData.category,
+      customCategory: sanitizeString(formData.customCategory),
+    };
+  }, [formData]);
+
+  const sanitizedOriginalProduct = useMemo(() => {
+    if (!originalProduct) return null;
+    return {
+      ...sanitizeProductData(originalProduct),
+      category: originalProduct.category,
+      customCategory: sanitizeString(originalProduct.customCategory),
+    };
+  }, [originalProduct]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const newFormData = { ...formData, [name]: value };
 
-    // If user edits the URL, clear any staged file upload
+    if (name === "category") {
+      if (value === "Other") {
+        setShowCustomInput(true);
+      } else {
+        setShowCustomInput(false);
+        newFormData.customCategory = "";
+      }
+    }
+
+    setFormData(newFormData);
+
     if (name === "imageUrl") {
       setImageFile(null);
       setImagePreview(value);
     }
 
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+    validateForm(newFormData);
+  };
+
+  const handleCustomCategoryBlur = () => {
+    const customCat = formData.customCategory.trim();
+    if (customCat) {
+      // Add to allCategories if not already present
+      if (!allCategories.includes(customCat)) {
+        setAllCategories((prev) => [...prev, customCat]);
+      }
+      // Set the custom category as the selected category and hide input
+      setFormData((prev) => ({
+        ...prev,
+        category: customCat,
+        customCategory: customCat,
+      }));
+      setShowCustomInput(false);
+      validateForm({
+        ...formData,
+        category: customCat,
+        customCategory: customCat,
+      });
     }
   };
 
-  const validateForm = () => {
+  const validateForm = (dataToValidate = formData) => {
     const newErrors = {};
-    const name = formData.name.trim();
-    const price = parseFloat(formData.price);
-    const stock = parseInt(formData.stock);
+    const name = dataToValidate.name.trim();
+    const price = parseFloat(dataToValidate.price);
+    const stock = parseInt(dataToValidate.stock);
 
     if (!name) newErrors.name = "Product name is required";
     else if (name.length < 2) newErrors.name = "Must be at least 2 characters";
     else if (name.length > 100) newErrors.name = "Cannot exceed 100 characters";
 
-    if (!formData.price || isNaN(price) || price < 0.01)
+    if (!dataToValidate.price || isNaN(price) || price < 0.01)
       newErrors.price = "Price must be at least 0.01";
-    else if (!/^\d+(\.\d{1,2})?$/.test(formData.price))
+    else if (!/^\d+(\.\d{1,2})?$/.test(dataToValidate.price))
       newErrors.price = "Price can have at most 2 decimal places";
 
-    if (!formData.unit) newErrors.unit = "Please select a unit";
+    if (!dataToValidate.unit) newErrors.unit = "Please select a unit";
 
-    if (formData.stock === "" || isNaN(stock) || stock < 0)
+    if (dataToValidate.stock === "" || isNaN(stock) || stock < 0)
       newErrors.stock = "Stock must be 0 or greater";
-    else if (stock !== parseFloat(formData.stock)) newErrors.stock = "Stock must be a whole number";
+    else if (stock !== parseFloat(dataToValidate.stock))
+      newErrors.stock = "Stock must be a whole number";
+
+    if (!dataToValidate.category) {
+      newErrors.category = "Please select a category";
+    } else if (dataToValidate.category === "Other" || showCustomInput) {
+      if (!dataToValidate.customCategory.trim()) {
+        newErrors.customCategory = "Please enter a custom category";
+      }
+    }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const valid = Object.keys(newErrors).length === 0;
+    setIsValid(valid);
+    return valid;
   };
+
+  const isDirty = useMemo(() => {
+    if (!sanitizedOriginalProduct) return false;
+    if (imageFile) return true;
+
+    // Get final categories for comparison
+    const currentFinalCategory =
+      sanitizedFormData.category === "Other" || showCustomInput
+        ? sanitizedFormData.customCategory
+        : sanitizedFormData.category;
+    const originalFinalCategory =
+      sanitizedOriginalProduct.category === "Other"
+        ? sanitizedOriginalProduct.customCategory
+        : sanitizedOriginalProduct.category;
+
+    if (sanitizedFormData.name !== sanitizedOriginalProduct.name) return true;
+    if (sanitizedFormData.price !== sanitizedOriginalProduct.price) return true;
+    if (sanitizedFormData.unit !== sanitizedOriginalProduct.unit) return true;
+    if (sanitizedFormData.stock !== sanitizedOriginalProduct.stock) return true;
+    if (sanitizedFormData.description !== sanitizedOriginalProduct.description) return true;
+    if (sanitizedFormData.imageUrl !== sanitizedOriginalProduct.imageUrl) return true;
+    if (sanitizedFormData.status !== sanitizedOriginalProduct.status) return true;
+    if (currentFinalCategory !== originalFinalCategory) return true;
+
+    return false;
+  }, [sanitizedFormData, sanitizedOriginalProduct, imageFile, showCustomInput]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!isValid || !isDirty) return;
 
     setIsSubmitting(true);
     try {
-      const stock = parseInt(formData.stock, 10);
-      const status = stock === 0 ? "inactive" : formData.status;
+      const changedData = {};
 
-      const updateData = {
-        name: formData.name.trim(),
-        price: parseFloat(formData.price),
-        unit: formData.unit,
-        stock: stock,
-        status: status,
-        description: formData.description.trim() || "",
-        // If a new file wasn't staged, send the current imageUrl (which might be an old URL or a new pasted URL)
-        // If a file *was* staged, the parent (Dashboard) will handle it, so we can send the original URL.
-        imageUrl: imageFile ? product.imageUrl : formData.imageUrl.trim() || "",
-      };
+      // Only include changed fields
+      if (sanitizedFormData.name !== sanitizedOriginalProduct.name) {
+        changedData.name = sanitizedFormData.name;
+      }
+      if (sanitizedFormData.price !== sanitizedOriginalProduct.price) {
+        changedData.price = sanitizedFormData.price;
+      }
+      if (sanitizedFormData.unit !== sanitizedOriginalProduct.unit) {
+        changedData.unit = sanitizedFormData.unit;
+      }
+      if (sanitizedFormData.stock !== sanitizedOriginalProduct.stock) {
+        changedData.stock = sanitizedFormData.stock;
+      }
+      if (sanitizedFormData.description !== sanitizedOriginalProduct.description) {
+        changedData.description = sanitizedFormData.description;
+      }
+      if (!imageFile && sanitizedFormData.imageUrl !== sanitizedOriginalProduct.imageUrl) {
+        changedData.imageUrl = sanitizedFormData.imageUrl;
+      }
 
-      // Pass both the data and the file (if it exists) to the parent
-      await onSubmit(updateData, imageFile);
+      // Get final category values
+      const currentFinalCategory =
+        sanitizedFormData.category === "Other" || showCustomInput
+          ? sanitizeString(sanitizedFormData.customCategory.trim())
+          : sanitizedFormData.category;
+      const originalFinalCategory =
+        sanitizedOriginalProduct.category === "Other"
+          ? sanitizeString(sanitizedOriginalProduct.customCategory.trim())
+          : sanitizedOriginalProduct.category;
+
+      // Only include category if it changed
+      if (currentFinalCategory !== originalFinalCategory) {
+        changedData.categories = [currentFinalCategory];
+      }
+
+      // Calculate new status based on stock
+      const newStatus =
+        parseInt(sanitizedFormData.stock, 10) === 0 ? "inactive" : sanitizedFormData.status;
+      if (newStatus !== sanitizedOriginalProduct.status) {
+        changedData.status = newStatus;
+      }
+
+      // Don't send request if no changes (safety check)
+      if (Object.keys(changedData).length === 0 && !imageFile) {
+        onClose();
+        return;
+      }
+
+      await onSubmit(changedData, imageFile);
 
       setErrors({});
-      onClose(); // Parent will close modal on success
+      onClose();
     } catch (error) {
       console.error("Error updating product:", error);
       setErrors({ submit: error.message || "Failed to update product" });
@@ -145,24 +289,25 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
   const handleClose = () => {
     if (!isSubmitting) {
       setErrors({});
-      onClose(); // This will trigger the useEffect to clean up state
+      onClose();
     }
   };
 
   const removeImage = () => {
-    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    const newFormData = { ...formData, imageUrl: "" };
+    setFormData(newFormData);
     setImagePreview("");
     setImageFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    validateForm(newFormData);
   };
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file (optional, but good practice)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File is too large (Max 5MB)");
       return;
@@ -177,12 +322,12 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
     const localPreviewUrl = URL.createObjectURL(file);
     localPreviewRef.current = localPreviewUrl;
 
-    // Set the file to state and update the preview
     setImageFile(file);
     setImagePreview(localPreviewUrl);
 
-    // Clear the URL field to avoid confusion
-    setFormData((prev) => ({ ...prev, imageUrl: "" }));
+    const newFormData = { ...formData, imageUrl: "" };
+    setFormData(newFormData);
+    validateForm(newFormData);
   };
 
   if (!isOpen || !product) return null;
@@ -199,7 +344,6 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
         {isSubmitting && <LogoSpinner message="Updating Product..." />}
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 py-3 text-white sm:px-5">
-          {/* ... (header content unchanged) ... */}
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-white bg-opacity-20 p-1.5 backdrop-blur-sm sm:p-2">
               <svg
@@ -217,11 +361,19 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                 />
               </svg>
             </div>
-            <div>
-              <h2 className="text-base font-bold sm:text-lg">Edit Product</h2>
-              <p className="hidden text-xs text-emerald-50 sm:block">Update product details</p>
+            <div className="flex items-center gap-1 text-base font-bold sm:text-lg">
+              <span className="font-semibold text-white sm:text-base">Editing:</span>
+              <span className="flex-1 truncate text-xs font-bold text-white sm:text-base">
+                {product?.name}
+              </span>
+              {product?.stock === 0 && (
+                <span className="flex-shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                  Out of Stock
+                </span>
+              )}
             </div>
           </div>
+
           <button
             onClick={handleClose}
             disabled={isSubmitting}
@@ -241,48 +393,88 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
           </button>
         </div>
 
-        {/* ... (Current Product Banner unchanged) ... */}
-        <div className="flex-shrink-0 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-2 sm:px-5">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-emerald-600 sm:text-sm">Editing:</span>
-            <span className="flex-1 truncate text-xs font-bold text-gray-900 sm:text-sm">
-              {product?.name}
-            </span>
-            {product?.stock === 0 && (
-              <span className="flex-shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
-                Out of Stock
-              </span>
-            )}
-          </div>
-        </div>
-
         {/* Form - Scrollable Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="space-y-3 p-4 sm:p-5">
-            {/* ... (Validation errors, Name, Price, Unit, Stock, Status, Description unchanged) ... */}
-
             {errors.submit && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {errors.submit}
               </div>
             )}
+            <div className="grid grid-cols-4 gap-3 sm:grid-cols-4">
+              {/* Product Name */}
+              <div className="col-span-2">
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="e.g., Fresh Brown Eggs"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    errors.name ? "border-red-500" : "border-gray-300"
+                  }`}
+                />
+                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              </div>
 
-            {/* Product Name */}
-            <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                Product Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="e.g., Fresh Brown Eggs"
-                className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.name ? "border-red-500" : "border-gray-300"}`}
-              />
-              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+              <div className="col-span-2">
+                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
+                  Category <span className="text-red-500">*</span>
+                </label>
+                {showCustomInput ? (
+                  <input
+                    type="text"
+                    name="customCategory"
+                    value={formData.customCategory}
+                    onChange={handleChange}
+                    onBlur={handleCustomCategoryBlur}
+                    placeholder="e.g., Sweets, Dairy, etc."
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      errors.category || errors.customCategory
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
+                    list="category-suggestions-edit"
+                    autoFocus
+                  />
+                ) : (
+                  <select
+                    name="category"
+                    value={formData.category}
+                    onChange={handleChange}
+                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      errors.category ? "border-red-500" : "border-gray-300"
+                    }`}
+                  >
+                    <option value="">Select a category</option>
+                    {CATEGORY_OPTIONS.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                    {/* {allCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))} */}
+                    <option value="Other">Other (Please specify)</option>
+                  </select>
+                )}
+                <datalist id="category-suggestions-edit">
+                  {allCategories.map((cat) => (
+                    <option key={cat} value={cat} />
+                  ))}
+                </datalist>
+                {(errors.category || errors.customCategory) && (
+                  <p className="mt-1 text-xs text-red-500">
+                    {errors.category || errors.customCategory}
+                  </p>
+                )}
+              </div>
             </div>
-
             {/* Price, Unit, Stock, and Status in Grid */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {/* Price */}
@@ -300,7 +492,9 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className={`w-full rounded-lg border py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.price ? "border-red-500" : "border-gray-300"}`}
+                    className={`w-full rounded-lg border py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      errors.price ? "border-red-500" : "border-gray-300"
+                    }`}
                   />
                 </div>
                 {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
@@ -315,7 +509,9 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.unit ? "border-red-500" : "border-gray-300"}`}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    errors.unit ? "border-red-500" : "border-gray-300"
+                  }`}
                 >
                   <option value="">Select unit</option>
                   {UNIT_OPTIONS.map((option) => (
@@ -339,7 +535,9 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                   onChange={handleChange}
                   placeholder="0"
                   min="0"
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.stock ? "border-red-500" : "border-gray-300"}`}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    errors.stock ? "border-red-500" : "border-gray-300"
+                  }`}
                 />
                 {errors.stock && <p className="mt-1 text-xs text-red-500">{errors.stock}</p>}
               </div>
@@ -354,7 +552,9 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                   value={formData.status}
                   onChange={handleChange}
                   disabled={parseInt(formData.stock, 10) === 0}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${errors.status ? "border-red-500" : "border-gray-300"} ${parseInt(formData.stock, 10) === 0 ? "bg-gray-100 text-gray-500" : ""}`}
+                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    errors.status ? "border-red-500" : "border-gray-300"
+                  } ${parseInt(formData.stock, 10) === 0 ? "bg-gray-100 text-gray-500" : ""}`}
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -362,7 +562,6 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
               </div>
             </div>
 
-            {/* Description */}
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-gray-700">
                 Description <span className="text-xs text-gray-400">(Optional)</span>
@@ -444,39 +643,38 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                     placeholder="https://example.com/image.jpg"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
-                  {displayImageUrl &&
-                    !imageFile && ( // Only show preview if it's not a local file preview
-                      <div className="relative inline-block">
-                        <img
-                          src={displayImageUrl}
-                          alt="Preview"
-                          onError={(e) => {
-                            e.target.src =
-                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' font-size='14' text-anchor='middle' dy='.3em' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
-                          }}
-                          className="h-24 w-24 rounded-lg border-2 border-emerald-200 object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={removeImage}
-                          className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-colors hover:bg-red-600"
+                  {displayImageUrl && !imageFile && (
+                    <div className="relative inline-block">
+                      <img
+                        src={displayImageUrl}
+                        alt="Preview"
+                        onError={(e) => {
+                          e.target.src =
+                            "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' font-size='14' text-anchor='middle' dy='.3em' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
+                        }}
+                        className="h-24 w-24 rounded-lg border-2 border-emerald-200 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-colors hover:bg-red-600"
+                      >
+                        <svg
+                          className="h-3 w-3"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
                         >
-                          <svg
-                            className="h-3 w-3"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    )}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -544,7 +742,6 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
                       )}
                     </div>
                   </button>
-                  {/* Local Preview for Uploaded File */}
                   {imageFile && displayImageUrl && (
                     <div className="relative mt-2 inline-block">
                       <img
@@ -592,7 +789,7 @@ const EditProduct = ({ isOpen, onClose, onSubmit, product }) => {
               <button
                 type="submit"
                 onClick={handleSubmit}
-                disabled={isSubmitting || isUploading}
+                disabled={isSubmitting || isUploading || !isDirty || !isValid}
                 className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-700 hover:to-emerald-600 disabled:opacity-50"
               >
                 <svg

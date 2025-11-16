@@ -1,90 +1,109 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import ProfileHeader from '../components/Profile/ProfileHeader';
-import ProfileForm from '../components/Profile/ProfileForm';
-import AvatarUpload from '../components/Profile/AvatarUpload';
-import { getProfile } from '../services/profileApi';
-import { getAuthToken, clearAuthData, useAuth } from '../context/AuthContext';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import ProfileHeader from "../components/Profile/ProfileHeader";
+import { getAuthToken, clearAuthData, useAuth } from "../context/AuthContext";
+import { getUserProfile } from "../services/userService";
+import { getMyFarmProfile } from "../services/farmApi";
+import { UserProfileView } from "../components/Profile/UserProfileView";
+import { FarmProfileView } from "../components/Profile/FarmProfileView";
 
-const getDefaultProfile = () => ({
+const getDefaultUser = () => ({
   id: "",
   firstName: "",
   lastName: "",
   email: "",
-  farmName: "",
   phoneNumber: "",
+  avatarUrl: "",
+});
+
+const getDefaultFarm = () => ({
+  farmName: "",
   farmBio: "",
   location: {
     type: "Point",
     coordinates: [30.0444, 31.2357],
   },
   specialties: [],
-  avatarUrl: "",
 });
 
 /**
  * ProfilePage
- * Displays farmer profile information with edit capability
+ * Container component that fetches data and displays profile information.
+ * Implements role-based guards to show/hide farm data.
  */
 const ProfilePage = () => {
   const navigate = useNavigate();
-  const { updateAvatar: updateContextAvatar } = useAuth();
-  const [profile, setProfile] = useState(getDefaultProfile());
-  const [loading, setLoading] = useState(false);
+  const { user } = useAuth(); // Get user role
+
+  // --- Split state for user and farm data ---
+  const [userData, setUserData] = useState(null);
+  const [farmData, setFarmData] = useState(null);
+
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
 
-  const fetchProfile = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const token = getAuthToken();
-
-      if (!token) {
-        clearAuthData();
-        navigate("/login");
-        return;
-      }
-
-      const data = await getProfile();
-
-      if (data) {
-        const profileData = {
-          ...getDefaultProfile(),
-          ...data,
-          // Add +2 prefix to phone number if it exists and doesn't already have it
-          phoneNumber: data.phoneNumber 
-            ? (data.phoneNumber.startsWith('+2') ? data.phoneNumber : `+2${data.phoneNumber}`)
-            : "",
-          location: data.location || getDefaultProfile().location,
-          specialties: Array.isArray(data.specialties) ? data.specialties : [],
-        };
-
-        setProfile(profileData);
-        setImagePreview(profileData.avatarUrl || "");
-        // Update context avatar when profile loads
-        if (profileData.avatarUrl) {
-          updateContextAvatar(profileData.avatarUrl);
+      try {
+        const token = getAuthToken();
+        if (!token || !user) {
+          clearAuthData();
+          navigate("/login");
+          return;
         }
-      }
-    } catch (err) {
-      console.error("Error fetching profile:", err);
-      const errorMsg = err.response?.data?.message || "Failed to fetch profile";
-      setError(errorMsg);
 
-      if (err.response?.status === 401) {
-        clearAuthData();
-        navigate("/login");
+        // --- Fetch user and (conditionally) farm data ---
+        const promises = [getUserProfile()];
+
+        // --- ROLE GUARD ---
+        // Only add the farm data promise if the user is a farmer
+        if (user.role === "farmer") {
+          promises.push(getMyFarmProfile());
+        }
+
+        const [fetchedUser, fetchedFarm = null] = await Promise.all(promises);
+
+        if (fetchedUser) {
+          // Set User Data
+          setUserData({
+            ...getDefaultUser(),
+            ...fetchedUser,
+            phoneNumber: fetchedUser.phone
+              ? fetchedUser.phone.startsWith("+2")
+                ? fetchedUser.phone
+                : `+2${fetchedUser.phone}`
+              : "",
+          });
+
+          // Set Farm Data (only if fetched)
+          if (fetchedFarm) {
+            setFarmData({
+              ...getDefaultFarm(),
+              ...fetchedFarm,
+              location: fetchedFarm.location || getDefaultFarm().location,
+              specialties: Array.isArray(fetchedFarm.specialties) ? fetchedFarm.specialties : [],
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        const errorMsg = err.response?.data?.message || "Failed to fetch profile";
+        setError(errorMsg);
+
+        if (err.response?.status === 401) {
+          clearAuthData();
+          navigate("/login");
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchProfile();
+  }, [navigate, user]); // Depend on user
 
   const handleEditClick = () => {
     navigate("/edit-profile");
@@ -92,10 +111,10 @@ const ProfilePage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emerald-500 border-t-transparent mx-auto mb-4" />
-                <p className="text-gray-600 text-lg font-medium">Loading profile...</p>
+          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+          <p className="text-lg font-medium text-gray-600">Loading profile...</p>
         </div>
       </div>
     );
@@ -103,11 +122,11 @@ const ProfilePage = () => {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="text-center bg-red-50 p-8 rounded-xl border border-red-200 max-w-md">
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="max-w-md rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-16 w-16 text-red-500 mx-auto mb-4"
+            className="mx-auto mb-4 h-16 w-16 text-red-500"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -119,11 +138,11 @@ const ProfilePage = () => {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-red-700 font-semibold mb-2">Error Loading Profile</p>
-          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <p className="mb-2 font-semibold text-red-700">Error Loading Profile</p>
+          <p className="mb-4 text-sm text-red-600">{error}</p>
           <button
-            onClick={fetchProfile}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+            onClick={() => window.location.reload()}
+            className="rounded-lg bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
           >
             Try Again
           </button>
@@ -133,21 +152,16 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen px-4 sm:px-8 md:px-12 lg:px-20 xl:px-16 2xl:px-8 3xl:px-8 py-2">
-      <div className="max-w-[1600px] mx-auto space-y-8">
+    <div className="min-h-screen px-4 py-2 sm:px-8 md:px-12 lg:px-20 xl:px-16 2xl:px-8 3xl:px-8">
+      <div className="mx-auto max-w-[1600px] space-y-8">
         <ProfileHeader isEditing={false} onEditClick={handleEditClick} />
-        <div className="flex justify-center mb-8">
-          <AvatarUpload
-            profilePicture={profile.avatarUrl}
-            imagePreview={imagePreview}
-            isEditing={false}
-            onPreviewChange={setImagePreview}
-            onProfileChange={(updatedProfile) =>
-              setProfile((prev) => ({ ...prev, ...updatedProfile }))
-            }
-          />
-        </div>
-        <ProfileForm profile={profile} isEditing={false} />
+
+        {/* Render User View Component */}
+        {userData && <UserProfileView userData={userData} />}
+
+        {/* --- ROLE GUARD --- */}
+        {/* Render Farm View Component only if user is a farmer and data exists */}
+        {user?.role === "farmer" && farmData && <FarmProfileView farmData={farmData} />}
       </div>
     </div>
   );

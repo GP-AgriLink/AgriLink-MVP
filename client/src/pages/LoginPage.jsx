@@ -15,7 +15,6 @@ const LoginPage = () => {
       const destination = user.role === "farmer" ? "/dashboard" : "/discover";
       navigate(destination, {
         replace: true,
-        state: { activeView: "profile" }, // For farmer dashboard
       });
     }
   }, [user, navigate]);

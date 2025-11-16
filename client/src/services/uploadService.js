@@ -1,7 +1,3 @@
-/**
- * Handles all file uploads for the application.
- * Replaces old (profileApi) and (farmProductApi) upload functions.
- */
 import apiClient, { API_ENDPOINTS } from "../config/api";
 
 /**
@@ -19,7 +15,8 @@ export const uploadImage = async (file) => {
     });
     return response.data; // { message, imageUrl }
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to upload image";
+    // --- ERROR MESSAGE ---
+    const errorMessage = error.response?.data?.message || "Image upload failed. Please try again.";
     throw new Error(errorMessage);
   }
 };
