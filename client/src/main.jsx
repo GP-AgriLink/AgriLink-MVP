@@ -4,14 +4,14 @@ import { BrowserRouter } from "react-router-dom";
 import "./index.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import App from "./App.jsx";
-import { CartProvider } from "./context/CartContext";
+// --- 1. REMOVE CartProvider from here ---
+// import { CartProvider } from "./context/CartContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <CartProvider>
-        <App />
-      </CartProvider>
+      {/* --- 2. REMOVE Wrapper from here --- */}
+      <App />
     </BrowserRouter>
   </StrictMode>
 );
