@@ -43,31 +43,31 @@ const CategoryCard = ({ imageSrc, name, description }) => {
 const categoryDetails = {
     Vegetables: {
         description: "Fresh, crisp vegetables sourced directly from local farms.",
-        imageSrc: "../../../public/Category/Vegetables.png"
+        imageSrc: "../../../Category/Vegetables.png"
     },
     Organic: {
         description: "Certified organic produce grown without synthetic pesticides or fertilizers.",
-        imageSrc: "../../../public/Category/Organic.jpg"
+        imageSrc: "../../../Category/Organic.jpg"
     },
     Dairy: {
         description: "Creamy milk, rich cheeses, and fresh dairy products from pasture-raised cows.",
-        imageSrc: "../../../public/Category/Dairy.png"
+        imageSrc: "../../../Category/Dairy.png"
     },
     Fruits: {
         description: "Sweet, juicy, and seasonal fruits picked at the peak of ripeness.",
-        imageSrc: "../../../public/Category/Fruits.png"
+        imageSrc: "../../../Category/Fruits.png"
     },
     Grains: {
         description: "Locally harvested grains, from hearty oats to golden wheat.",
-        imageSrc: "../../../public/Category/Grains.png"
+        imageSrc: "../../../Category/Grains.png"
     },
     Herbs: {
         description: "Aromatic, fresh-cut herbs like basil, mint, and rosemary to elevate your cooking.",
-        imageSrc: "../../../public/Category/Herbs.jpg"
+        imageSrc: "../../../Category/Herbs.jpg"
     },
     default: {
         description: "Explore our collection of high-quality farm products.",
-        imageSrc: "../../../public/Category/all.png"
+        imageSrc: "../../../Category/all.png"
     }
 };
 
