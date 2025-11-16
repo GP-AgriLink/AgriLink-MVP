@@ -1,15 +1,14 @@
 import axios from "axios";
-// We assume authService is in 'services' folder, one level up
 import { getAuthToken, clearAuthData } from "../services/authService";
 import { sanitizeFormData } from "../utils/sanitizers";
 import { toast } from "react-toastify";
 
 // 1. Centralized API Configuration
-export const API_BASE_URL =
-  import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
+export const API_BASE_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
 
 /**
  * API Endpoints.
+ * All old /api/farmers routes are deprecated and replaced by /api/users.
  * Profile management is now split between /api/users/profile and /api/farms/myfarm.
  */
 export const API_ENDPOINTS = {
@@ -19,7 +18,10 @@ export const API_ENDPOINTS = {
     forgotPassword: "/api/users/forgot-password", // POST
     resetPassword: (token) => `/api/users/reset-password/${token}`, // POST
   },
-  
+  // User-specific profile (firstName, lastName, avatarUrl)
+  users: {
+    profile: "/api/users/profile",
+  },
   // Farm-specific profile (farmBio, location) and public discovery
   farms: {
     myFarm: "/api/farms/myfarm", // GET/PUT (Protected, Farmer Only)
@@ -29,7 +31,6 @@ export const API_ENDPOINTS = {
     byId: (farmId) => `/api/farms/${farmId}`,
     publicStats: "/api/farms/stats", // GET (Public)
   },
-  
   // Product management (Farmer) and public discovery
   products: {
     create: "/api/products", // POST
@@ -38,7 +39,6 @@ export const API_ENDPOINTS = {
     publicByFarm: (farmId) => `/api/products/farm/${farmId}`, // GET (Public)
     categories: "/api/products/categories", // GET (Public)
   },
-  
   // Order management (Customer & Farmer)
   orders: {
     create: "/api/orders", // POST (Protected)
@@ -47,16 +47,14 @@ export const API_ENDPOINTS = {
   },
   // Cart management (Customer)
   cart: {
-    getCart: "/api/cart", // GET 
-    addItem: "/api/cart/item", // POST 
-    removeItem: (productId) => `/api/cart/item/${productId}`, // DELETE 
-    clearCart: "/api/cart", // DELETE All items
+    getCart: "/api/cart", // GET
+    addItem: "/api/cart/item", // POST
+    removeItem: (productId) => `/api/cart/item/${productId}`, // DELETE
+    clearCart: "/api/cart", // DELETE
   },
-  // ----------------------------------
-
   // Centralized file uploads
   uploads: {
-    uploadImage: "/api/uploads", // POST 
+    uploadImage: "/api/uploads", // POST
   },
 };
 
@@ -82,6 +80,8 @@ apiClient.interceptors.request.use(
     const isModifyingRequest = config.method === "post" || config.method === "put";
     const isJsonContent = config.headers["Content-Type"] === "application/json";
     const skipSanitization = config.headers["X-Skip-Sanitization"] === "true";
+
+    // Check for FormData
     const isFormData = config.data instanceof FormData;
 
     if (
@@ -112,21 +112,26 @@ apiClient.interceptors.response.use(
     const errorMessage = error.response?.data?.message || "An unexpected error occurred";
 
     if (status === 401) {
+      // Unauthorized: Token expired or invalid
       console.warn("Unauthorized: Session expired or invalid token");
-      clearAuthData(); 
+      clearAuthData(); // This function will be provided by the new authService
       toast.error("Your session has expired. Please log in again.");
+      // Delay redirect slightly to allow toast to be seen
       setTimeout(() => {
         if (typeof window !== "undefined") {
           window.location.href = "/login";
         }
       }, 1500);
     } else if (status === 403) {
+      // Forbidden (e.g., Customer trying to access Farmer route)
       console.error("Forbidden: Insufficient permissions");
       toast.error("You are not authorized to perform this action.");
     } else if (status && status >= 500) {
+      // Server error
       console.error("Server error:", errorMessage);
       toast.error("Server error. Please try again later.");
     } else if (!error.response) {
+      // Network error (timeout, CORS, etc.)
       console.error("Network error:", error.message);
       toast.error("Network error. Please check your connection.");
     }
