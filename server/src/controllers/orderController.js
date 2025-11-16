@@ -77,6 +77,12 @@ const getMyOrders = async (req, res) => {
             }
             query = { farm: farm._id };
         }
+
+        // Check for a status in the query string
+        if (req.query.status) {
+            query.status = req.query.status;
+        }
+
         const total = await Order.countDocuments(query);
         const orders = await Order.find(query)
             .sort({ createdAt: -1 }) // Keep the sort
@@ -124,7 +130,7 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Farmer profile not found" });
     }
 
-    // --- CRITICAL: Ownership Check (The Fix) ---
+    // --- CRITICAL: Ownership Check ---
     // Compare the order's 'farm' field with the logged-in farmer's farm ID
     if (order.farm.toString() !== farm._id.toString()) {
       return res
