@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+// import { Link } from 'react-router-dom';
 
 const LeafIcon = ({ className }) => (
     <svg
@@ -161,11 +161,11 @@ const CategoriesSection = () => {
 
                 </div>
 
-                <Link to={"/products"} className='flex justify-center'>
+                {/* <Link to={"/products"} className='flex justify-center'>
                     <button className="mt-16 rounded-full bg-green-100 px-8 py-4 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200">
                         Explore All Categories
                     </button>
-                </Link>
+                </Link> */}
 
             </div>
         </section>

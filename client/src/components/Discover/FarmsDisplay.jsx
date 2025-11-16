@@ -210,11 +210,6 @@ const FarmsDisplay = ({ userCoords }) => {
                 <Popup>
                   <div className="max-w-md w-60 overflow-hidden rounded-lg p-0">
                     <div className="flex gap-1 mb-4">
-                      <img
-                        className="w-20 rounded-lg object-cover"
-                        src={farm.avatarUrl || "https://via.placeholder.com/100"}
-                        alt={`${farm.farmName} image`}
-                      />
                       <div>
                         <div className="p-4">
                           <div className="mb-2">

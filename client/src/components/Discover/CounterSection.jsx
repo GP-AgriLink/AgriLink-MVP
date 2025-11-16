@@ -24,15 +24,7 @@ function StatSkeleton() {
     );
 }
 
-
 function CounterSection() {
-
-    // const [stats] = useState({
-    //     farmsRegistered: 120,
-    //     customersJoined: 27,
-    //     productsListed: 85,
-    //     ordersCompleted: 430,
-    // });
 
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -43,12 +35,7 @@ function CounterSection() {
             const token = localStorage.getItem("token");
 
             try {
-                const response = await fetch('http://localhost:5000/api/farms/stats', {
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${token}`
-                    }
-                });
+                const response = await fetch('http://localhost:5000/api/farms/stats');
 
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);

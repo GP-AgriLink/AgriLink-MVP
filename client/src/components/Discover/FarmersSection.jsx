@@ -5,7 +5,7 @@ function FarmerSection() {
         "Digital inventory management system",
         "Direct access to thousands of customers",
         "Easy order management and tracking",
-        "Fair commission rates and instant payouts"
+        // "Fair commission rates and instant payouts"
     ];
 
     return (
