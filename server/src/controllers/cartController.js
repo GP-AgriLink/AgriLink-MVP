@@ -45,27 +45,35 @@ const addCartItem = async (req, res) => {
   try {
     // Find the product and its farm
     const product = await Product.findById(productId);
+    // --- VALIDATION CHECKS ---
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    if (product.stock < quantity) {
-      return res.status(400).json({ message: "Not enough stock" });
+    if (product.isArchived || product.status === "inactive") {
+      return res
+        .status(400)
+        .json({ message: "This product is no longer available" });
     }
+    if (product.stock < quantity) {
+      return res.status(400).json({ message: "Not enough stock available" });
+    }
+    // --- END OF VALIDATION ---
 
     const cart = await findOrCreateCart(req.user._id);
+
     const existingItem = cart.items.find(
       (item) => item.product.toString() === productId
     );
 
     if (existingItem) {
-      // Update quantity
+      // Item already in cart, just update the quantity
       existingItem.quantity = quantity;
     } else {
-      // Add new item, now including the farm ID
+      // Item not in cart, add it as a new item
       cart.items.push({
         product: productId,
         farm: product.farm,
-        quantity,
+        quantity: quantity,
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl,
