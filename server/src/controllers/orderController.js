@@ -3,6 +3,8 @@ import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import Farm from "../models/Farm.js";
 import Cart from "../models/Cart.js";
+import mongoose from "mongoose";
+import AppError from "../utils/AppError.js";
 
 /**
  * @desc    Create new order(s) from the user's cart
@@ -10,55 +12,74 @@ import Cart from "../models/Cart.js";
  * @access  Private
  */
 const createOrder = async (req, res) => {
+  // START A MONGOOSE SESSION (for the transaction)
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const userId = req.user._id;
 
-    // Get the user's cart and populate the products to check stock
-    const cart = await Cart.findOne({ user: userId }).populate(
-      "items.product",
-      "stock name"
-    );
+    // Get the user's cart (MUST use the session)
+    const cart = await Cart.findOne({ user: userId }).session(session);
 
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: "Your cart is empty" });
+      throw new AppError("Your cart is empty", 400);
     }
 
-    // First Pass: Check stock for ALL items in the cart
-    for (const item of cart.items) {
-      if (!item.product) {
-        return res.status(404).json({
-          message: `Product ${item.name} not found. Please remove it from your cart.`,
-        });
-      }
-      if (item.product.stock < item.quantity) {
-        return res.status(400).json({
-          message: `Not enough stock for ${item.product.name}. Available: ${item.product.stock}`,
-        });
-      }
-    }
-
-    // Group items by farm
     const farmGroups = new Map();
+    const productsToUpdate = [];
+
+    // --- CRITICAL: RE-VALIDATE CART LOOP ---
+    // This loop checks for stale prices, integrity, and stock.
     for (const item of cart.items) {
+      const product = await Product.findById(item.product).session(session);
+
+      // Check 1: Product Integrity
+      if (!product || product.isArchived || product.status === "inactive") {
+        throw new AppError(
+          `Product "${item.name}" is no longer available. Please remove it from your cart.`,
+          400
+        );
+      }
+      // Check 2: Stale Price
+      if (product.price !== item.price) {
+        throw new AppError(
+          `The price of "${item.name}" has changed. Please review your cart.`,
+          400
+        );
+      }
+      // Check 3: Stock (Race Condition check)
+      if (product.stock < item.quantity) {
+        throw new AppError(
+          `Not enough stock for "${item.name}". Only ${product.stock} left.`,
+          400
+        );
+      }
+
+      // Group items by farm
       const farmId = item.farm.toString();
       if (!farmGroups.has(farmId)) {
         farmGroups.set(farmId, []);
       }
       farmGroups.get(farmId).push(item);
+
+      // Add product to our update list
+      productsToUpdate.push({
+        _id: product._id,
+        stock: product.stock - item.quantity,
+      });
     }
 
-    // Second Pass: Create orders and decrement stock
+    //  --- CREATE ORDERS LOOP ---
     const createdOrders = [];
     for (const [farmId, items] of farmGroups.entries()) {
-      // Calculate total for this sub-order
       const totalAmount = items.reduce(
         (sum, item) => sum + item.quantity * item.price,
         0
       );
 
-      // Map cart items to order items
       const orderItems = items.map((i) => ({
-        productId: i.product._id,
+        productId: i.product,
         name: i.name,
         quantity: i.quantity,
         unitPrice: i.price,
@@ -72,27 +93,47 @@ const createOrder = async (req, res) => {
         totalAmount,
       });
 
-      await newOrder.save();
-      createdOrders.push(newOrder);
-
-      // Decrement stock for each item in this sub-order
-      for (const item of items) {
-        await Product.updateOne(
-          { _id: item.product._id },
-          { $inc: { stock: -item.quantity } }
-        );
-      }
+      // We must save the new order using the session
+      const savedOrder = await newOrder.save({ session });
+      createdOrders.push(savedOrder);
     }
+
+    // --- UPDATE STOCK (ATOMICALLY) ---
+    // This is safer than looping and saving one-by-one
+    const bulkOps = productsToUpdate.map((p) => ({
+      updateOne: {
+        filter: { _id: p._id },
+        update: { $set: { stock: p.stock } },
+      },
+    }));
+    await Product.bulkWrite(bulkOps, { session });
 
     // Clear the user's cart
     cart.items = [];
-    await cart.save();
+    await cart.save({ session });
 
-    // Respond with an array of all newly created orders
+    // --- COMMIT THE TRANSACTION ---
+    // If all operations succeeded, commit the changes to the database.
+    await session.commitTransaction();
+
     res.status(201).json(createdOrders);
   } catch (error) {
+    // --- ABORT THE TRANSACTION ---
+    // If any error occurred, roll back all changes.
+    await session.abortTransaction();
+
     console.error(error.message);
-    res.status(500).send("Server Error");
+
+    // Check if it's our operational error
+    if (error.isOperational) {
+      return res.status(error.statusCode).json({ message: error.message });
+    }
+
+    // If it's not, it's an unknown server error
+    res.status(500).send("Server Error: Order failed");
+  } finally {
+    // Always end the session
+    session.endSession();
   }
 };
 
