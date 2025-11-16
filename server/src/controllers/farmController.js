@@ -280,12 +280,19 @@ const getFarmStats = async (req, res) => {
  */
 const getPublicStats = async (req, res) => {
   try {
+    // --- Date calculations for new stats ---
+    const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    // --- Run all queries in parallel for maximum efficiency ---
     const [
       farmCount,
       productCount,
       orderCount,
       totalSalesResult,
       customerCount,
+      ordersInLast24Hours,
+      newProductsThisWeek,
     ] = await Promise.all([
       // Count all Farms
       Farm.countDocuments({}),
@@ -304,17 +311,32 @@ const getPublicStats = async (req, res) => {
 
       // Count all registered 'customer' users
       User.countDocuments({ role: "customer" }),
+
+      // Count all orders (any status) in the last 24 hours
+      Order.countDocuments({ createdAt: { $gte: last24Hours } }),
+
+      // Count new visible products from the last 7 days
+      Product.countDocuments({
+        status: "active",
+        isArchived: false,
+        createdAt: { $gte: oneWeekAgo },
+      }),
     ]);
 
     // Helper to safely get the sales total (it returns an array)
     const totalSales = totalSalesResult[0]?.total || 0;
 
     res.json({
+      // --- Static Stats ---
       farmsRegistered: farmCount,
       productsListed: productCount,
       ordersCompleted: orderCount,
       totalSalesValue: totalSales,
       customersJoined: customerCount,
+
+      // --- Activity Stats ---
+      ordersInLast24Hours: ordersInLast24Hours,
+      newProductsThisWeek: newProductsThisWeek,
     });
   } catch (error) {
     console.error(error.message);
