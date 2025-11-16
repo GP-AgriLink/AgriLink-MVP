@@ -74,6 +74,15 @@ const getMyProducts = async (req, res) => {
             };
         }
 
+        // status filters
+        if (req.query.status) {
+            query.status = req.query.status;
+        }
+        if (req.query.isArchived) {
+            query.isArchived = req.query.isArchived === 'true'; // Convert string 'true' to boolean
+        }
+
+
         // --- Get total count and paginated data ---
         const total = await Product.countDocuments(query);
         const products = await Product.find(query)
