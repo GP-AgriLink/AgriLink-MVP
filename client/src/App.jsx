@@ -94,17 +94,24 @@ function App() {
 
             {/* Child routes */}
             <Route path="profile" element={<DashboardProfileView />} />
-            <Route path="products" element={<DashboardProductsView />} />
+            <Route
+              path="products"
+              element={
+                <ProtectedRoute allowedRoles={["farmer"]}>
+                  <DashboardProductsView />
+                </ProtectedRoute>
+              }
+            />
             <Route path="orders" element={<OrdersPage />} />
           </Route>
 
-          
           <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+          {/* Edit Profile - Farmers only (customers edit in dashboard) */}
           <Route
             path="/edit-profile"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["farmer"]}>
                 <EditProfile />
               </ProtectedRoute>
             }
