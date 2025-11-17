@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 
 // Extracted the SVG icon to be a scalable component
-const LogoIconSvg = ({ className }) => (
+export const LogoIconSvg = ({ className }) => (
   <svg
     className={className}
     viewBox="0 0 24 24"
@@ -16,7 +16,7 @@ function Logo({ className, iconOnly = false, iconContainerClass = "w-9 h-9" }) {
 
   if (iconOnly) {
     return (
-      <Link to="/" className={`flex items-center justify-center transition-transform hover:-translate-y-0.5 ${className}`}>
+      <Link to="/" className={`flex items-center justify-center shadow-md transition-transform hover:-translate-y-0.5 ${className}`}>
         {/* This container sets the overall size (e.g., w-12 h-12) */}
         <span className={`${iconContainerClass} rounded-full grid place-items-center bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-sm`}>
           {/* This icon scales relative to the container */}
@@ -28,7 +28,7 @@ function Logo({ className, iconOnly = false, iconContainerClass = "w-9 h-9" }) {
 
   // Full logo
   return (
-    <Link to="/" className={`flex items-center gap-3 rounded-full border border-emerald-200 shadow-sm text-emerald-900 font-semibold tracking-[2.8px] uppercase px-4 py-2 no-underline transition-transform hover:-translate-y-0.5 ${className}`}>
+    <Link to="/" className={`flex items-center gap-3 rounded-full border border-emerald-200 shadow-md text-emerald-900 font-semibold tracking-[2.8px] uppercase px-4 py-2 no-underline transition-transform hover:-translate-y-0.5 ${className}`}>
       {/* Default container size is w-9 h-9 */}
       <span className="w-9 h-9 rounded-full grid place-items-center bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-sm">
         {/* Icon scales to 55% of w-9 h-9 */}
