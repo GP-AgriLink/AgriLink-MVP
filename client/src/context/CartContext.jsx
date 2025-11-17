@@ -18,9 +18,18 @@ export const CartProvider = ({ children }) => {
       try {
         const cart = await cartApi.getCart();
         
+        // Backend now returns items with populated 'farm' object
         const fixedItems = (cart.items || []).map(item => {
           const productData = item.product || {};
           const farmData = item.farm || {};
+          
+          // 🔍 DEBUG: Log to see what's coming from backend
+          console.log('📦 Cart Item:', {
+            name: item.name,
+            farm: item.farm,
+            farmData: farmData,
+            farmName: farmData.farmName
+          });
           
           return {
             ...item,
@@ -33,7 +42,7 @@ export const CartProvider = ({ children }) => {
             // Keep the farm object for grouping
             farm: {
               _id: farmData._id,
-              farmName: farmData.farmName,
+              farmName: farmData.farmName || 'Unknown Farm', // ✅ Add fallback
               avatarUrl: farmData.avatarUrl
             }
           };
@@ -67,6 +76,7 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
+    // NO MORE FARM RESTRICTION! 🎉
     // Users can now add items from multiple farms
 
     const newQuantity = (cartItems.find(item => item.productId === product._id)?.quantity || 0) + 1;
@@ -92,7 +102,7 @@ export const CartProvider = ({ children }) => {
               unit: product.unit,
               stock: product.stock,
               quantity: newQuantity,
-              farm: product.farmData || { _id: product.farm } 
+              farm: product.farmData || { _id: product.farm } // Backend will populate this properly
             }
           ];
         }
@@ -165,7 +175,7 @@ export const CartProvider = ({ children }) => {
   
   const cartCount = cartItems.length;
 
-  // Group items by farm for UI
+  // NEW: Group items by farm for UI
   const groupedByFarm = cartItems.reduce((acc, item) => {
     const farmId = item.farm?._id;
     if (!farmId) return acc;
