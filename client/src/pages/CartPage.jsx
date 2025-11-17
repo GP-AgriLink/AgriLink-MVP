@@ -61,15 +61,22 @@ const CartPage = () => {
       
       // Backend returns array of orders (one per farm)
       const orderCount = orders.length;
-      const farmNames = orders.map(o => o.farm?.farmName || 'Unknown Farm').join(', ');
-      
+
+      const farmNames = Object.values(groupedByFarm)
+      .map(group => group.farm.farmName) 
+      .join(', ');  
+          
       toast.success(
         `🎉 ${orderCount} order${orderCount > 1 ? 's' : ''} placed successfully! Orders from: ${farmNames}`,
         { autoClose: 5000 }
       );
       
-      clearCart();
       navigate('/dashboard/orders');
+      
+      // Clear cart after navigation
+      setTimeout(() => {
+        clearCart();
+      }, 100);
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || 'Failed to place order. Please try again.';
