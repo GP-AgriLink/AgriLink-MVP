@@ -6,20 +6,24 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  scroll-behavior: smooth;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
-	width: 8px;
+  width: 8px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-	background-color: rgba(72, 187, 120, 0.6);
-	border-radius: 9999px;
+  background-color: rgba(72, 187, 120, 0.6);
+  border-radius: 9999px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background-color: rgba(72, 187, 120, 0.8);
+  background-color: rgba(72, 187, 120, 0.8);
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-	background-color: rgba(240, 255, 244, 0.4);
-	border-radius: 9999px;
+  background-color: rgba(240, 255, 244, 0.4);
+  border-radius: 9999px;
 }

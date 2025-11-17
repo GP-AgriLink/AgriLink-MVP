@@ -2,103 +2,134 @@ import React from 'react';
 import { FiTrash2, FiPlus, FiMinus } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
-const CartSummary = ({ items, total, itemCount, onQuantityChange, onRemoveItem, onClearAll }) => {
+const CartSummary = ({ groupedByFarm, total, itemCount, onQuantityChange, onRemoveItem, onClearAll }) => {
+  const farmIds = Object.keys(groupedByFarm);
+  
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-md md:p-8">
+    <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-gray-900">
-          Order Summary
-          <p className="mt-1 text-sm font-light text-emerald-700">
-            Review the product in your basket before confirming delivery.
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-gray-900">Your Cart</h2>
+          <p className="text-sm text-emerald-800 mt-1">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'} from {farmIds.length} {farmIds.length === 1 ? 'farm' : 'farms'}
           </p>
-        </h2>
-
-        <span className="text-sm font-bold uppercase tracking-wide text-emerald-700">
-          {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
-        </span>
-      </div>
-
-      {/* Cart Items */}
-      <div className="mb-6 space-y-4">
-        {items.map((item) => (
-          <div
-            key={item._id}
-            className="flex items-center gap-4 rounded-xl border border-emerald-100 bg-emerald-50 p-4"
-          >
-            {/* Product Info */}
-            <div className="min-w-0 flex-1">
-              <Link
-                to={`/farm/${item.farmer}`}
-                className="block truncate text-base font-semibold text-gray-900 transition-colors hover:text-emerald-600"
-              >
-                {item.name}
-              </Link>
-              <p className="mt-1 text-sm text-emerald-700">
-                ${item.price.toFixed(2)} / {item.unit}
-              </p>
-            </div>
-
-            {/* Quantity Controls */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center rounded-lg border border-emerald-300 bg-white">
-                <button
-                  onClick={() => onQuantityChange(item._id, item.quantity - 1)}
-                  className="rounded-l-lg p-2 text-emerald-600 transition-colors hover:bg-emerald-50"
-                  aria-label="Decrease quantity"
-                >
-                  <FiMinus className="h-4 w-4" />
-                </button>
-                <span className="min-w-[40px] px-4 text-center text-sm font-semibold text-gray-900">
-                  {item.quantity}
-                </span>
-                <button
-                  onClick={() => onQuantityChange(item._id, item.quantity + 1)}
-                  disabled={item.quantity >= item.stock}
-                  className="rounded-r-lg p-2 text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  aria-label="Increase quantity"
-                >
-                  <FiPlus className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Item Total */}
-              <div className="min-w-[80px] text-right">
-                <p className="text-base font-bold text-gray-900">
-                  ${(item.price * item.quantity).toFixed(2)}
-                </p>
-              </div>
-
-              {/* Remove Button */}
-              <button
-                onClick={() => onRemoveItem(item._id)}
-                className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-50"
-                aria-label="Remove item"
-              >
-                <FiTrash2 className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Clear All Button - MOVED HERE */}
-      {items.length > 0 && (
-        <div className="-mt-2 mb-4 flex justify-end">
+        </div>
+        {itemCount > 0 && (
           <button
             onClick={onClearAll}
-            className="text-sm font-medium text-red-600 transition-colors hover:text-red-700"
+            className="text-sm font-medium text-red-600 hover:text-red-700 transition-colors"
           >
             Clear All
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Total */}
-      <div className="border-t border-gray-200 pt-6">
+      {/* Items Grouped by Farm */}
+      <div className="space-y-8">
+        {farmIds.map((farmId) => {
+          const farmGroup = groupedByFarm[farmId];
+          const farm = farmGroup.farm;
+          const items = farmGroup.items;
+          const farmTotal = farmGroup.total;
+
+          return (
+            <div key={farmId} className="border-2 border-emerald-100 rounded-2xl p-5 bg-emerald-50/30">
+              {/* Farm Header */}
+              <div className="flex items-center gap-3 mb-4 pb-4 border-b border-emerald-200">
+                {farm.avatarUrl && (
+                  <img 
+                    src={farm.avatarUrl} 
+                    alt={farm.farmName}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-emerald-300"
+                  />
+                )}
+                <div className="flex-1">
+                  <Link 
+                    to={`/farm/${farmId}`}
+                    className="text-lg font-bold text-gray-900 hover:text-emerald-600 transition-colors"
+                  >
+                    {farm.farmName || 'Unknown Farm'}
+                  </Link>
+                  <p className="text-sm text-emerald-700 font-semibold">
+                    Subtotal: ${farmTotal.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Farm Items */}
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div
+                    key={item.productId || `cart-item-${index}`}
+                    className="flex items-center gap-4 p-4 bg-white rounded-xl border border-emerald-100"
+                  >
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-semibold text-gray-900 truncate">
+                        {item.name || 'Unnamed Product'}
+                      </p>
+                      <p className="text-sm text-emerald-700 mt-1">
+                        ${(item.unitPrice || 0).toFixed(2)} / {item.unit || 'unit'}
+                      </p>
+                    </div>
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center border border-emerald-300 rounded-lg bg-white">
+                        <button
+                          onClick={() => onQuantityChange(item.productId, item.quantity - 1)}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 transition-colors rounded-l-lg"
+                          aria-label="Decrease quantity"
+                        >
+                          <FiMinus className="w-4 h-4" />
+                        </button>
+                        <span className="px-4 font-semibold text-gray-900 text-sm min-w-[40px] text-center">
+                          {item.quantity || 0}
+                        </span>
+                        <button
+                          onClick={() => onQuantityChange(item.productId, item.quantity + 1)}
+                          disabled={item.quantity >= item.stock}
+                          className="p-2 text-emerald-600 hover:bg-emerald-50 transition-colors rounded-r-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                          aria-label="Increase quantity"
+                        >
+                          <FiPlus className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Item Total */}
+                      <div className="min-w-[80px] text-right">
+                        <p className="text-base font-bold text-gray-900">
+                          ${((item.unitPrice || 0) * (item.quantity || 0)).toFixed(2)}
+                        </p>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => onRemoveItem(item.productId)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <FiTrash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grand Total */}
+      <div className="border-t-2 border-gray-300 pt-6 mt-6">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-bold uppercase tracking-wide text-emerald-700">TOTAL</span>
-          <span className="text-2xl font-bold text-gray-900">${total.toFixed(2)}</span>
+          <span className="text-lg font-bold text-emerald-700 uppercase tracking-wide">
+            GRAND TOTAL
+          </span>
+          <span className="text-2xl font-bold text-gray-900">
+            ${(total || 0).toFixed(2)}
+          </span>
         </div>
       </div>
     </div>

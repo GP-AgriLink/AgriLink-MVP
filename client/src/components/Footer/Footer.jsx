@@ -24,8 +24,8 @@ function Footer() {
           <div className="flex flex-col items-center md:items-end gap-4">
             <h3 className="text-emerald-900 font-bold text-sm uppercase tracking-wider">Quick Links</h3>
             <div className="flex flex-wrap justify-center md:justify-end gap-x-6 gap-y-3">
-              <Link 
-                to="/privacy" 
+              <Link
+                to="/privacy"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Read privacy policy"
               >
@@ -34,9 +34,9 @@ function Footer() {
                 </svg>
                 <span>Privacy Policy</span>
               </Link>
-              
-              <Link 
-                to="/terms" 
+
+              <Link
+                to="/terms"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Review terms of service"
               >
@@ -48,9 +48,9 @@ function Footer() {
                 </svg>
                 <span>Terms of Service</span>
               </Link>
-              
-              <Link 
-                to="/contact" 
+
+              <Link
+                to="/contact"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Contact AgriLink"
               >
@@ -61,8 +61,8 @@ function Footer() {
                 <span>Contact Us</span>
               </Link>
 
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="About AgriLink"
               >
@@ -85,7 +85,7 @@ function Footer() {
           <p className="text-emerald-900/60 text-xs font-medium text-center md:text-left">
             © 2025 AgriLink. All rights reserved. | Built with 🌱 for sustainable agriculture
           </p>
-          
+
           <div className="flex items-center gap-2 text-emerald-700/60 text-xs">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="stroke-emerald-600/60">
               <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>

@@ -1,190 +1,151 @@
-import { useState, useEffect } from "react";
-import { Search, MapPin } from "lucide-react";
-import {
-    MapContainer,
-    TileLayer,
-    Marker,
-    Popup,
-    useMap,
-} from "react-leaflet";
-import "leaflet/dist/leaflet.css";
+import React, { useState, useEffect } from 'react';
 
-const DEFAULT_DISTANCE = 10000;
-const FALLBACK_POSITION = [30.0444, 31.2357]; // Default Cairo
-
-const FlyToLocation = ({ coords }) => {
-    const map = useMap();
-    useEffect(() => {
-        if (coords) {
-            map.flyTo([coords.latitude, coords.longitude], 13, {
-                duration: 2,
-                easeLinearity: 0.25,
-            });
-        }
-    }, [coords, map]);
-    return null;
-};
-
-const HeroSection = ({ onLocationSet, userCoords }) => {
-    const [searchLocation, setSearchLocation] = useState("");
-    const [loadingLocation, setLoadingLocation] = useState(false);
-    const [error, setError] = useState(null);
-    const [mapCenter, setMapCenter] = useState(FALLBACK_POSITION);
-
-    // Auto-fetch location on page load
-    useEffect(() => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    const coords = {
-                        latitude: pos.coords.latitude,
-                        longitude: pos.coords.longitude,
-                        distance: DEFAULT_DISTANCE,
-                    };
-                    onLocationSet(coords);
-                    setMapCenter([coords.latitude, coords.longitude]);
-                },
-                (err) => {
-                    console.error("Error getting initial location:", err);
-                }
-            );
-        }
-    }, [onLocationSet]);
-
-    // Handler for the "Use My Location" button
-    const handleUseMyLocation = () => {
-        if (!navigator.geolocation) {
-            setError("Geolocation is not supported by your browser.");
-            return;
-        }
-        setLoadingLocation(true);
-        setError(null);
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                const coords = {
-                    latitude: pos.coords.latitude,
-                    longitude: pos.coords.longitude,
-                    distance: DEFAULT_DISTANCE,
-                };
-                onLocationSet(coords);
-                setLoadingLocation(false);
-            },
-            (err) => {
-                console.error(err);
-                setError("Unable to retrieve your location.");
-                setLoadingLocation(false);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    };
-
-    // Handler for the search bar
-    const handleSearchSubmit = async (e) => {
-        e.preventDefault();
-        if (!searchLocation) return;
-        setLoadingLocation(true);
-        setError(null);
-        try {
-            const res = await fetch(
-                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-                    searchLocation
-                )}`
-            );
-            const data = await res.json();
-            if (data && data.length > 0) {
-                const { lat, lon } = data[0];
-                const coords = {
-                    latitude: parseFloat(lat),
-                    longitude: parseFloat(lon),
-                    distance: DEFAULT_DISTANCE,
-                };
-                onLocationSet(coords);
-            } else {
-                setError("Location not found. Please try again.");
-            }
-        } catch (err) {
-            console.error(err);
-            setError("Error fetching location.");
-        } finally {
-            setLoadingLocation(false);
-        }
-    };
+function StatItem({ value, label }) {
+    const formattedValue = new Intl.NumberFormat('en-US').format(value);
 
     return (
-        <div className="relative w-full bg-emerald-50">
-            <div className="container mx-auto grid min-h-[70vh] grid-cols-1 items-center gap-12 px-4 py-20 lg:grid-cols-2">
+        <div className="text-center p-1">
+            <span className="block text-4xl font-extrabold text-emerald-700">
+                {formattedValue}+
+            </span>
+            <span className="block mt-5 text-lg font-medium text-emerald-900">
+                {label}
+            </span>
+        </div>
+    );
+}
 
-                {/* --- Column 1: Text and Controls --- */}
-                <div className="text-center lg:text-left">
-                    <h1 className="text-5xl font-extrabold text-gray-900 drop-shadow-sm">
-                        Discover Fresh, Local Farms
-                    </h1>
-                    <p className="mt-4 text-xl text-gray-600">
-                        Find produce, support farmers, and eat fresh.
-                    </p>
+function StatSkeleton() {
+    return (
+        <div className="text-center p-4 animate-pulse">
+            <div className="h-12 bg-gray-300 rounded-md w-2/4 mx-auto"></div>
+            <div className="h-6 bg-gray-300 rounded-md w-3/4 mx-auto mt-3"></div>
+        </div>
+    );
+}
 
-                    <div className="mt-10 max-w-lg space-y-4 lg:mx-0">
-                        <form
-                            onSubmit={handleSearchSubmit}
-                            className="relative w-full"
-                        >
-                            <input
-                                type="text"
-                                value={searchLocation}
-                                onChange={(e) => setSearchLocation(e.target.value)}
-                                placeholder="Enter your city or zip code"
-                                className="w-full rounded-full border border-gray-300 px-6 py-4 pr-16 text-lg shadow-lg
-                                focus:outline-none focus:border-emerald-200 focus:ring-1 focus:ring-emerald-200 caret-emerald-200"
-                            />
+const HeroSection = () => {
 
-                            <button
-                                type="submit"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-600 p-3 text-white shadow-md transition-colors hover:bg-emerald-700"
-                                disabled={loadingLocation}
-                            >
-                                <Search className="h-6 w-6" />
-                            </button>
-                        </form>
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-                        <div className="flex items-center justify-center gap-4 lg:justify-start">
-                            <span className="text-gray-500">or</span>
-                            <button
-                                onClick={handleUseMyLocation}
-                                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-emerald-600 shadow-lg transition-all hover:shadow-xl"
-                                disabled={loadingLocation}
-                            >
-                                <MapPin className="h-5 w-5" />
-                                {loadingLocation ? "Locating..." : "Use My Location"}
-                            </button>
-                        </div>
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const response = await fetch('http://localhost:5000/api/farms/stats');
 
-                        {error && <p className="mt-4 text-red-600">{error}</p>}
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                setStats(data);
+
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    if (loading) {
+        return (
+            <section className="py-16 bg-gray-50">
+                <div className="container mx-auto max-w-7xl px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <StatSkeleton />
+                        <StatSkeleton />
+                        <StatSkeleton />
+                        <StatSkeleton />
                     </div>
                 </div>
+            </section>
+        );
+    }
 
-                {/* --- Column 2: Map --- */}
-                <div className="h-96 w-full rounded-2xl shadow-lg lg:h-[50vh] z-0">
-                    <MapContainer
-                        center={mapCenter}
-                        zoom={10}
-                        scrollWheelZoom={true}
-                        className="h-full w-full rounded-2xl"
+    if (error) {
+        return (
+            <section className="py-16 bg-red-50">
+                <div className="container mx-auto max-w-7xl px-6 lg:px-8 text-center">
+                    <p className="text-red-700 font-medium">
+                        Error loading statistics: {error}
+                    </p>
+                </div>
+            </section>
+        );
+    }
+
+    return (
+        <section className="relative h-[75vh] w-full">
+            <img
+                src="../../../hero.jpg"
+                alt="A vibrant farm field"
+                className="absolute inset-0 h-full w-full object-cover"
+            />
+
+            <div className="absolute inset-0 bg-white/80" aria-hidden="true"></div>
+
+            <div className="relative z-10 flex h-full flex-col p-8 text-white">
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                    <h1 className="mb-4 text-4xl font-bold md:text-6xl text-emerald-900">
+                        Freshness from the farm.
+                    </h1>
+                    <p className="max-w-2xl text-lg md:text-xl text-emerald-700 mt-5">
+                        Discover and shop from the best local farms across Egypt. Connect directly with farmers who care about quality and sustainability.
+                    </p>
+
+                    <a
+                        href="#DiscoverSection"
+                        className="mt-8 flex items-center gap-2 py-2 px-7 rounded-full bg-emerald-700 text-lg font-medium transition-transform hover:scale-105"
                     >
-                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                        Find Farms Near Me
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="h-5 w-5"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M19 9l-7 7-7-7"
+                            />
+                        </svg>
+                    </a>
 
-                        <FlyToLocation coords={userCoords} />
+                    <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-16">
+                        {/* {stats.map((stat) => (
+                            <div key={stat.id} className="flex flex-col items-center"> */}
+                        {/* <span className="text-3xl font-bold text-emerald-600">{stat.value}</span>
+                                <span className="text-sm uppercase tracking-wider mt-3 text-emerald-900">{stat.name}</span> */}
 
-                        {userCoords && (
-                            <Marker
-                                position={[userCoords.latitude, userCoords.longitude]}
-                            >
-                                <Popup>Your Selected Location</Popup>
-                            </Marker>
-                        )}
-                    </MapContainer>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 uppercase tracking-wider">
+
+                            <StatItem
+                                value={stats.farmsRegistered}
+                                label="Farms"
+                            />
+
+                            <StatItem
+                                value={stats.customersJoined}
+                                label="Customers"
+                            />
+
+                            <StatItem
+                                value={stats.productsListed}
+                                label="Products"
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </section>
     );
 };
 
