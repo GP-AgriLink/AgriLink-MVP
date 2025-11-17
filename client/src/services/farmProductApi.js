@@ -27,24 +27,21 @@ export const createProduct = async (productData) => {
 /**
  * Get all products for the logged-in farmer (Protected endpoint)
  *
- * @param {number} page - The page number to retrieve
- * @param {number} limit - The number of items per page
- * @param {string} category - The category to filter by
- * @param {string} search - The search term to filter by name
+ * @param {object} params - Query parameters object containing page, limit, category, search, status, isArchived
  * @returns {Promise<object>} Paginated product object { data: [], page, pages, total }
  */
-export const getMyProducts = async (page = 1, limit = 10, category = "", search = "") => {
+export const getMyProducts = async (params = {}) => {
   try {
-    const params = { page, limit };
-    if (category) {
-      params.category = category;
-    }
-    if (search) {
-      params.search = search;
-    }
+    // Filter out undefined/null values and empty strings
+    const cleanParams = {};
+    Object.keys(params).forEach(key => {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+        cleanParams[key] = params[key];
+      }
+    });
 
     const response = await apiClient.get(API_ENDPOINTS.products.myProducts, {
-      params,
+      params: cleanParams,
     });
     // Return the full paginated object from the server
     return response.data;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getMyProducts } from "../services/farmProductApi";
 import { useAuth } from "./AuthContext";
+import { toast } from "react-toastify";
 
 const ProductsContext = createContext(null);
 
@@ -41,19 +42,28 @@ export const ProductsProvider = ({ children }) => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    category: "",
+    filter: "active",
     search: "",
+    category: "",
   });
+
+  // Separate state for input values before applying
+  const [searchInput, setSearchInput] = useState("");
+  const [categoryInput, setCategoryInput] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuth();
 
-  // Debounce the search term
-  const debouncedSearch = useDebounce(pagination.search, 300);
-
   useEffect(() => {
     if (!user) {
+      setProductsData({ data: [], page: 1, pages: 1, total: 0 });
+      setLoading(false);
+      return;
+    }
+
+    // Only fetch products if user is a farmer
+    if (user.role !== "farmer") {
       setProductsData({ data: [], page: 1, pages: 1, total: 0 });
       setLoading(false);
       return;
@@ -63,24 +73,56 @@ export const ProductsProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       try {
-        // Pass all pagination params to the API call
-        const data = await getMyProducts(
-          pagination.page,
-          pagination.limit,
-          pagination.category,
-          debouncedSearch // Use the debounced search term
-        );
+        // Build params object for the API call
+        const params = {
+          page: pagination.page,
+          limit: pagination.limit,
+        };
+
+        // Add search if it exists
+        if (pagination.search) {
+          params.search = pagination.search;
+        }
+
+        // Add category if it exists
+        if (pagination.category) {
+          params.category = pagination.category;
+        }
+
+        if (pagination.filter === "archived") {
+          // Only send isArchived when it's true
+          params.isArchived = true;
+        } else if (pagination.filter) {
+          // For 'active' or 'inactive', only send status 
+          params.status = pagination.filter;
+        }
+
+        // Actually call the API with the params
+        const data = await getMyProducts(params);
+
         setProductsData(data);
       } catch (err) {
         console.error("Error fetching products:", err);
-        setError(err.message || "Failed to load products");
+        
+        // Handle auth errors strictly
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          setError(err.message || "Authentication required");
+        } else {
+          // For network errors or server down, show toast and empty state
+          if (!err.response || err.code === "ERR_NETWORK") {
+            toast.error("Network error. Please check your connection.");
+          }
+          // Set empty data for graceful degradation
+          setProductsData({ data: [], page: 1, pages: 1, total: 0 });
+          setError(null);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [user, pagination.page, pagination.limit, pagination.category, debouncedSearch]); // Re-fetch when debouncedSearch changes
+  }, [user, pagination.page, pagination.limit, pagination.filter, pagination.search, pagination.category]); // Re-fetch when search or category changes
 
   /**
    * Manually re-runs the fetch with the current pagination settings.
@@ -88,42 +130,101 @@ export const ProductsProvider = ({ children }) => {
    */
   const refreshProducts = useCallback(async () => {
     if (!user) return;
+    
+    // Only refresh products if user is a farmer
+    if (user.role !== "farmer") {
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     try {
-      const data = await getMyProducts(
-        pagination.page,
-        pagination.limit,
-        pagination.category,
-        debouncedSearch
-      );
+      const params = {
+        page: pagination.page,
+        limit: pagination.limit,
+      };
+
+      if (pagination.search) {
+        params.search = pagination.search;
+      }
+
+      if (pagination.category) {
+        params.category = pagination.category;
+      }
+
+      if (pagination.filter === "archived") {
+        // Only send isArchived when it's true
+        params.isArchived = true;
+      } else if (pagination.filter) {
+        // For 'active' or 'inactive', only send status
+        params.status = pagination.filter;
+      }
+
+      const data = await getMyProducts(params);
+
       setProductsData(data);
     } catch (err) {
-      setError(err.message || "Failed to load products");
+      // Handle errors gracefully like in fetchProducts
+      if (err.response?.status === 401 || err.response?.status === 403) {
+        setError(err.message || "Authentication required");
+      } else {
+        if (!err.response || err.code === "ERR_NETWORK") {
+          toast.error("Network error. Please check your connection.");
+        }
+        setProductsData({ data: [], page: 1, pages: 1, total: 0 });
+        setError(null);
+      }
     } finally {
       setLoading(false);
     }
-  }, [user, pagination, debouncedSearch]);
+  }, [user, pagination]);
 
   const goToPage = (newPage) => {
     setPagination((prev) => ({ ...prev, page: newPage }));
   };
 
-  // Renamed to setCategoryFilter for clarity
-  const setCategoryFilter = (newCategory) => {
+  // Renamed to setFilter
+  const setFilter = (newFilter) => {
+    // Clear search and category filters when switching status tabs
+    setSearchInput("");
+    setCategoryInput("");
     setPagination((prev) => ({
       ...prev,
       page: 1,
-      category: newCategory || "",
+      filter: newFilter || "active",
+      search: "",
+      category: "",
     }));
   };
 
-  // New function to update search term
-  const setSearchQuery = (newSearch) => {
+  // Function to apply search filter (triggered by button click)
+  const applyFilters = () => {
     setPagination((prev) => ({
       ...prev,
-      page: 1, // Reset to page 1 on new search
-      search: newSearch || "",
+      page: 1,
+      search: searchInput.trim(),
+    }));
+  };
+
+  // Function to set category immediately (on dropdown change)
+  const setCategoryFilter = (newCategory) => {
+    setCategoryInput(newCategory);
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      category: newCategory,
+    }));
+  };
+
+  // Function to clear all filters
+  const clearFilters = () => {
+    setSearchInput("");
+    setCategoryInput("");
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+      search: "",
+      category: "",
     }));
   };
 
@@ -137,11 +238,17 @@ export const ProductsProvider = ({ children }) => {
     totalPages: productsData.pages,
     totalProducts: productsData.total,
     goToPage,
-    setFilter: setCategoryFilter,
-    setCategoryFilter,
-    setSearchQuery,
-    activeCategory: pagination.category,
+    setFilter,
+    activeFilter: pagination.filter,
     activeSearch: pagination.search,
+    activeCategory: pagination.category,
+    searchInput,
+    setSearchInput,
+    categoryInput,
+    setCategoryInput,
+    applyFilters,
+    setCategoryFilter,
+    clearFilters,
   };
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

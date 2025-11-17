@@ -1,30 +1,39 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, Archive, AlertTriangle } from "lucide-react";
+import { getDashboardStats } from "../../services/farmApi";
 
 /**
  * ProductStats
  * Displays clickable stat boxes for product categories
- * @param {Array} products - Complete list of products
+ * Fetches stats from API on mount and when refreshTrigger changes
  * @param {string} activeFilter - The currently selected filter
  * @param {Function} onStatClick - Handler to navigate dashboard view
+ * @param {number} refreshTrigger - Value that triggers stats refresh when changed
  */
-const ProductStats = ({ products, activeFilter, onStatClick }) => {
-  const stats = useMemo(() => {
-    const active = products.filter(
-      (p) => !p.isArchived && p.status === "active" && p.stock > 0
-    ).length;
-    const inactive = products.filter(
-      (p) => !p.isArchived && (p.status === "inactive" || p.stock === 0)
-    ).length;
-    const archived = products.filter((p) => p.isArchived).length;
-    return { active, inactive, archived };
-  }, [products]);
+const ProductStats = ({ activeFilter, onStatClick, refreshTrigger }) => {
+  const [stats, setStats] = useState({ active: 0, inactive: 0, archived: 0 });
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const data = await getDashboardStats();
+        setStats(data.products || { active: 0, inactive: 0, archived: 0 });
+      } catch (err) {
+        console.error("Failed to load product stats", err);
+        // Keep previous stats on error
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
   const statItems = [
     {
       id: "active",
       label: "Active",
-      count: stats.active,
+      count: stats.active || 0,
       color: "emerald",
       icon: CheckCircle,
       bgColor: "bg-emerald-600",
@@ -32,7 +41,7 @@ const ProductStats = ({ products, activeFilter, onStatClick }) => {
     {
       id: "inactive",
       label: "Inactive",
-      count: stats.inactive,
+      count: stats.inactive || 0,
       color: "orange",
       icon: AlertTriangle,
       bgColor: "bg-orange-500",
@@ -40,7 +49,7 @@ const ProductStats = ({ products, activeFilter, onStatClick }) => {
     {
       id: "archived",
       label: "Archived",
-      count: stats.archived,
+      count: stats.archived || 0,
       color: "gray",
       icon: Archive,
       bgColor: "bg-gray-500",
