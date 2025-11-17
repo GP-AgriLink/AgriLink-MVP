@@ -26,6 +26,8 @@ export const API_ENDPOINTS = {
   farms: {
     myFarm: "/api/farms/myfarm", // GET/PUT (Protected, Farmer Only)
     myFarmStats: "/api/farms/myfarm/stats", // (Protected, Farmer Only)
+    myFarmReport: "/api/farms/myfarm/report", // (Protected, Farmer Only) - monthly/yearly report
+    myCoustomers: "/api/users/profile/customers", // (Protected, User Only) - list of favorite farms
     allFarms: "/api/farms",
     nearby: "/api/farms/nearby", // GET (Public, e.g., /api/farms/nearby?longitude=...)
     byId: (farmId) => `/api/farms/${farmId}`,

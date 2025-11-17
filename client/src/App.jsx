@@ -13,7 +13,11 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
-import CartPage from "./pages/CartPage";
+
+import FarmerReportPage from "./pages/FarmerReport";
+import CustomerReportPage from "./pages/CoustmerReport";
+import CartPage from "./pages/CartPage"; // --- 2. IMPORT CartPage (uncommented) ---
+
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
 import OrdersPage from "./pages/OrdersPage";
@@ -93,9 +97,12 @@ function App() {
 
             <Route path="/discover" element={<LandingPage />} />
             <Route path="/farm/:id" element={<FarmStorePage />} />
+<<<<<<< Updated upstream
             <Route path="/cart" element={<CartPage />} />
 
             {/* Dashboard with nested routes */}
+=======
+>>>>>>> Stashed changes
             <Route
               path="/dashboard"
               element={
@@ -121,8 +128,13 @@ function App() {
               />
               <Route path="orders" element={<OrdersPage />} />
             </Route>
+<<<<<<< Updated upstream
 
             {/* Edit Profile - Farmers only (customers edit in dashboard) */}
+=======
+            <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+>>>>>>> Stashed changes
             <Route
               path="/edit-profile"
               element={
@@ -131,8 +143,31 @@ function App() {
                 </ProtectedRoute>
               }
             />
+<<<<<<< Updated upstream
 
             {/* Catch-all 404 route */}
+=======
+            <Route
+              path="/farmer/report"
+              element={
+                <ProtectedRoute>
+                  <FarmerReportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer/report"
+              element={
+                <ProtectedRoute>
+                  <CustomerReportPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* --- 4. UNCOMMENT your CartPage route --- */}
+            <Route path="/cart" element={<CartPage />} />
+            {/* <Route path="/farm/:id" element={<FarmStorePage />} /> */}{" "}
+            {/* This was a duplicate route, removed it */}
+>>>>>>> Stashed changes
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>

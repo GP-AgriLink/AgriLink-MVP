@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { FiMapPin, FiBriefcase, FiFileText, FiTag, FiNavigation } from "react-icons/fi";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
@@ -51,6 +52,7 @@ const CompactInfoItem = ({ icon: Icon, label, value, className = "" }) => {
 export const FarmProfileView = ({ farmData }) => {
   const [currentZoom, setCurrentZoom] = useState(9);
   const mapRef = useRef(null);
+  const navigate = useNavigate();
 
   if (!farmData) return null;
 
