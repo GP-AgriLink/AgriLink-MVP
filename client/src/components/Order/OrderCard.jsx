@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 
-const OrderCard = ({ order, onOrderUpdate }) => {
+const OrderCard = ({ order, onOrderUpdate, userRole }) => {
   const [fadeOut, setFadeOut] = useState(false);
   const orderData = order;
+  const isFarmer = userRole === "farmer";
 
   // Determine the initial status
   const initialStatus =
@@ -17,8 +18,42 @@ const OrderCard = ({ order, onOrderUpdate }) => {
   const formatNumber = (num) =>
     typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00";
 
+  // Validate order status transitions
+  const validateTransition = (currentStatus, newStatus) => {
+    const actualCurrent = currentStatus === "Delivery" ? "Ready for Delivery" : currentStatus;
+    const actualNew = newStatus === "Delivery" ? "Ready for Delivery" : newStatus;
+
+    // Cannot change if already completed or cancelled
+    if (actualCurrent === "Completed" || actualCurrent === "Cancelled") {
+      return { valid: false, message: `Order is already ${actualCurrent} and cannot be changed.` };
+    }
+
+    // From "Incoming": can only go to "Ready for Delivery" or "Cancelled"
+    if (actualCurrent === "Incoming") {
+      if (actualNew !== "Ready for Delivery" && actualNew !== "Cancelled") {
+        return { valid: false, message: 'Incoming orders can only be set to "Ready for Delivery" or "Cancelled".' };
+      }
+    }
+
+    // From "Ready for Delivery": can only go to "Completed" or "Cancelled"
+    if (actualCurrent === "Ready for Delivery") {
+      if (actualNew !== "Completed" && actualNew !== "Cancelled") {
+        return { valid: false, message: 'Orders ready for delivery can only be set to "Completed" or "Cancelled".' };
+      }
+    }
+
+    return { valid: true };
+  };
+
   const handleClick = async (newStatus) => {
     if (newStatus === status) return;
+
+    // Validate the status transition
+    const validation = validateTransition(status, newStatus);
+    if (!validation.valid) {
+      alert(validation.message);
+      return;
+    }
 
     if (newStatus === "Delivery") {
       setStatus("Delivery");
@@ -115,40 +150,42 @@ const OrderCard = ({ order, onOrderUpdate }) => {
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3 sm:flex-row">
-        {status === "Delivery" ? (
-          <>
-            <button
-              onClick={() => handleClick("Completed")}
-              className="w-full rounded-lg border border-[#0EB17C] bg-white py-2.5 font-semibold text-[#0EB17C] shadow-sm transition hover:bg-[#0EB17C] hover:text-white"
-            >
-              Complete
-            </button>
-            <button
-              onClick={() => handleClick("Cancelled")}
-              className="w-full rounded-lg bg-red-100 py-2.5 font-semibold text-red-700 transition hover:bg-red-200"
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <>
-            <button
-              onClick={() => handleClick("Delivery")}
-              className="w-full rounded-lg bg-[#13C191] py-2.5 font-semibold text-white transition hover:opacity-90"
-            >
-              Delivery
-            </button>
-            <button
-              onClick={() => handleClick("Cancelled")}
-              className="w-full rounded-lg bg-red-100 py-2.5 font-semibold text-red-700 transition hover:bg-red-200"
-            >
-              Cancel
-            </button>
-          </>
-        )}
-      </div>
+      {/* Action Buttons - Only visible for farmers */}
+      {isFarmer && (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {status === "Delivery" ? (
+            <>
+              <button
+                onClick={() => handleClick("Completed")}
+                className="w-full rounded-lg border border-[#0EB17C] bg-white py-2.5 font-semibold text-[#0EB17C] shadow-sm transition hover:bg-[#0EB17C] hover:text-white"
+              >
+                Complete
+              </button>
+              <button
+                onClick={() => handleClick("Cancelled")}
+                className="w-full rounded-lg bg-red-100 py-2.5 font-semibold text-red-700 transition hover:bg-red-200"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => handleClick("Delivery")}
+                className="w-full rounded-lg bg-[#13C191] py-2.5 font-semibold text-white transition hover:opacity-90"
+              >
+                Delivery
+              </button>
+              <button
+                onClick={() => handleClick("Cancelled")}
+                className="w-full rounded-lg bg-red-100 py-2.5 font-semibold text-red-700 transition hover:bg-red-200"
+              >
+                Cancel
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 };

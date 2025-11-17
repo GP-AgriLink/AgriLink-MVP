@@ -3,7 +3,7 @@ import OrderCard from "./OrderCard";
 
 const ITEMS_PER_PAGE = 6;
 
-const IncomingOrders = ({ orders, onOrderUpdate, activeFilter }) => {
+const IncomingOrders = ({ orders, onOrderUpdate, activeFilter, userRole }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [fade, setFade] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,7 +63,7 @@ const IncomingOrders = ({ orders, onOrderUpdate, activeFilter }) => {
               }`}
           >
             {currentOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onOrderUpdate={onOrderUpdate} />
+              <OrderCard key={order.id} order={order} onOrderUpdate={onOrderUpdate} userRole={userRole} />
             ))}
           </div>
 

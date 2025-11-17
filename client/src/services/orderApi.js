@@ -3,11 +3,22 @@ import apiClient, { API_ENDPOINTS } from "../config/api";
 /**
  * Get all orders for the logged-in farmer
  * GET /api/orders/myorders
+ * @param {Object} params - Query parameters
+ * @param {string} params.status - Filter by status: "Incoming", "Ready for Delivery", "Completed", "Cancelled"
  * @returns {Promise<Array>} A list of the farmer's orders
  */
-export const getMyOrders = async () => {
+export const getMyOrders = async (params = {}) => {
   try {
-    const { data } = await apiClient.get(API_ENDPOINTS.orders.myOrders);
+    const queryParams = {};
+    
+    // Add status filter if provided
+    if (params.status) {
+      queryParams.status = params.status;
+    }
+    
+    const { data } = await apiClient.get(API_ENDPOINTS.orders.myOrders, {
+      params: queryParams
+    });
     // The server returns a paginated object { data: [...] }, not just the array.
     // We must return data.data to get the array of orders.
     return data.data || []; // Ensure an array is always returned
