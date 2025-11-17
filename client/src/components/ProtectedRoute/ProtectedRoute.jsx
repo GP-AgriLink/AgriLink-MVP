@@ -1,7 +1,7 @@
-import { Navigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { getAuthToken, clearAuthData } from '../../context/AuthContext';
+import { Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { getAuthToken, clearAuthData } from "../../context/AuthContext";
 
 const ProtectedRoute = ({ children, allowedRoles = null }) => {
   const { user } = useAuth();
@@ -11,22 +11,22 @@ const ProtectedRoute = ({ children, allowedRoles = null }) => {
   useEffect(() => {
     if (user) {
       const checkAuthData = () => {
-        const savedUser = localStorage.getItem('user');
-        const savedToken = localStorage.getItem('token');
-        
+        const savedUser = localStorage.getItem("user");
+        const savedToken = localStorage.getItem("token");
+
         // If user state exists but localStorage is cleared, redirect to login
         if (!savedUser || !savedToken) {
           clearAuthData();
-          window.location.href = '/login';
+          window.location.href = "/login";
         }
       };
 
       // Check immediately
       checkAuthData();
-      
+
       // Then check periodically
       const intervalId = setInterval(checkAuthData, 1000);
-      
+
       return () => clearInterval(intervalId);
     }
   }, [user]);

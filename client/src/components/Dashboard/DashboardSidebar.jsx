@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { FiFileText } from "react-icons/fi";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext"; // Import useAuth for role-based UI
 
 // Main Sidebar Component
@@ -137,6 +138,21 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
         >
           {getIcon("profile")}
           <span>My Profile</span>
+        </button>
+
+        <button
+          onClick={() => {
+            user?.role === "farmer" ? navigate("/farmer/report") : navigate("/customer/report");
+            setIsSidebarOpen(false);
+          }}
+          className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 font-semibold transition-all ${
+            location.pathname.includes("/report")
+              ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5"
+              : "text-emerald-900 hover:bg-emerald-50"
+          }`}
+        >
+          <FiFileText className="h-4 w-4" />
+          View Report
         </button>
       </nav>
     </aside>

@@ -13,7 +13,11 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
-import CartPage from "./pages/CartPage";
+
+import FarmerReportPage from "./pages/FarmerReport";
+import CustomerReportPage from "./pages/CoustmerReport";
+import CartPage from "./pages/CartPage"; // --- 2. IMPORT CartPage (uncommented) ---
+
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
 import OrdersPage from "./pages/OrdersPage";
@@ -128,6 +132,24 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["farmer"]}>
                   <EditProfile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Report routes */}
+            <Route
+              path="/farmer/report"
+              element={
+                <ProtectedRoute>
+                  <FarmerReportPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer/report"
+              element={
+                <ProtectedRoute>
+                  <CustomerReportPage />
                 </ProtectedRoute>
               }
             />

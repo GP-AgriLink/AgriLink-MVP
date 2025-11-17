@@ -95,3 +95,18 @@ export const getPublicStats = async () => {
     throw error;
   }
 };
+
+/**
+ * Get the logged-in farmer's report (monthly/yearly).
+ * @param {object} params - Query params such as { month, year }
+ * @returns {Promise<object>} Report payload from backend
+ */
+export const getMyFarmReport = async (params = {}) => {
+  try {
+    const response = await apiClient.get(API_ENDPOINTS.farms.myFarmReport, { params });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching farmer report:", error);
+    throw error;
+  }
+};
