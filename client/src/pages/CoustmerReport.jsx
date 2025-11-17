@@ -78,7 +78,7 @@ const CustomerReportPage = () => {
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-800">Spending Summary</h2>
             <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-600">Year</label>
+              <label className="text-lg font-medium text-gray-600">Year</label>
               <select
                 value={year}
                 onChange={(e) => setYear(Number(e.target.value))}
