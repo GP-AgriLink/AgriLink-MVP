@@ -6,6 +6,7 @@ import { getUserProfile } from "../services/userService";
 import { getMyFarmProfile } from "../services/farmApi";
 import { UserProfileView } from "../components/Profile/UserProfileView";
 import { FarmProfileView } from "../components/Profile/FarmProfileView";
+import LogoSpinner from "../components/common/LogoSpinner";
 
 const getDefaultUser = () => ({
   id: "",
@@ -90,12 +91,42 @@ const ProfilePage = () => {
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
-        const errorMsg = err.response?.data?.message || "Failed to fetch profile";
-        setError(errorMsg);
 
+        // Handle auth errors - redirect to login
         if (err.response?.status === 401) {
           clearAuthData();
           navigate("/login");
+          return;
+        }
+
+        // For network errors or server down, use cached data from auth context
+        if (!err.response || err.code === "ERR_NETWORK") {
+          if (user) {
+            // Use cached user data from auth context
+            let displayPhone = user.phone || "";
+            displayPhone = displayPhone.replace(/\D/g, "");
+            if (displayPhone.startsWith("20") && displayPhone.length === 12) {
+              displayPhone = "0" + displayPhone.substring(2);
+            }
+            if (!displayPhone.startsWith("0") && displayPhone.length === 10) {
+              displayPhone = "0" + displayPhone;
+            }
+
+            setUserData({
+              ...getDefaultUser(),
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              email: user.email || "",
+              phoneNumber: displayPhone,
+              avatarUrl: user.avatarUrl || "",
+            });
+          }
+          toast.warning("Working offline - some data may be unavailable");
+          // Don't set error for network issues
+        } else {
+          // For other errors, show error UI
+          const errorMsg = err.response?.data?.message || "Failed to fetch profile";
+          setError(errorMsg);
         }
       } finally {
         setLoading(false);
@@ -110,14 +141,7 @@ const ProfilePage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <p className="text-lg font-medium text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LogoSpinner message="Loading profile..." />;
   }
 
   if (error) {

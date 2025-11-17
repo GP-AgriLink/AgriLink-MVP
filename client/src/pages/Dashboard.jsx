@@ -149,21 +149,25 @@ const Dashboard = () => {
 
       {/* Modals are rendered here, outside the <main> element,
           so they can cover the entire page */}
-      <AddProduct
-        isOpen={isAddProductOpen}
-        onClose={() => setIsAddProductOpen(false)}
-        onSubmit={handleAddProductSubmit}
-      />
+      {isAddProductOpen && (
+        <AddProduct
+          isOpen={isAddProductOpen}
+          onClose={() => setIsAddProductOpen(false)}
+          onSubmit={handleAddProductSubmit}
+        />
+      )}
 
-      <EditProduct
-        isOpen={isEditProductOpen}
-        onClose={() => {
-          setIsEditProductOpen(false);
-          setProductToEdit(null);
-        }}
-        onSubmit={handleEditProductSubmit}
-        product={productToEdit}
-      />
+      {isEditProductOpen && (
+        <EditProduct
+          isOpen={isEditProductOpen}
+          onClose={() => {
+            setIsEditProductOpen(false);
+            setProductToEdit(null);
+          }}
+          onSubmit={handleEditProductSubmit}
+          product={productToEdit}
+        />
+      )}
     </div>
   );
 };

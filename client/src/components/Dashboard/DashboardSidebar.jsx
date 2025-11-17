@@ -1,84 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext"; // Import useAuth for role-based UI
-
-// Helper component for the accordion buttons
-const AccordionItem = ({
-  viewName,
-  label,
-  icon,
-  filters,
-  // --- REFACTORED PROPS ---
-  activeView,
-  activeFilter,
-  navigate,
-  isOpen,
-  setOpenAccordion,
-  closeMobileMenu,
-}) => {
-  const handleMainClick = () => {
-    // If it's already open, close it. Otherwise, open it.
-    if (isOpen) {
-      setOpenAccordion("");
-    } else {
-      setOpenAccordion(viewName);
-      // Navigate to the view's base URL
-      navigate(`/dashboard/${viewName}`);
-    }
-  };
-
-  const handleFilterClick = (filterId) => {
-    // Navigate with the new filter as a URL search parameter
-    navigate(`/dashboard/${viewName}?filter=${filterId}`);
-    closeMobileMenu(); // Close mobile menu on final selection
-  };
-
-  return (
-    <div className="space-y-1">
-      <button
-        onClick={handleMainClick}
-        className={`flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2.5 font-semibold transition-all ${
-          activeView === viewName
-            ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5"
-            : "text-emerald-900 hover:bg-emerald-50"
-        }`}
-      >
-        <div className="flex items-center gap-3">
-          {icon}
-          <span>{label}</span>
-        </div>
-        <ChevronDown
-          size={20}
-          className={`transition-transform duration-300 ${isOpen ? "rotate-180" : "rotate-0"}`}
-        />
-      </button>
-
-      {/* Accordion Content (Sub-filters) */}
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? "max-h-96" : "max-h-0"
-        }`}
-      >
-        <div className="space-y-1 py-1 pl-7 pr-2">
-          {filters.map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => handleFilterClick(filter.id)}
-              className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm font-semibold transition-all ${
-                activeFilter === filter.id // Check active filter from URL
-                  ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md"
-                  : "text-emerald-900 hover:bg-emerald-50"
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Main Sidebar Component
 const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
@@ -86,35 +9,9 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
   const { user } = useAuth(); // Get user for role-based UI
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
 
   // Get active view from URL: /dashboard/PROFILE -> "profile"
   const activeView = location.pathname.split("/")[2] || "profile";
-  // Get active filter from URL: ?filter=INCOMING -> "incoming"
-  const activeFilter = searchParams.get("filter");
-
-  // Accordion state is now local to the sidebar
-  const [openAccordion, setOpenAccordion] = useState(activeView);
-
-  // Effect to sync accordion with URL changes
-  useEffect(() => {
-    if (activeView !== "profile") {
-      setOpenAccordion(activeView);
-    }
-  }, [activeView]);
-
-  // Effect to set default filters if they are missing from the URL
-  useEffect(() => {
-    // We navigate using searchParams, so OrdersPage can read it
-    if (activeView === "orders" && !activeFilter) {
-      navigate("/dashboard/orders?filter=incoming", { replace: true });
-    }
-    // This filter logic will be removed from ProductList, but we set it for now.
-    if (user?.role === "farmer" && activeView === "products" && !activeFilter) {
-      navigate("/dashboard/products?filter=active", { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, activeFilter, navigate, user]);
 
   // --- (getIcon function remains identical) ---
   const getIcon = (iconType) => {
@@ -178,25 +75,15 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     }
   };
 
-  const orderFilters = [
-    { id: "incoming", label: "Incoming" },
-    { id: "delivery", label: "Delivery" },
-    { id: "completed", label: "Completed" },
-    { id: "cancelled", label: "Cancelled" },
-  ];
-
-  const productFilters = [
-    { id: "active", label: "Active" },
-    { id: "inactive", label: "Inactive" },
-    { id: "archived", label: "Archived" },
-  ];
-
   const handleProfileClick = () => {
     navigate("/dashboard/profile"); // Use navigate
-    setOpenAccordion(""); // Close accordions
     setIsSidebarOpen(false);
   };
 
+  const handleNavigate = (view) => {
+    navigate(`/dashboard/${view}`);
+    setIsSidebarOpen(false);
+  };
   return (
     <aside
       className={`fixed left-0 top-0 z-[500] h-full max-h-[90vh] min-h-[90vh] min-w-72 max-w-80 flex-shrink-0 overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
@@ -213,33 +100,31 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
         {user?.role === "farmer" ? "Farmer Portal" : "My Account"}
       </h2>
       <nav className="space-y-2">
-        <AccordionItem
-          viewName="orders"
-          label="My Orders"
-          icon={getIcon("orders")}
-          filters={orderFilters}
-          activeView={activeView}
-          activeFilter={activeFilter}
-          navigate={navigate}
-          isOpen={openAccordion === "orders"}
-          setOpenAccordion={setOpenAccordion}
-          closeMobileMenu={() => setIsSidebarOpen(false)}
-        />
+        <button
+          onClick={() => handleNavigate("orders")}
+          className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 font-semibold transition-all ${
+            activeView === "orders"
+              ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5"
+              : "text-emerald-900 hover:bg-emerald-50"
+          }`}
+        >
+          {getIcon("orders")}
+          <span>My Orders</span>
+        </button>
 
         {/* --- ROLE-BASED UI: Only show 'My Products' to farmers --- */}
         {user?.role === "farmer" && (
-          <AccordionItem
-            viewName="products"
-            label="My Products"
-            icon={getIcon("products")}
-            filters={productFilters}
-            activeView={activeView}
-            activeFilter={activeFilter}
-            navigate={navigate}
-            isOpen={openAccordion === "products"}
-            setOpenAccordion={setOpenAccordion}
-            closeMobileMenu={() => setIsSidebarOpen(false)}
-          />
+          <button
+            onClick={() => handleNavigate("products")}
+            className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 font-semibold transition-all ${
+              activeView === "products"
+                ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5"
+                : "text-emerald-900 hover:bg-emerald-50"
+            }`}
+          >
+            {getIcon("products")}
+            <span>My Products</span>
+          </button>
         )}
 
         <button

@@ -29,8 +29,6 @@ export const UserProfileView = ({ userData }) => {
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-      <h2 className="mb-6 text-xl font-semibold text-gray-800">User Details</h2>
-
       <div className="mb-8 flex justify-center">
         <img
           src={userData.avatarUrl || avatarPlaceholder}
