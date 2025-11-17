@@ -27,8 +27,15 @@ const CompactInfoItem = ({ icon: Icon, label, value, className = "" }) => {
 export const UserProfileView = ({ userData }) => {
   if (!userData) return null;
 
+  // Format phone number for display - add +2 prefix if not present
+  const formatPhoneForDisplay = (phone) => {
+    if (!phone) return "";
+    if (phone.startsWith("+2")) return phone;
+    return `+2${phone}`;
+  };
+
   return (
-    <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-gray-100 bg-white p-8 shadow-sm">
       <div className="mb-8 flex justify-center">
         <img
           src={userData.avatarUrl || avatarPlaceholder}
@@ -41,7 +48,7 @@ export const UserProfileView = ({ userData }) => {
         <CompactInfoItem icon={FiUser} label="First Name" value={userData.firstName} />
         <CompactInfoItem icon={FiUser} label="Last Name" value={userData.lastName} />
         <CompactInfoItem icon={FiMail} label="Email" value={userData.email} />
-        <CompactInfoItem icon={FiPhone} label="Phone Number" value={userData.phoneNumber} />
+        <CompactInfoItem icon={FiPhone} label="Phone Number" value={formatPhoneForDisplay(userData.phoneNumber)} />
       </div>
     </div>
   );
