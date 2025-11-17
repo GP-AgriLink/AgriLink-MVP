@@ -102,6 +102,7 @@ const RegisterForm = ({ role }) => {
               as={InputField}
               label="Farm Name"
               name="farmName"
+              id={`${role}-farmName`}
               type="text"
               placeholder="Enter your farm name"
               error={touched.farmName && errors.farmName}
@@ -113,6 +114,7 @@ const RegisterForm = ({ role }) => {
               as={InputField}
               label="Email"
               name="email"
+              id={`${role}-email`}
               type="email"
               placeholder="your.email@example.com"
               error={touched.email && errors.email}
@@ -124,6 +126,7 @@ const RegisterForm = ({ role }) => {
               as={InputField}
               label="Phone Number"
               name="phoneNumber"
+              id={`${role}-phoneNumber`}
               type="tel"
               placeholder="01012345678"
               error={touched.phoneNumber && errors.phoneNumber}
@@ -135,6 +138,7 @@ const RegisterForm = ({ role }) => {
               as={InputField}
               label="Password"
               name="password"
+              id={`${role}-password`}
               type="password"
               placeholder="••••••••"
               error={touched.password && errors.password}
@@ -146,6 +150,7 @@ const RegisterForm = ({ role }) => {
               as={InputField}
               label="Confirm Password"
               name="confirmPassword"
+              id={`${role}-confirmPassword`}
               type="password"
               placeholder="••••••••"
               error={touched.confirmPassword && errors.confirmPassword}
