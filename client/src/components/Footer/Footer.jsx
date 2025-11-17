@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom';
+import { LogoIconSvg } from '../common/Logo';
 
 function Footer() {
   return (
-    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white/90 via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-7 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-50">
+    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-6 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-50 bottom-0">
       <div className="w-full lg:w-5/6 mx-auto px-4 sm:px-6 lg:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-6">
           <div className="flex flex-col items-center md:items-start gap-3">
             <div className="flex items-center gap-3">
               <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-100">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M4.5 3.75c5.25.75 9 5.25 9.75 9.75.75-4.5 4.5-9 9.75-9.75-.75 5.25-3.75 9-9.75 11.25 2.25 1.5 5.25 3.75 6 6-4.5-1.5-7.5-3.75-9-6-1.5 2.25-4.5 4.5-9 6 .75-2.25 3.75-4.5 6-6C8.25 12.75 5.25 9 4.5 3.75Z"></path>
-                </svg>
+                <LogoIconSvg className="w-[55%] h-[55%] text-white" />
               </div>
               <div className="flex flex-col">
                 <span className="text-emerald-900 font-bold text-xl tracking-wide">AgriLink</span>

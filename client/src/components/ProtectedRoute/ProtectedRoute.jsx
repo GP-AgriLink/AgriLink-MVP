@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { getAuthToken, clearAuthData } from '../../context/AuthContext';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles = null }) => {
   const { user } = useAuth();
   const token = getAuthToken();
 
@@ -37,7 +37,15 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // Render the protected content if user is authenticated
+  // Check role-based access if allowedRoles is specified
+  if (allowedRoles && Array.isArray(allowedRoles) && allowedRoles.length > 0) {
+    if (!allowedRoles.includes(user.role)) {
+      // User doesn't have required role, redirect to dashboard
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
+  // Render the protected content if user is authenticated and has required role
   return children;
 };
 

@@ -6,6 +6,8 @@ import { getUserProfile } from "../services/userService";
 import { getMyFarmProfile } from "../services/farmApi";
 import { UserProfileForm } from "../components/Profile/UserProfileForm";
 import { FarmProfileForm } from "../components/Profile/FarmProfileForm";
+import LogoSpinner from "../components/common/LogoSpinner";
+import { User, Store, ChevronRight } from "lucide-react";
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export default function EditProfile() {
   // State to hold the data for each form
   const [userData, setUserData] = useState(null);
   const [farmData, setFarmData] = useState(null);
+  const [activeSection, setActiveSection] = useState("user");
 
   // Page-level loading state (for initial fetch)
   const [isLoading, setIsLoading] = useState(true);
@@ -86,6 +89,33 @@ export default function EditProfile() {
           toast.error("Session expired. Please log in again");
           clearAuthData();
           navigate("/login");
+          return;
+        }
+
+        // For network errors or server down, use cached data from auth context
+        if (!err.response || err.code === "ERR_NETWORK") {
+          if (user) {
+            // Use cached user data
+            let displayPhone = user.phone || "";
+            displayPhone = displayPhone.replace(/\D/g, "");
+            if (displayPhone.startsWith("20") && displayPhone.length === 12) {
+              displayPhone = "0" + displayPhone.substring(2);
+            }
+            if (!displayPhone.startsWith("0") && displayPhone.length === 10) {
+              displayPhone = "0" + displayPhone;
+            }
+
+            setUserData({
+              ...defaultUser,
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              email: user.email || "",
+              phoneNumber: displayPhone,
+              avatarUrl: user.avatarUrl || "",
+            });
+          }
+          toast.warning("Working offline - some data may be unavailable");
+          // Don't set error for network issues
         } else {
           toast.error("Failed to load profile data");
           setError("Failed to load profile data");
@@ -98,14 +128,7 @@ export default function EditProfile() {
   }, [navigate, user]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <p className="text-lg font-medium text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LogoSpinner message="Loading profile..." />;
   }
 
   if (error) {
@@ -140,15 +163,77 @@ export default function EditProfile() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <h1 className="text-3xl font-semibold text-gray-800">Edit Profile</h1>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/30 px-4 py-6 md:py-10">
+      <div className="mx-auto max-w-5xl">
+        {/* Compact Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Profile Settings</h1>
+            <p className="mt-0.5 text-sm text-gray-600">Manage your account information</p>
+          </div>
+          {user?.role === "farmer" && (
+            <div className="hidden items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-gray-200 sm:flex">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600">
+                <Store className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">Farmer Account</span>
+            </div>
+          )}
+        </div>
 
-        {/* Render User Form when data is ready */}
-        {userData && <UserProfileForm initialData={userData} />}
+        {/* Main Content Card */}
+        <div className="overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-gray-200">
+          {user?.role === "farmer" ? (
+            <div className="grid lg:grid-cols-[240px_1fr]">
+              {/* Sidebar Navigation */}
+              <div className="border-b border-gray-200 bg-gray-50/50 p-4 lg:border-b-0 lg:border-r">
+                <nav className="space-y-1">
+                  <button
+                    onClick={() => setActiveSection("user")}
+                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${
+                      activeSection === "user"
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md"
+                        : "text-gray-700 hover:bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <User className="h-4 w-4" />
+                      <span>Personal Info</span>
+                    </div>
+                    <ChevronRight className={`h-4 w-4 transition-transform ${activeSection === "user" ? "rotate-90" : ""}`} />
+                  </button>
+                  <button
+                    onClick={() => setActiveSection("farm")}
+                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${
+                      activeSection === "farm"
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md"
+                        : "text-gray-700 hover:bg-white hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Store className="h-4 w-4" />
+                      <span>Farm Profile</span>
+                    </div>
+                    <ChevronRight className={`h-4 w-4 transition-transform ${activeSection === "farm" ? "rotate-90" : ""}`} />
+                  </button>
+                </nav>
+              </div>
 
-        {/* Render Farm Form when data is ready and user is a farmer */}
-        {user?.role === "farmer" && farmData && <FarmProfileForm initialData={farmData} />}
+              {/* Content Area */}
+              <div className="p-6 md:p-8">
+                <div className="transition-all duration-300">
+                  {activeSection === "user" && userData && <UserProfileForm initialData={userData} />}
+                  {activeSection === "farm" && farmData && <FarmProfileForm initialData={farmData} />}
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Customer view - single form
+            <div className="p-6 md:p-8">
+              {userData && <UserProfileForm initialData={userData} />}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useProducts } from "../context/ProductsContext";
 import ProductList from "../components/FarmProduct/ProductList";
 import { archiveProduct, updateProduct } from "../services/farmProductApi";
@@ -10,6 +11,12 @@ import { toast } from "react-toastify";
  */
 const MyProductsPage = ({ onEdit, onAddNew }) => {
   const { products, loading, error, refreshProducts, setLoading } = useProducts();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Increment refreshTrigger whenever products change to notify ProductStats
+  useEffect(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, [products]);
 
   const handleArchiveProduct = async (productId) => {
     setLoading(true);
@@ -90,6 +97,7 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
           onArchive={handleArchiveProduct}
           onRestore={handleRestoreProduct}
           onAddNew={onAddNew}
+          refreshTrigger={refreshTrigger}
         />
       </div>
     </div>

@@ -5,7 +5,7 @@ import Footer from "../Footer/Footer";
 
 const MainLayout = ({ children }) => {
   return (
-    <div className="app flex min-h-screen flex-col bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <div className="app flex flex-col bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50" style={{ zoom: "0.8", minHeight: "125vh" }}>
       <Navbar />
       {/* Toaster is now positioned relative to the main layout */}
       <ToastContainer

@@ -59,23 +59,14 @@ const RegisterPage = () => {
           />
         </div>
 
-        {/* --- Animated Form Container --- */}
-        <div className="relative h-auto w-full max-w-sm overflow-hidden">
-          <div
-            className={`flex transition-transform duration-500 ease-in-out ${
-              selectedRole === "farmer" ? "-translate-x-full" : "translate-x-0"
-            }`}
-          >
-            {/* --- Customer Form --- */}
-            <div className="w-full flex-shrink-0 px-4">
-              <RegisterForm role="customer" />
-            </div>
-
-            {/* --- Farmer Form --- */}
-            <div className="w-full flex-shrink-0 px-4">
-              <RegisterForm role="farmer" />
-            </div>
-          </div>
+        {/* --- Form Container --- */}
+        <div className="relative h-auto w-full max-w-sm px-4">
+          {/* Conditionally render only one form to avoid duplicate IDs */}
+          {selectedRole === "customer" ? (
+            <RegisterForm key="customer" role="customer" />
+          ) : (
+            <RegisterForm key="farmer" role="farmer" />
+          )}
         </div>
 
         {/* Background */}

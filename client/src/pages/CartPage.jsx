@@ -69,7 +69,7 @@ const CartPage = () => {
       );
       
       clearCart();
-      navigate('/my-orders');
+      navigate('/dashboard/orders');
     } catch (err) {
       const errorMessage =
         err.response?.data?.message || 'Failed to place order. Please try again.';

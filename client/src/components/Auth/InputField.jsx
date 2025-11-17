@@ -5,19 +5,20 @@ import { Eye, EyeOff } from "lucide-react";
  * New shared InputField for Auth components.
  * Maintains styling from the original login/register forms.
  */
-const InputField = ({ label, type, name, placeholder, error, ...props }) => {
+const InputField = ({ label, type, name, placeholder, error, id, ...props }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
   const inputType = isPassword && showPassword ? "text" : type;
+  const fieldId = id || name; // Use provided id or fall back to name
 
   return (
     <div className="relative">
-      <label htmlFor={name} className="inline text-sm font-semibold leading-5 text-[#064e3b]">
+      <label htmlFor={fieldId} className="inline text-sm font-semibold leading-5 text-[#064e3b]">
         {label}
       </label>
       <div className="relative">
         <input
-          id={name}
+          id={fieldId}
           type={inputType}
           name={name}
           placeholder={placeholder}

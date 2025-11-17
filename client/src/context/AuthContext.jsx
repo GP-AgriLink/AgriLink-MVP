@@ -99,9 +99,16 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     const result = await authService.login(email, password);
     if (result.success) {
-      setUser(result.user);
-      // After login, we *could* hydrate here, but the page will reload
-      // and the main useEffect will run, so it's not strictly necessary.
+      // Manually hydrate the full user profile immediately after login
+      // This ensures avatarUrl is available before navigation completes
+      try {
+        const freshUser = await getUserProfile();
+        authService.updateUserInStorage(freshUser);
+        setUser(authService.getCurrentUser());
+      } catch (hydrateError) {
+        console.error("Failed to hydrate user post-login:", hydrateError);
+        setUser(result.user); // Fallback to minimal user from login
+      }
     }
     return result;
   };

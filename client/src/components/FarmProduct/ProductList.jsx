@@ -1,37 +1,24 @@
-import { useMemo } from "react";
+import { useState, useEffect } from "react";
 import ProductListHeader from "./ProductListHeader";
 import ProductStats from "./ProductStats";
 import FilteredProductList from "./FilteredProductList";
 import EmptyState from "./EmptyState";
 import { useProducts } from "../../context/ProductsContext";
 
-const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew }) => {
-  const { activeCategory: activeFilter, setFilter: onFilterChange } = useProducts();
-
-  const { activeProducts, inactiveProducts, archivedProducts } = useMemo(() => {
-    const active = [];
-    const inactive = [];
-    const archived = [];
-
-    products.forEach((p) => {
-      if (p.isArchived) {
-        archived.push(p);
-      } else if (p.status === "inactive" || p.stock === 0) {
-        inactive.push(p);
-      } else {
-        active.push(p);
-      }
-    });
-
-    return { activeProducts: active, inactiveProducts: inactive, archivedProducts: archived };
-  }, [products]);
+const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew, refreshTrigger }) => {
+  const { activeFilter, setFilter, activeSearch, activeCategory } = useProducts();
 
   // Handler for stat block clicks
   const handleStatClick = (filter) => {
-    onFilterChange(filter);
+    setFilter(filter);
   };
 
-  if (products.length === 0) {
+  // Only show complete empty state if there are no products AND no active filters
+  // If there are search/category filters active, we should still show the full UI
+  const hasActiveFilters = activeSearch || activeCategory;
+  const hasNoProductsAtAll = products.length === 0 && activeFilter === "active" && !hasActiveFilters;
+
+  if (hasNoProductsAtAll) {
     return (
       <section className="space-y-8">
         <ProductListHeader onAddNew={onAddNew} />
@@ -45,42 +32,45 @@ const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew }) => {
       {/* Header Section */}
       <ProductListHeader onAddNew={onAddNew} />
 
-      <ProductStats products={products} activeFilter={activeFilter} onStatClick={handleStatClick} />
+      {/* Stats Component - fetches its own data from API */}
+      <ProductStats 
+        activeFilter={activeFilter} 
+        onStatClick={handleStatClick}
+        refreshTrigger={refreshTrigger}
+      />
 
-      {/* Active Products List - Default */}
-      {(activeFilter === "active" || !activeFilter) && (
+      {/* Products are already filtered by backend based on activeFilter */}
+      {products.length > 0 ? (
         <FilteredProductList
-          products={activeProducts}
+          products={products}
+          isArchived={activeFilter === "archived"}
           onEdit={onEdit}
           onArchive={onArchive}
           onRestore={onRestore}
-          emptyTitle="No Active Products"
-          emptyMessage="You have no active products. Try adding a new product or restoring an archived one."
+          emptyTitle={`No ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Products`}
+          emptyMessage={
+            activeFilter === "active"
+              ? "You have no active products. Try adding a new product or restoring an archived one."
+              : activeFilter === "inactive"
+              ? "These are products that are out of stock or manually set to 'inactive'."
+              : "Products you archive will appear here. You can restore them at any time."
+          }
         />
-      )}
-
-      {/* Inactive Products List */}
-      {activeFilter === "inactive" && (
+      ) : (
         <FilteredProductList
-          products={inactiveProducts}
+          products={[]}
+          isArchived={activeFilter === "archived"}
           onEdit={onEdit}
           onArchive={onArchive}
           onRestore={onRestore}
-          emptyTitle="No Inactive Products"
-          emptyMessage="These are products that are out of stock or manually set to 'inactive'."
-        />
-      )}
-
-      {/* Archived Products List */}
-      {activeFilter === "archived" && (
-        <FilteredProductList
-          products={archivedProducts}
-          isArchived={true}
-          onEdit={onEdit}
-          onArchive={onArchive}
-          onRestore={onRestore}
-          emptyTitle="No Archived Products"
-          emptyMessage="Products you archive will appear here. You can restore them at any time."
+          emptyTitle={`No ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Products`}
+          emptyMessage={
+            activeFilter === "active"
+              ? "You have no active products. Try adding a new product or restoring an archived one."
+              : activeFilter === "inactive"
+              ? "These are products that are out of stock or manually set to 'inactive'."
+              : "Products you archive will appear here. You can restore them at any time."
+          }
         />
       )}
     </section>

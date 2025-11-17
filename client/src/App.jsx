@@ -1,6 +1,6 @@
 import { Routes, Route, Link, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { CartProvider } from "./context/CartContext"; // --- 1. IMPORT CartProvider HERE ---
+import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import MainLayout from "./components/Layout/MainLayout";
 import { ProductsProvider } from "./context/ProductsContext";
@@ -13,7 +13,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
-import CartPage from "./pages/CartPage"; // --- 2. IMPORT CartPage (uncommented) ---
+import CartPage from "./pages/CartPage";
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
 import OrdersPage from "./pages/OrdersPage";
@@ -32,7 +32,9 @@ function App() {
               element={
                 <div className="container mx-auto px-6 py-12">
                   <h1 className="mb-4 text-4xl font-bold text-gray-900">Welcome to AgriLink</h1>
-                  <p className="mb-8 text-lg text-gray-700">Your connection to fresh local farms!</p>
+                  <p className="mb-8 text-lg text-gray-700">
+                    Your connection to fresh local farms!
+                  </p>
                   <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                     <div className="rounded-lg bg-white p-6 shadow-md">
                       <h2 className="mb-4 text-2xl font-semibold text-emerald-600">For Farmers</h2>
@@ -47,7 +49,9 @@ function App() {
                       </Link>
                     </div>
                     <div className="rounded-lg bg-white p-6 shadow-md">
-                      <h2 className="mb-4 text-2xl font-semibold text-emerald-600">For Customers</h2>
+                      <h2 className="mb-4 text-2xl font-semibold text-emerald-600">
+                        For Customers
+                      </h2>
                       <p className="mb-4 text-gray-600">
                         Discover and buy from local farms in your area.
                       </p>
@@ -62,8 +66,14 @@ function App() {
                 </div>
               }
             />
+            {/* Authentication routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* Password reset routes */}
+            <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
+            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+
             <Route
               path="/about"
               element={
@@ -80,9 +90,12 @@ function App() {
                 </div>
               }
             />
+
             <Route path="/discover" element={<LandingPage />} />
             <Route path="/farm/:id" element={<FarmStorePage />} />
+            <Route path="/cart" element={<CartPage />} />
 
+            {/* Dashboard with nested routes */}
             <Route
               path="/dashboard"
               element={
@@ -93,28 +106,33 @@ function App() {
                 </ProtectedRoute>
               }
             >
+              {/* Default child route: /dashboard -> /dashboard/profile */}
               <Route index element={<Navigate to="profile" replace />} />
+
+              {/* Child routes */}
               <Route path="profile" element={<DashboardProfileView />} />
-              <Route path="products" element={<DashboardProductsView />} />
+              <Route
+                path="products"
+                element={
+                  <ProtectedRoute allowedRoles={["farmer"]}>
+                    <DashboardProductsView />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="orders" element={<OrdersPage />} />
             </Route>
 
-
-            <Route path="/forgot-password" element={<ForgotPasswordFlow />} />
-            <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+            {/* Edit Profile - Farmers only (customers edit in dashboard) */}
             <Route
               path="/edit-profile"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={["farmer"]}>
                   <EditProfile />
                 </ProtectedRoute>
               }
             />
-            
-            {/* --- 4. UNCOMMENT your CartPage route --- */}
-            <Route path="/cart" element={<CartPage />} />
 
-            {/* <Route path="/farm/:id" element={<FarmStorePage />} /> */} {/* This was a duplicate route, removed it */}
+            {/* Catch-all 404 route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>
