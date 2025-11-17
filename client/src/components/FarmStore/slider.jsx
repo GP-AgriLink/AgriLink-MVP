@@ -18,21 +18,21 @@ export default function Slider({ farm, products }) {
   const [isResolvingLocation, setIsResolvingLocation] = useState(false);
   const timeoutRef = useRef(null);
 
-  // Auto-slide with fade
+  // Auto slide
   useEffect(() => {
     if (!products?.length || products.length === 1) return;
     const next = () => {
-      setFade(true); // start fade out
+      setFade(true);
       setTimeout(() => {
         setIndex((i) => (i + 1) % products.length);
-        setFade(false); // fade in new image
-      }, 500); // fade duration
+        setFade(false);
+      }, 500);
     };
     timeoutRef.current = setInterval(next, 4000);
     return () => clearInterval(timeoutRef.current);
   }, [products]);
 
-  // Resolve farm location
+  // Resolve location
   useEffect(() => {
     let mounted = true;
     const resolve = async () => {
@@ -90,15 +90,34 @@ export default function Slider({ farm, products }) {
       />
 
       <div className="pointer-events-none absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/70 to-transparent p-8 text-white">
+        {/* Farm Name */}
         {farm?.farmName && (
-          <div className="mb-2 inline-block self-start rounded-full bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur-sm">
+          <div className="mb-1 inline-block self-start rounded-full bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur-sm">
             {farm.farmName}
           </div>
         )}
-        <h1 className="text-3xl font-bold drop-shadow-lg sm:text-6xl">
+
+        {/* Product Name */}
+        <h1 className="mb-2 text-3xl font-bold drop-shadow-lg sm:text-6xl">
           {current.name || "Unnamed Product"}
         </h1>
-        <p className="mt-2 text-sm opacity-90 sm:text-base">
+
+        {/* ⭐ Farm Specialities */}
+        {Array.isArray(farm?.specialties) && farm.specialties.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {farm.specialties.map((spec, i) => (
+              <div
+                key={i}
+                className="inline-block rounded-full bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur-sm"
+              >
+                {spec}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Product Description */}
+        <p className="mb-1 mt-2 text-sm opacity-90 sm:text-base">
           {current.description
             ? current.description.length > 80
               ? current.description.slice(0, 80) + "..."
@@ -106,8 +125,9 @@ export default function Slider({ farm, products }) {
             : "Product has no description."}
         </p>
 
+        {/* Location */}
         {isResolvingLocation || locationName ? (
-          <div className="mt-3 inline-block self-start rounded-full bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur-sm transition-all duration-700 ease-in-out">
+          <div className="mt-3 inline-block self-start rounded-full bg-white/10 px-4 py-1.5 text-xs uppercase tracking-widest backdrop-blur-sm">
             {isResolvingLocation ? "Resolving location…" : locationName}
           </div>
         ) : null}
