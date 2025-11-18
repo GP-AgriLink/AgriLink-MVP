@@ -194,7 +194,8 @@ const FarmStorePage = () => {
               >
                 {displayedProducts.map((p) => (
                   <motion.div key={p._id} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-                    <ProductCard product={p} />
+                    {/* Pass farmData here so the CartContext can access farm name immediately */}
+                    <ProductCard product={{ ...p, farmData: farm }} />
                   </motion.div>
                 ))}
               </motion.div>
