@@ -1,46 +1,42 @@
-import { useState, useEffect } from "react";
+import { useMemo, useCallback, memo } from "react";
 import ProductListHeader from "./ProductListHeader";
 import ProductStats from "./ProductStats";
 import FilteredProductList from "./FilteredProductList";
 import EmptyState from "./EmptyState";
 import { useProducts } from "../../context/ProductsContext";
 
-const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew, refreshTrigger }) => {
+const ProductList = memo(({ products, onEdit, onArchive, onRestore, onAddNew, stats, statsLoading }) => {
   const { activeFilter, setFilter, activeSearch, activeCategory } = useProducts();
 
-  // Handler for stat block clicks
-  const handleStatClick = (filter) => {
+  const handleStatClick = useCallback((filter) => {
     setFilter(filter);
-  };
+  }, [setFilter]);
 
-  // Only show complete empty state if there are no products AND no active filters
-  // If there are search/category filters active, we should still show the full UI
-  const hasActiveFilters = activeSearch || activeCategory;
-  const hasNoProductsAtAll = products.length === 0 && activeFilter === "active" && !hasActiveFilters;
-
-  if (hasNoProductsAtAll) {
-    return (
-      <section className="space-y-8">
-        <ProductListHeader onAddNew={onAddNew} />
-        <EmptyState onAddNew={onAddNew} />
-      </section>
-    );
-  }
+  const totalProducts = useMemo(() => 
+    (stats?.active || 0) + (stats?.inactive || 0) + (stats?.archived || 0),
+    [stats]
+  );
+  const hasActiveFilters = useMemo(() => 
+    activeSearch || activeCategory,
+    [activeSearch, activeCategory]
+  );
+  const hasNoProductsAtAll = useMemo(() => 
+    totalProducts === 0 && !hasActiveFilters,
+    [totalProducts, hasActiveFilters]
+  );
 
   return (
     <section className="space-y-8">
-      {/* Header Section */}
       <ProductListHeader onAddNew={onAddNew} />
-
-      {/* Stats Component - fetches its own data from API */}
       <ProductStats 
         activeFilter={activeFilter} 
         onStatClick={handleStatClick}
-        refreshTrigger={refreshTrigger}
+        stats={stats}
+        loading={statsLoading}
       />
-
-      {/* Products are already filtered by backend based on activeFilter */}
-      {products.length > 0 ? (
+      {hasNoProductsAtAll ? (
+        <EmptyState onAddNew={onAddNew} />
+      ) : products.length > 0 ? (
         <FilteredProductList
           products={products}
           isArchived={activeFilter === "archived"}
@@ -75,6 +71,8 @@ const ProductList = ({ products, onEdit, onArchive, onRestore, onAddNew, refresh
       )}
     </section>
   );
-};
+});
+
+ProductList.displayName = 'ProductList';
 
 export default ProductList;

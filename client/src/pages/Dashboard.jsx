@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
 import AddProduct from "../components/FarmProduct/AddProduct";
@@ -11,7 +11,7 @@ import { toast } from "react-toastify";
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // --- Modal State & Logic Lives Here ---
+  // Modal State & Logic
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
@@ -32,16 +32,17 @@ const Dashboard = () => {
     };
   }, [isSidebarOpen]);
 
-  const handleAddProduct = () => {
+  // Memoize handlers
+  const handleAddProduct = useCallback(() => {
     setIsAddProductOpen(true);
-  };
+  }, []);
 
-  const handleEditProduct = (product) => {
+  const handleEditProduct = useCallback((product) => {
     setProductToEdit(product);
     setIsEditProductOpen(true);
-  };
+  }, []);
 
-  const handleAddProductSubmit = async (sanitizedData, imageFile) => {
+  const handleAddProductSubmit = useCallback(async (sanitizedData, imageFile) => {
     setLoading(true); // Use context's loading
     let finalData = { ...sanitizedData };
 
@@ -62,9 +63,9 @@ const Dashboard = () => {
       setLoading(false); // Manually stop loading on error
       throw error; // Re-throw to keep the modal open
     }
-  };
+  }, [refreshProducts, setLoading]);
 
-  const handleEditProductSubmit = async (changedData, imageFile) => {
+  const handleEditProductSubmit = useCallback(async (changedData, imageFile) => {
     if (Object.keys(changedData).length === 0 && !imageFile) {
       toast.info("No changes to save.");
       setIsEditProductOpen(false);
@@ -99,7 +100,13 @@ const Dashboard = () => {
       setLoading(false);
       throw error;
     }
-  };
+  }, [productToEdit, refreshProducts, setLoading]);
+
+  // Memoize context value
+  const outletContext = useMemo(
+    () => ({ onAddNew: handleAddProduct, onEdit: handleEditProduct }),
+    [handleAddProduct, handleEditProduct]
+  );
 
   return (
     <div className="box-border" style={{ minHeight: "calc(100vh - 200px)" }}>
@@ -140,8 +147,8 @@ const Dashboard = () => {
 
           <main className="max-h-fit flex-1">
             <div className="max-h-[90vh] min-h-fit overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 shadow-lg backdrop-blur-sm">
-              {/* Pass handlers to children via Outlet context */}
-              <Outlet context={{ onAddNew: handleAddProduct, onEdit: handleEditProduct }} />
+              {/* Pass memoized handlers to children via Outlet context */}
+              <Outlet context={outletContext} />
             </div>
           </main>
         </div>

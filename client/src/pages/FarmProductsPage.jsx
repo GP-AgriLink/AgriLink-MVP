@@ -1,37 +1,54 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useProducts } from "../context/ProductsContext";
 import ProductList from "../components/FarmProduct/ProductList";
 import { archiveProduct, updateProduct } from "../services/farmProductApi";
+import { getDashboardStats } from "../services/farmApi";
 import { toast } from "react-toastify";
 
-/**
- * MyProductsPage
- * @param {Function} onEdit - Handler for product edit action
- * @param {Function} onAddNew - Handler for new product creation
- */
+// MyProductsPage: debounced stats fetching and memoized handlers
 const MyProductsPage = ({ onEdit, onAddNew }) => {
   const { products, loading, error, refreshProducts, setLoading } = useProducts();
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [stats, setStats] = useState({ active: 0, inactive: 0, archived: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
+  const fetchStatsTimeoutRef = useRef(null);
 
-  // Increment refreshTrigger whenever products change to notify ProductStats
   useEffect(() => {
-    setRefreshTrigger((prev) => prev + 1);
-  }, [products]);
+    if (fetchStatsTimeoutRef.current) {
+      clearTimeout(fetchStatsTimeoutRef.current);
+    }
+    fetchStatsTimeoutRef.current = setTimeout(async () => {
+      try {
+        setStatsLoading(true);
+        const data = await getDashboardStats();
+        setStats(data.products || { active: 0, inactive: 0, archived: 0 });
+      } catch (err) {
+        console.error("Failed to load product stats", err);
+        setStats({ active: 0, inactive: 0, archived: 0 });
+      } finally {
+        setStatsLoading(false);
+      }
+    }, 300);
+    return () => {
+      if (fetchStatsTimeoutRef.current) {
+        clearTimeout(fetchStatsTimeoutRef.current);
+      }
+    };
+  }, [products.length]);
 
-  const handleArchiveProduct = async (productId) => {
+  const handleArchiveProduct = useCallback(async (productId) => {
     setLoading(true);
     try {
       await archiveProduct(productId);
-      toast.success("Product Archived"); // Updated message
+      toast.success("Product Archived");
       refreshProducts();
     } catch (err) {
       console.error("Error archiving product:", err);
-      toast.error(err.message || "Failed to archive product"); // Updated message
+      toast.error(err.message || "Failed to archive product");
       setLoading(false);
     }
-  };
+  }, [refreshProducts, setLoading]);
 
-  const handleRestoreProduct = async (productId) => {
+  const handleRestoreProduct = useCallback(async (productId) => {
     setLoading(true);
     const productToRestore = products.find((p) => (p._id || p.id) === productId);
     if (!productToRestore) {
@@ -48,14 +65,14 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
 
     try {
       await updateProduct(productId, updateData);
-      toast.success("Product Restored"); // Updated message
+      toast.success("Product Restored");
       refreshProducts();
     } catch (err) {
       const errorMessage = err.message || "Failed to restore product. Please try again.";
       toast.error(errorMessage);
       setLoading(false);
     }
-  };
+  }, [products, refreshProducts, setLoading]);
 
   if (error) {
     return (
@@ -97,7 +114,8 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
           onArchive={handleArchiveProduct}
           onRestore={handleRestoreProduct}
           onAddNew={onAddNew}
-          refreshTrigger={refreshTrigger}
+          stats={stats}
+          statsLoading={statsLoading}
         />
       </div>
     </div>

@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
-const OrderCard = ({ order, onOrderUpdate, userRole }) => {
+const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const [fadeOut, setFadeOut] = useState(false);
+  const [isItemsExpanded, setIsItemsExpanded] = useState(false);
   const orderData = order;
   const isFarmer = userRole === "farmer";
 
@@ -15,11 +17,12 @@ const OrderCard = ({ order, onOrderUpdate, userRole }) => {
     else setStatus(orderData.status);
   }, [orderData.status]);
 
-  const formatNumber = (num) =>
-    typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00";
+  const formatNumber = useCallback((num) =>
+    typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00",
+  []);
 
   // Validate order status transitions
-  const validateTransition = (currentStatus, newStatus) => {
+  const validateTransition = useCallback((currentStatus, newStatus) => {
     const actualCurrent = currentStatus === "Delivery" ? "Ready for Delivery" : currentStatus;
     const actualNew = newStatus === "Delivery" ? "Ready for Delivery" : newStatus;
 
@@ -43,9 +46,9 @@ const OrderCard = ({ order, onOrderUpdate, userRole }) => {
     }
 
     return { valid: true };
-  };
+  }, []);
 
-  const handleClick = async (newStatus) => {
+  const handleClick = useCallback(async (newStatus) => {
     if (newStatus === status) return;
 
     // Validate the status transition
@@ -79,10 +82,15 @@ const OrderCard = ({ order, onOrderUpdate, userRole }) => {
         }
       }, 300);
     }
-  };
+  }, [orderData.id, onOrderUpdate, status, validateTransition]);
 
-  const cardStyle =
-    status === "Delivery" ? "bg-gray-50 border-gray-200" : "bg-white border-green-100";
+  const toggleItems = useCallback(() => {
+    setIsItemsExpanded(prev => !prev);
+  }, []);
+
+  const cardStyle = useMemo(() => 
+    status === "Delivery" ? "bg-gray-50 border-gray-200" : "bg-white border-green-100",
+  [status]);
 
   const items = orderData.items || [];
   const customer = orderData.customer || "Unknown Customer";
@@ -122,31 +130,45 @@ const OrderCard = ({ order, onOrderUpdate, userRole }) => {
         <p className="pb-1 font-medium text-gray-700">{customer}</p>
         <p className="mb-4 text-sm text-gray-500">{phone}</p>
 
-        {/* Items */}
+        {/* Items Dropdown */}
         <div
           className={`${status === "Delivery" ? "border-green-200 bg-gray-100" : "border-green-100 bg-green-50"
-            } mb-4 rounded-xl border p-4`}
+            } mb-4 rounded-xl border overflow-hidden`}
         >
-          <p className="mb-2 text-left text-sm font-semibold tracking-wide text-gray-700">
-            Items ({items.length})
-          </p>
+          <button
+            onClick={toggleItems}
+            className="w-full flex items-center justify-between p-4 text-left hover:opacity-80 transition-opacity"
+          >
+            <span className="text-sm font-semibold tracking-wide text-gray-700">
+              Items ({items.length})
+            </span>
+            {isItemsExpanded ? (
+              <ChevronUp className="h-4 w-4 text-gray-600" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-600" />
+            )}
+          </button>
 
-          {items.map((item, index) => (
-            <div
-              key={index}
-              className="flex justify-between border-b border-gray-100 py-1 text-sm text-gray-600 last:border-none"
-            >
-              <div className="flex flex-col text-left">
-                <span className="font-medium">{item.name}</span>
-                <span className="text-xs text-gray-500">
-                  {item.qty} pcs × ${formatNumber(item.price)}
-                </span>
-              </div>
-              <span className="font-semibold text-gray-700">
-                ${formatNumber(item.qty * item.price)}
-              </span>
+          {isItemsExpanded && (
+            <div className="px-4 pb-4 space-y-1">
+              {items.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex justify-between border-b border-gray-100 py-1 text-sm text-gray-600 last:border-none"
+                >
+                  <div className="flex flex-col text-left">
+                    <span className="font-medium">{item.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {item.qty} pcs × ${formatNumber(item.price)}
+                    </span>
+                  </div>
+                  <span className="font-semibold text-gray-700">
+                    ${formatNumber(item.qty * item.price)}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -188,6 +210,8 @@ const OrderCard = ({ order, onOrderUpdate, userRole }) => {
       )}
     </div>
   );
-};
+});
+
+OrderCard.displayName = 'OrderCard';
 
 export default OrderCard;

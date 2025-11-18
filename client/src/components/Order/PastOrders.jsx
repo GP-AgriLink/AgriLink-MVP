@@ -84,11 +84,11 @@ const PastOrders = ({ orders, activeFilter }) => {
             <table className="min-w-full text-sm text-gray-700">
               <thead className="bg-green-100 text-gray-600 uppercase text-xs tracking-wide sticky top-0 z-20">
                 <tr>
-                  <th className="py-4 px-6 text-center">Order ID</th>
-                  <th className="py-4 px-6 text-center">Customer</th>
-                  <th className="py-4 px-6 text-center">Total</th>
-                  <th className="py-4 px-6 text-center">Date</th>
-                  <th className="py-4 px-6 text-center">Status</th>
+                  <th className="py-4 px-6 text-start">Order ID</th>
+                  <th className="py-4 px-6 text-start">Customer</th>
+                  <th className="py-4 px-6 text-start">Total</th>
+                  <th className="py-4 px-6 text-start">Date</th>
+                  <th className="py-4 px-6 text-start">Status</th>
                 </tr>
               </thead>
               <tbody>

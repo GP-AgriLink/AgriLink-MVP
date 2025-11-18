@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, memo } from "react";
 import { ChevronDown } from "lucide-react";
 import { FiFileText } from "react-icons/fi";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext"; // Import useAuth for role-based UI
 
-// Main Sidebar Component
-const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
+const DashboardSidebar = memo(({ isSidebarOpen, setIsSidebarOpen }) => {
   // --- NEW HOOKS & STATE ---
   const { user } = useAuth(); // Get user for role-based UI
   const location = useLocation();
@@ -76,15 +75,18 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     }
   };
 
-  const handleProfileClick = () => {
+  const handleProfileClick = useCallback(() => {
     navigate("/dashboard/profile"); // Use navigate
     setIsSidebarOpen(false);
-  };
+  }, [navigate, setIsSidebarOpen]);
 
-  const handleNavigate = (view) => {
-    navigate(`/dashboard/${view}`);
-    setIsSidebarOpen(false);
-  };
+  const handleNavigate = useCallback(
+    (view) => {
+      navigate(`/dashboard/${view}`);
+      setIsSidebarOpen(false);
+    },
+    [navigate, setIsSidebarOpen]
+  );
   return (
     <aside
       className={`fixed left-0 top-0 z-[500] h-full max-h-[90vh] min-h-[90vh] min-w-72 max-w-80 flex-shrink-0 overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 p-5 shadow-lg backdrop-blur-sm transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
@@ -157,6 +159,8 @@ const DashboardSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
       </nav>
     </aside>
   );
-};
+});
+
+DashboardSidebar.displayName = "DashboardSidebar";
 
 export default DashboardSidebar;
