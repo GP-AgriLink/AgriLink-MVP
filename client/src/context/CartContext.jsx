@@ -67,22 +67,25 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    // Users can now add items from multiple farms
-
-    const newQuantity = (cartItems.find(item => item.productId === product._id)?.quantity || 0) + 1;
+    // Calculate new quantity based on existing item
+    const existingItem = cartItems.find(item => item.productId === product._id);
+    const newQuantity = (existingItem?.quantity || 0) + 1;
     const oldCartItems = cartItems;
     
     try {
       // Optimistically update UI
       setCartItems(prevItems => {
         const existing = prevItems.find(item => item.productId === product._id);
+        
         if (existing) {
+          // If item exists, update quantity only (doesn't change the count of unique items)
           return prevItems.map(item =>
             item.productId === product._id
               ? { ...item, quantity: newQuantity }
               : item
           );
         } else {
+          // If item is new, add it to the list
           return [
             ...prevItems,
             {
@@ -92,7 +95,12 @@ export const CartProvider = ({ children }) => {
               unit: product.unit,
               stock: product.stock,
               quantity: newQuantity,
-              farm: product.farmData || { _id: product.farm } 
+              // Use farmData passed from FarmStorePage for immediate UI update (name & avatar)
+              farm: product.farmData ? {
+                _id: product.farmData._id,
+                farmName: product.farmData.farmName || product.farmData.name, 
+                avatarUrl: product.farmData.avatarUrl
+              } : { _id: product.farm } // Fallback if farmData is missing
             }
           ];
         }
@@ -163,6 +171,7 @@ export const CartProvider = ({ children }) => {
     0
   );
   
+  // This counts the number of unique items (array length), not total quantity.
   const cartCount = cartItems.length;
 
   // Group items by farm for UI
