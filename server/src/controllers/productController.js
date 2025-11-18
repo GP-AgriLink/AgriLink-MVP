@@ -76,10 +76,12 @@ const getMyProducts = async (req, res) => {
 
         // status filters
         if (req.query.status) {
-            query.status = req.query.status;
+          query.status = req.query.status;
+          query.isArchived = false;
         }
-        if (req.query.isArchived) {
-            query.isArchived = req.query.isArchived === 'true'; // Convert string 'true' to boolean
+      
+        if (req.query.isArchived === "true") {
+          query.isArchived = true; // Convert string 'true' to boolean
         }
 
 

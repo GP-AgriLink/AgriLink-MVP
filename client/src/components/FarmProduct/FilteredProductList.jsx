@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import ProductRow from "./ProductRow";
 import EmptyState from "./EmptyState";
 import { Search, X, Filter } from "lucide-react";
@@ -9,6 +9,7 @@ import { getAllCategories } from "../../services/farmProductApi";
  * FilteredProductList
  * Displays a paginated and searchable list of products for a specific filter.
  * This component now gets its search state from ProductsContext.
+ * Optimized with memoization to prevent unnecessary re-renders.
  *
  * @param {Array} products - Pre-filtered list of products (e.g., only active)
  * @param {boolean} isArchived - Whether this list is for archived products
@@ -16,7 +17,7 @@ import { getAllCategories } from "../../services/farmProductApi";
  * @param {Function} onArchive - Handler for archive action
  * @param {Function} onRestore - Handler for restore action
  */
-const FilteredProductList = ({
+const FilteredProductList = memo(({
   products,
   isArchived = false,
   onEdit,
@@ -45,7 +46,7 @@ const FilteredProductList = ({
     clearFilters,
   } = useProducts();
 
-  // Fetch categories on mount
+  // Fetch categories once on mount
   useEffect(() => {
     const fetchCategories = async () => {
       setLoadingCategories(true);
@@ -59,21 +60,29 @@ const FilteredProductList = ({
       }
     };
     fetchCategories();
-  }, []);
+  }, []); // Empty deps - only fetch once
 
-  const handleSearchSubmit = (e) => {
+  const handleSearchSubmit = useCallback((e) => {
     e.preventDefault();
     applyFilters();
-  };
+  }, [applyFilters]);
 
-  const handleCategoryChange = (e) => {
+  const handleCategoryChange = useCallback((e) => {
     const newCategory = e.target.value;
     // Apply category filter immediately
     setCategoryFilter(newCategory);
-  };
+  }, [setCategoryFilter]);
 
-  const themColor = isArchived ? "gray" : products.length === 0 ? "orange" : "emerald";
-  const hasActiveFilters = activeSearch || activeCategory;
+  // Memoize computed values
+  const themColor = useMemo(() => 
+    isArchived ? "gray" : products.length === 0 ? "orange" : "emerald",
+    [isArchived, products.length]
+  );
+  
+  const hasActiveFilters = useMemo(() => 
+    activeSearch || activeCategory,
+    [activeSearch, activeCategory]
+  );
 
   // Don't show the empty state component - always render the filters and table
   // The empty message will be shown in the table body when needed
@@ -279,6 +288,8 @@ const FilteredProductList = ({
       )}
     </section>
   );
-};
+});
+
+FilteredProductList.displayName = 'FilteredProductList';
 
 export default FilteredProductList;

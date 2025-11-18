@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { getMyOrders, updateOrderStatus } from "../services/orderApi";
 import { getDashboardStats } from "../services/farmApi";
@@ -21,9 +21,10 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [orderStats, setOrderStats] = useState({});
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
 
-  // Map filter names to actual database status values
-  const getStatusFromFilter = (filter) => {
+  // Memoize status mapping to avoid recreation on every render
+  const getStatusFromFilter = useCallback((filter) => {
     const statusMap = {
       incoming: "Incoming",
       delivery: "Ready for Delivery",
@@ -31,9 +32,43 @@ const OrdersPage = () => {
       cancelled: "Cancelled",
     };
     return statusMap[filter] || "Incoming";
-  };
+  }, []);
 
-  const fetchOrders = async () => {
+  // Memoize fetchStats to maintain stable reference
+  const fetchStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      if (isFarmer(user)) {
+        const stats = await getDashboardStats();
+        setOrderStats(stats.orders || {});
+      } else if (isCustomer(user)) {
+        const allOrders = await getMyOrders();
+        const statsCalculated = {
+          Incoming: allOrders.filter((o) => o.status === "Incoming").length,
+          "Ready for Delivery": allOrders.filter((o) => o.status === "Ready for Delivery").length,
+          Completed: allOrders.filter((o) => o.status === "Completed").length,
+          Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
+        };
+        setOrderStats(statsCalculated);
+      }
+    } catch (statsError) {
+      console.error("Failed to load order stats", statsError);
+      setOrderStats({
+        Incoming: 0,
+        "Ready for Delivery": 0,
+        Completed: 0,
+        Cancelled: 0,
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -65,50 +100,19 @@ const OrdersPage = () => {
 
         setOrders(transformedOrders);
       }
-
-      // Fetch stats separately
-      // For farmers: use the dashboard stats endpoint
-      // For customers: calculate from all orders
-      try {
-        if (isFarmer(user)) {
-          const stats = await getDashboardStats();
-          setOrderStats(stats.orders || {});
-        } else if (isCustomer(user)) {
-          // For customers, fetch all orders and calculate stats
-          const allOrders = await getMyOrders(); // Fetch without filter
-          const statsCalculated = {
-            Incoming: allOrders.filter((o) => o.status === "Incoming").length,
-            "Ready for Delivery": allOrders.filter((o) => o.status === "Ready for Delivery").length,
-            Completed: allOrders.filter((o) => o.status === "Completed").length,
-            Cancelled: allOrders.filter((o) => o.status === "Cancelled").length,
-          };
-          setOrderStats(statsCalculated);
-        }
-      } catch (statsError) {
-        console.error("Failed to load order stats", statsError);
-        // Set default stats on error
-        setOrderStats({
-          Incoming: 0,
-          "Ready for Delivery": 0,
-          Completed: 0,
-          Cancelled: 0,
-        });
-      }
     } catch (err) {
       console.error("Error fetching orders:", err);
-      setOrders([]); // Set empty array on error
+      setOrders([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeFilter, getStatusFromFilter]);
 
   useEffect(() => {
     fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeFilter]); // Refetch when the URL param changes
+  }, [fetchOrders]);
 
-  const handleOrderUpdate = async (id, newStatus) => {
-    // Only farmers can update order status
+  const handleOrderUpdate = useCallback(async (id, newStatus) => {
     if (!isFarmer(user)) {
       toast.error("Only farmers can update order status");
       return;
@@ -116,40 +120,38 @@ const OrdersPage = () => {
 
     try {
       await updateOrderStatus(id, newStatus);
-
       toast.success(`Order marked as ${newStatus}`, { autoClose: 2000 });
-
-      // Simply refetch orders for the current filter and stats
-      await fetchOrders();
+      await Promise.all([fetchOrders(), fetchStats()]);
     } catch (err) {
       console.error("Error updating order status:", err);
-      // Display backend error message if available
       const errorMessage = err.response?.data?.message || "Failed to update order status";
       toast.error(errorMessage);
     }
-  };
+  }, [user, fetchOrders, fetchStats]);
 
-  const handleFilterClick = (filter) => {
+  const handleFilterClick = useCallback((filter) => {
     navigate(`/dashboard/orders?filter=${filter}`);
-  };
+  }, [navigate]);
 
-  if (loading) {
+  // Memoize empty state message based on user role
+  const emptyMessage = useMemo(() => 
+    isFarmer(user) 
+      ? "When you receive a new order, it will appear here."
+      : "You haven't placed any orders yet. Start shopping to see your orders here!",
+    [user]
+  );
+
+  const renderEmptyState = useCallback(() => (
+    <div className="flex h-[60vh] flex-col items-center justify-center p-4 text-center">
+      <img src={noOrderImage} alt="No orders" className="mb-4 h-64 w-64" />
+      <h2 className="text-2xl font-semibold text-gray-700">No Orders Yet</h2>
+      <p className="text-gray-500">{emptyMessage}</p>
+    </div>
+  ), [emptyMessage]);
+
+  if (loading && statsLoading) {
     return <LogoSpinner message="Loading orders..." />;
   }
-
-  const renderEmptyState = () => {
-    const message = isFarmer(user) 
-      ? "When you receive a new order, it will appear here."
-      : "You haven't placed any orders yet. Start shopping to see your orders here!";
-    
-    return (
-      <div className="flex h-[60vh] flex-col items-center justify-center p-4 text-center">
-        <img src={noOrderImage} alt="No orders" className="mb-4 h-64 w-64" />
-        <h2 className="text-2xl font-semibold text-gray-700">No Orders Yet</h2>
-        <p className="text-gray-500">{message}</p>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-8 md:px-12 lg:px-16 2xl:px-8 3xl:px-8">
