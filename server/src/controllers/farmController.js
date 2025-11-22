@@ -1,9 +1,9 @@
-import Farm from "../models/Farm.js";
-import User from "../models/User.js";
+import Farm from '../models/Farm.js';
+import User from '../models/User.js';
 
-import Product from "../models/Product.js";
-import Order from "../models/Order.js";
-import mongoose from "mongoose";
+import Product from '../models/Product.js';
+import Order from '../models/Order.js';
+import mongoose from 'mongoose';
 
 /**
  * @desc    Get the logged-in farmer's own farm profile
@@ -18,13 +18,13 @@ const getMyFarmProfile = async (req, res) => {
     if (!farm) {
       return res
         .status(404)
-        .json({ message: "Farm profile not found. Please create one." });
+        .json({ message: 'Farm profile not found. Please create one.' });
     }
 
     res.json(farm);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -46,7 +46,7 @@ const updateMyFarmProfile = async (req, res) => {
   // Build the location object
   if (location && location.coordinates) {
     profileFields.location = {
-      type: "Point",
+      type: 'Point',
       coordinates: location.coordinates,
     };
   }
@@ -67,11 +67,11 @@ const updateMyFarmProfile = async (req, res) => {
       // --- This block is a fallback ---
       // Our new registration logic *should* have already created a farm.
       // But this makes the endpoint robust.
-      return res.status(404).json({ message: "Farm profile not found." });
+      return res.status(404).json({ message: 'Farm profile not found.' });
     }
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -88,9 +88,9 @@ const getAllFarms = async (req, res) => {
 
     const query = {}; // We can add filters here later if needed
 
-    const total = await Farm.countDocuments(query);
-    const farms = await Farm.find(query)
-      .select("farmName specialties location")
+    const total = await Farm.countDocuments({ status: 'approved' });
+    const farms = await Farm.find({ status: 'approved' })
+      .select('farmName specialties location status')
       .skip(skip)
       .limit(limit);
 
@@ -102,7 +102,7 @@ const getAllFarms = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -114,17 +114,17 @@ const getAllFarms = async (req, res) => {
 const getFarmById = async (req, res) => {
   try {
     const farm = await Farm.findById(req.params.id).populate(
-      "user",
-      "firstName lastName"
+      'user',
+      'firstName lastName'
     );
 
     if (!farm) {
-      return res.status(404).json({ message: "Farm not found" });
+      return res.status(404).json({ message: 'Farm not found' });
     }
     res.json(farm);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -140,7 +140,7 @@ const getNearbyFarms = async (req, res) => {
   if (!longitude || !latitude) {
     return res
       .status(400)
-      .json({ message: "Please provide longitude and latitude" });
+      .json({ message: 'Please provide longitude and latitude' });
   }
 
   const limit = Number(req.query.limit) || 10;
@@ -155,10 +155,11 @@ const getNearbyFarms = async (req, res) => {
         // It finds documents and sorts them by distance automatically.
         $geoNear: {
           near: {
-            type: "Point",
+            type: 'Point',
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          distanceField: "distance", // This adds a 'distance' field to each document
+          query: { status: 'approved' },
+          distanceField: 'distance', // This adds a 'distance' field to each document
           maxDistance: parseInt(maxDistance),
           spherical: true, // Use spherical geometry (like $nearSphere)
         },
@@ -177,7 +178,7 @@ const getNearbyFarms = async (req, res) => {
         // one for the paginated data and one for the total count.
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
-          pagination: [{ $count: "total" }],
+          pagination: [{ $count: 'total' }],
         },
       },
     ]);
@@ -194,7 +195,7 @@ const getNearbyFarms = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -208,7 +209,7 @@ const getFarmStats = async (req, res) => {
     // Find the farmer's farm ID
     const farm = await Farm.findOne({ user: req.user._id });
     if (!farm) {
-      return res.status(404).json({ message: "Farm profile not found." });
+      return res.status(404).json({ message: 'Farm profile not found.' });
     }
     const farmId = farm._id;
 
@@ -218,8 +219,8 @@ const getFarmStats = async (req, res) => {
       {
         $group: {
           _id: {
-            status: "$status",
-            isArchived: "$isArchived",
+            status: '$status',
+            isArchived: '$isArchived',
           },
           count: { $sum: 1 },
         },
@@ -231,7 +232,7 @@ const getFarmStats = async (req, res) => {
       { $match: { farm: farmId } }, // Match only this farm's orders
       {
         $group: {
-          _id: "$status", // Group by the status field
+          _id: '$status', // Group by the status field
           count: { $sum: 1 },
         },
       },
@@ -242,7 +243,7 @@ const getFarmStats = async (req, res) => {
       products: { active: 0, inactive: 0, archived: 0 },
       orders: {
         Incoming: 0,
-        "Ready for Delivery": 0,
+        'Ready for Delivery': 0,
         Completed: 0,
         Cancelled: 0,
       },
@@ -252,7 +253,7 @@ const getFarmStats = async (req, res) => {
     productStats.forEach((stat) => {
       if (stat._id.isArchived) {
         stats.products.archived += stat.count;
-      } else if (stat._id.status === "active") {
+      } else if (stat._id.status === 'active') {
         stats.products.active += stat.count;
       } else {
         stats.products.inactive += stat.count;
@@ -269,7 +270,7 @@ const getFarmStats = async (req, res) => {
     res.json(stats);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -298,26 +299,26 @@ const getPublicStats = async (req, res) => {
       Farm.countDocuments({}),
 
       // Count all visible Products
-      Product.countDocuments({ status: "active", isArchived: false }),
+      Product.countDocuments({ status: 'active', isArchived: false }),
 
       // Count all completed Orders
-      Order.countDocuments({ status: "Completed" }),
+      Order.countDocuments({ status: 'Completed' }),
 
       // Sum the totalAmount of all "Completed" orders
       Order.aggregate([
-        { $match: { status: "Completed" } },
-        { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+        { $match: { status: 'Completed' } },
+        { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
 
       // Count all registered 'customer' users
-      User.countDocuments({ role: "customer" }),
+      User.countDocuments({ role: 'customer' }),
 
       // Count all orders (any status) in the last 24 hours
       Order.countDocuments({ createdAt: { $gte: last24Hours } }),
 
       // Count new visible products from the last 7 days
       Product.countDocuments({
-        status: "active",
+        status: 'active',
         isArchived: false,
         createdAt: { $gte: oneWeekAgo },
       }),
@@ -340,7 +341,7 @@ const getPublicStats = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -354,7 +355,7 @@ const getFarmReport = async (req, res) => {
     // Get Farm ID
     const farm = await Farm.findOne({ user: req.user._id });
     if (!farm) {
-      return res.status(404).json({ message: "Farm profile not found." });
+      return res.status(404).json({ message: 'Farm profile not found.' });
     }
     const farmId = farm._id;
 
@@ -365,7 +366,7 @@ const getFarmReport = async (req, res) => {
     if (!month || !year || month < 1 || month > 12) {
       return res
         .status(400)
-        .json({ message: "Please provide a valid month (1-12) and year." });
+        .json({ message: 'Please provide a valid month (1-12) and year.' });
     }
 
     // Calculate start and end dates for the query
@@ -382,16 +383,16 @@ const getFarmReport = async (req, res) => {
           {
             $match: {
               farm: farmId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
           {
             $group: {
               _id: null,
-              totalRevenue: { $sum: "$totalAmount" },
+              totalRevenue: { $sum: '$totalAmount' },
               totalOrdersCompleted: { $sum: 1 },
-              averageOrderValue: { $avg: "$totalAmount" },
+              averageOrderValue: { $avg: '$totalAmount' },
             },
           },
         ]),
@@ -401,16 +402,16 @@ const getFarmReport = async (req, res) => {
           {
             $match: {
               farm: farmId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
-          { $unwind: "$orderItems" }, // Deconstruct the orderItems array
+          { $unwind: '$orderItems' }, // Deconstruct the orderItems array
           {
             $group: {
-              _id: "$orderItems.productId", // Group by product ID
-              name: { $first: "$orderItems.name" }, // Get the name
-              totalQuantitySold: { $sum: "$orderItems.quantity" },
+              _id: '$orderItems.productId', // Group by product ID
+              name: { $first: '$orderItems.name' }, // Get the name
+              totalQuantitySold: { $sum: '$orderItems.quantity' },
             },
           },
           { $sort: { totalQuantitySold: -1 } }, // Sort by most sold
@@ -422,14 +423,14 @@ const getFarmReport = async (req, res) => {
           {
             $match: {
               farm: farmId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
           {
             $group: {
-              _id: "$user", // Group by customer's User ID
-              totalSpent: { $sum: "$totalAmount" },
+              _id: '$user', // Group by customer's User ID
+              totalSpent: { $sum: '$totalAmount' },
               totalOrdersPlaced: { $sum: 1 },
             },
           },
@@ -438,26 +439,26 @@ const getFarmReport = async (req, res) => {
           {
             // Join with the 'users' collection to get customer names
             $lookup: {
-              from: "users",
-              localField: "_id",
-              foreignField: "_id",
-              as: "customerDetails",
+              from: 'users',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'customerDetails',
             },
           },
-          { $unwind: "$customerDetails" },
+          { $unwind: '$customerDetails' },
           {
             // Format the output
             $project: {
               _id: 0,
-              userId: "$_id",
+              userId: '$_id',
               name: {
                 $concat: [
-                  "$customerDetails.firstName",
-                  " ",
-                  "$customerDetails.lastName",
+                  '$customerDetails.firstName',
+                  ' ',
+                  '$customerDetails.lastName',
                 ],
               },
-              phone: "$customerDetails.phone",
+              phone: '$customerDetails.phone',
               totalSpent: 1,
               totalOrdersPlaced: 1,
             },
@@ -474,8 +475,8 @@ const getFarmReport = async (req, res) => {
     };
 
     const report = {
-      reportMonth: `${startDate.toLocaleString("default", {
-        month: "long",
+      reportMonth: `${startDate.toLocaleString('default', {
+        month: 'long',
       })} ${year}`,
       // Manually build the object to exclude the _id
       salesOverview: {
@@ -490,7 +491,7 @@ const getFarmReport = async (req, res) => {
     res.json(report);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
