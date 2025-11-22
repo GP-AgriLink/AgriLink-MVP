@@ -2,8 +2,8 @@
  * @file authMiddleware.js
  * @description Middleware to protect routes by verifying a JWT.
  */
-import jwt from "jsonwebtoken";
-import User from "../models/User.js"; // Import User, not Farmer
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js'; // Import User, not Farmer
 
 /**
  * Middleware function that checks for a valid JWT in the Authorization header.
@@ -16,35 +16,35 @@ const protect = async (req, res, next) => {
   // Check for "Bearer <token>" in the Authorization header.
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
+    req.headers.authorization.startsWith('Bearer')
   ) {
     try {
       // Extract the token string.
-      token = req.headers.authorization.split(" ")[1];
+      token = req.headers.authorization.split(' ')[1];
 
       // Verify the token's signature and expiration.
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-       // Find the user by the ID from the token's payload.
+      // Find the user by the ID from the token's payload.
       // .select('-password') prevents the hashed password from being returned.
-      req.user = await User.findById(decoded.id).select("-password");
+      req.user = await User.findById(decoded.id).select('-password');
 
       if (!req.user) {
         return res
           .status(401)
-          .json({ message: "Not authorized, user not found" });
+          .json({ message: 'Not authorized, user not found' });
       }
 
       // Proceed to the next middleware or the route's controller.
       next();
     } catch (error) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
+      return res.status(401).json({ message: 'Not authorized, token failed' });
     }
   }
 
   // If no token is found in the header, deny access.
   if (!token) {
-    return res.status(401).json({ message: "Not authorized, no token" });
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
@@ -52,15 +52,26 @@ const protect = async (req, res, next) => {
  * @desc    Authorize specific roles
  */
 const isFarmer = (req, res, next) => {
-  if (req.user && req.user.role === "farmer") {
+  if (req.user && req.user.role === 'farmer') {
     next();
   } else {
     res.status(403); // Forbidden
     return res
       .status(403)
-      .json({ message: "Access denied. Farmer role required." });
+      .json({ message: 'Access denied. Farmer role required.' });
   }
 };
 
-export { protect, isFarmer };
+/**
+ * @desc    Authorize Admin only
+ */
+const isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403); // Forbidden
+    throw new Error('Access denied. Admin privileges required.');
+  }
+};
 
+export { protect, isFarmer, isAdmin };
