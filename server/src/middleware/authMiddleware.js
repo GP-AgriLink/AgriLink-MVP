@@ -74,4 +74,13 @@ const isAdmin = (req, res, next) => {
   }
 };
 
-export { protect, isFarmer, isAdmin };
+const isDriver = (req, res, next) => {
+  if (req.user && req.user.role === 'delivery') {
+    next();
+  } else {
+    res.status(403);
+    throw new Error('Access denied. Delivery role required.');
+  }
+};
+
+export { protect, isFarmer, isAdmin, isDriver };

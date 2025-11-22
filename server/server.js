@@ -17,6 +17,7 @@ import { notFound, errorHandler } from './src/middleware/errorMiddleware.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import cartRoutes from './src/routes/cartRoutes.js';
 import adminRoutes from './src/routes/adminRoutes.js';
+import deliveryRoutes from './src/routes/deliveryRoutes.js';
 import cors from 'cors';
 
 // --- Configuration ---
@@ -74,6 +75,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/delivery', deliveryRoutes);
 // --- Error Handling Middleware ---
 // Custom middleware to handle 404 Not Found errors.
 app.use(notFound);

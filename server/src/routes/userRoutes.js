@@ -1,5 +1,5 @@
-import express from "express";
-import { body } from "express-validator";
+import express from 'express';
+import { body } from 'express-validator';
 import {
   registerUser,
   loginUser,
@@ -8,37 +8,37 @@ import {
   forgotPassword,
   resetPassword,
   getCustomerReport,
-} from "../controllers/userController.js";
-import { protect } from "../middleware/authMiddleware.js";
+} from '../controllers/userController.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // @route   POST /api/users/register
 router.post(
-  "/register",
+  '/register',
   [
-    body("email", "Please include a valid email").isEmail(),
-    body("password", "Password must be 6 or more characters").isLength({
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password must be 6 or more characters').isLength({
       min: 6,
     }),
-    body("phone", "Phone number is required").not().isEmpty(),
-    body("role", "Role is required").isIn(["customer", "farmer"]),
+    body('phone', 'Phone number is required').not().isEmpty(),
+    body('role', 'Role is required').isIn(['customer', 'farmer', 'delivery']),
     // Conditional validation: if role is 'farmer', farmName is required
-    body("farmName")
-      .if(body("role").equals("farmer"))
+    body('farmName')
+      .if(body('role').equals('farmer'))
       .not()
       .isEmpty()
-      .withMessage("Farm name is required for farmers"),
+      .withMessage('Farm name is required for farmers'),
   ],
   registerUser
 );
 
 // @route   POST /api/users/login
 router.post(
-  "/login",
+  '/login',
   [
-    body("email", "Please include a valid email").isEmail(),
-    body("password", "Password is required").exists(),
+    body('email', 'Please include a valid email').isEmail(),
+    body('password', 'Password is required').exists(),
   ],
   loginUser
 );
@@ -46,17 +46,17 @@ router.post(
 // @route   GET /api/users/profile/report
 // @desc    Get an annual spending report for the logged-in user
 // @access  Private
-router.get("/profile/report", protect, getCustomerReport);
+router.get('/profile/report', protect, getCustomerReport);
 
 // @route   GET /api/users/profile
 // @route   PUT /api/users/profile
 router
-  .route("/profile")
+  .route('/profile')
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);
 
 // --- PASSWORD RESET ROUTES ---
-router.post("/forgot-password", forgotPassword);
-router.put("/reset-password/:token", resetPassword);
+router.post('/forgot-password', forgotPassword);
+router.put('/reset-password/:token', resetPassword);
 
 export default router;
