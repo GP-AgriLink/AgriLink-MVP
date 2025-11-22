@@ -2,7 +2,6 @@ import User from '../models/User.js';
 import Farm from '../models/Farm.js';
 import Order from '../models/Order.js';
 import DeliveryProfile from '../models/DeliveryProfile.js';
-import { validationResult } from 'express-validator';
 
 /**
  * @desc    Get comprehensive system stats
@@ -39,7 +38,7 @@ const getPendingFarms = async (req, res) => {
     const farms = await Farm.find({ status: 'pending' }).populate(
       'user',
       'firstName lastName email phone'
-    ); // Show who owns it
+    );
     res.json(farms);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
@@ -52,13 +51,7 @@ const getPendingFarms = async (req, res) => {
  * @access  Private (Admin)
  */
 const verifyFarm = async (req, res) => {
-  const { status, rejectionReason } = req.body; // status should be 'approved' or 'rejected'
-
-  if (!['approved', 'rejected'].includes(status)) {
-    return res
-      .status(400)
-      .json({ message: 'Invalid status. Use approved or rejected.' });
-  }
+  const { status, rejectionReason } = req.body;
 
   try {
     const farm = await Farm.findById(req.params.id);
@@ -67,8 +60,10 @@ const verifyFarm = async (req, res) => {
     }
 
     farm.status = status;
-    if (status === 'rejected' && rejectionReason) {
+    if (status === 'rejected') {
       farm.rejectionReason = rejectionReason;
+    } else {
+      farm.rejectionReason = undefined;
     }
 
     await farm.save();
@@ -101,11 +96,6 @@ const getPendingDrivers = async (req, res) => {
  * @access  Private (Admin)
  */
 const verifyDriver = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { status, rejectionReason } = req.body;
 
   try {

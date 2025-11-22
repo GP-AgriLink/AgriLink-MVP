@@ -1,9 +1,7 @@
 import Farm from '../models/Farm.js';
 import User from '../models/User.js';
-
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
-import mongoose from 'mongoose';
 
 /**
  * @desc    Get the logged-in farmer's own farm profile
@@ -12,7 +10,6 @@ import mongoose from 'mongoose';
  */
 const getMyFarmProfile = async (req, res) => {
   try {
-    // req.user._id comes from the 'protect' middleware
     const farm = await Farm.findOne({ user: req.user._id });
 
     if (!farm) {
@@ -36,14 +33,13 @@ const getMyFarmProfile = async (req, res) => {
 const updateMyFarmProfile = async (req, res) => {
   const { farmName, farmBio, avatarUrl, specialties, location } = req.body;
 
-  // Build the profile fields to update
   const profileFields = {};
   if (farmName) profileFields.farmName = farmName;
   if (farmBio) profileFields.farmBio = farmBio;
   if (avatarUrl) profileFields.avatarUrl = avatarUrl;
   if (specialties) profileFields.specialties = specialties;
 
-  // Build the location object
+  // Handle Location GeoJSON
   if (location && location.coordinates) {
     profileFields.location = {
       type: 'Point',
@@ -52,11 +48,10 @@ const updateMyFarmProfile = async (req, res) => {
   }
 
   try {
-    // Find the farm profile linked to the logged-in user
     let farm = await Farm.findOne({ user: req.user._id });
 
     if (farm) {
-      // --- Update Existing Profile ---
+      // Update existing profile
       farm = await Farm.findOneAndUpdate(
         { user: req.user._id },
         { $set: profileFields },
@@ -64,9 +59,7 @@ const updateMyFarmProfile = async (req, res) => {
       );
       return res.json(farm);
     } else {
-      // --- This block is a fallback ---
-      // Our new registration logic *should* have already created a farm.
-      // But this makes the endpoint robust.
+      // Fallback if farm doesn't exist (though registration should handle this)
       return res.status(404).json({ message: 'Farm profile not found.' });
     }
   } catch (error) {
@@ -86,11 +79,12 @@ const getAllFarms = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const skip = (page - 1) * limit;
 
-    const query = {}; // We can add filters here later if needed
+    // Only show approved farms
+    const query = { status: 'approved' };
 
-    const total = await Farm.countDocuments({ status: 'approved' });
-    const farms = await Farm.find({ status: 'approved' })
-      .select('farmName specialties location status')
+    const total = await Farm.countDocuments(query);
+    const farms = await Farm.find(query)
+      .select('farmName specialties location status avatarUrl')
       .skip(skip)
       .limit(limit);
 
@@ -134,48 +128,38 @@ const getFarmById = async (req, res) => {
  * @access  Public
  */
 const getNearbyFarms = async (req, res) => {
+  // 3. REMOVED: Manual check for longitude/latitude. Middleware handles it.
   const { longitude, latitude, distance } = req.query;
-  const maxDistance = distance || 10000; // 10km default
-
-  if (!longitude || !latitude) {
-    return res
-      .status(400)
-      .json({ message: 'Please provide longitude and latitude' });
-  }
+  const maxDistance = distance || 10000;
 
   const limit = Number(req.query.limit) || 10;
   const page = Number(req.query.page) || 1;
   const skip = (page - 1) * limit;
 
   try {
-    // We must use an aggregation pipeline for $geoNear
     const results = await Farm.aggregate([
       {
-        // $geoNear MUST be the first stage.
-        // It finds documents and sorts them by distance automatically.
         $geoNear: {
           near: {
             type: 'Point',
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          query: { status: 'approved' },
-          distanceField: 'distance', // This adds a 'distance' field to each document
+          distanceField: 'distance',
           maxDistance: parseInt(maxDistance),
-          spherical: true, // Use spherical geometry (like $nearSphere)
+          spherical: true,
+          query: { status: 'approved' }, // Only approved farms
         },
       },
       {
-        // Select only the fields we want to return
         $project: {
           farmName: 1,
           specialties: 1,
           location: 1,
-          distance: 1, // We can also return the calculated distance
+          distance: 1,
+          avatarUrl: 1,
         },
       },
       {
-        // $facet allows us to run two pipelines at once:
-        // one for the paginated data and one for the total count.
         $facet: {
           data: [{ $skip: skip }, { $limit: limit }],
           pagination: [{ $count: 'total' }],
@@ -184,7 +168,6 @@ const getNearbyFarms = async (req, res) => {
     ]);
 
     const data = results[0].data;
-    // Get the total, or 0 if no results were found
     const total = results[0].pagination[0] ? results[0].pagination[0].total : 0;
 
     res.json({
@@ -206,39 +189,32 @@ const getNearbyFarms = async (req, res) => {
  */
 const getFarmStats = async (req, res) => {
   try {
-    // Find the farmer's farm ID
     const farm = await Farm.findOne({ user: req.user._id });
     if (!farm) {
       return res.status(404).json({ message: 'Farm profile not found.' });
     }
     const farmId = farm._id;
 
-    // Run Product Stats Aggregation
     const productStats = await Product.aggregate([
-      { $match: { farm: farmId } }, // Match only this farmer's products
+      { $match: { farm: farmId } },
       {
         $group: {
-          _id: {
-            status: '$status',
-            isArchived: '$isArchived',
-          },
+          _id: { status: '$status', isArchived: '$isArchived' },
           count: { $sum: 1 },
         },
       },
     ]);
 
-    // Run Order Stats Aggregation
     const orderStats = await Order.aggregate([
-      { $match: { farm: farmId } }, // Match only this farm's orders
+      { $match: { farm: farmId } },
       {
         $group: {
-          _id: '$status', // Group by the status field
+          _id: '$status',
           count: { $sum: 1 },
         },
       },
     ]);
 
-    // Process the raw stats into a clean object
     const stats = {
       products: { active: 0, inactive: 0, archived: 0 },
       orders: {
@@ -249,7 +225,6 @@ const getFarmStats = async (req, res) => {
       },
     };
 
-    // Process product stats
     productStats.forEach((stat) => {
       if (stat._id.isArchived) {
         stats.products.archived += stat.count;
@@ -260,7 +235,6 @@ const getFarmStats = async (req, res) => {
       }
     });
 
-    // Process order stats
     orderStats.forEach((stat) => {
       if (stats.orders.hasOwnProperty(stat._id)) {
         stats.orders[stat._id] = stat.count;
@@ -281,11 +255,9 @@ const getFarmStats = async (req, res) => {
  */
 const getPublicStats = async (req, res) => {
   try {
-    // --- Date calculations for new stats ---
     const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    // --- Run all queries in parallel for maximum efficiency ---
     const [
       farmCount,
       productCount,
@@ -295,28 +267,15 @@ const getPublicStats = async (req, res) => {
       ordersInLast24Hours,
       newProductsThisWeek,
     ] = await Promise.all([
-      // Count all Farms
-      Farm.countDocuments({}),
-
-      // Count all visible Products
+      Farm.countDocuments({ status: 'approved' }),
       Product.countDocuments({ status: 'active', isArchived: false }),
-
-      // Count all completed Orders
       Order.countDocuments({ status: 'Completed' }),
-
-      // Sum the totalAmount of all "Completed" orders
       Order.aggregate([
         { $match: { status: 'Completed' } },
         { $group: { _id: null, total: { $sum: '$totalAmount' } } },
       ]),
-
-      // Count all registered 'customer' users
       User.countDocuments({ role: 'customer' }),
-
-      // Count all orders (any status) in the last 24 hours
       Order.countDocuments({ createdAt: { $gte: last24Hours } }),
-
-      // Count new visible products from the last 7 days
       Product.countDocuments({
         status: 'active',
         isArchived: false,
@@ -324,18 +283,14 @@ const getPublicStats = async (req, res) => {
       }),
     ]);
 
-    // Helper to safely get the sales total (it returns an array)
     const totalSales = totalSalesResult[0]?.total || 0;
 
     res.json({
-      // --- Static Stats ---
       farmsRegistered: farmCount,
       productsListed: productCount,
       ordersCompleted: orderCount,
       totalSalesValue: totalSales,
       customersJoined: customerCount,
-
-      // --- Activity Stats ---
       ordersInLast24Hours: ordersInLast24Hours,
       newProductsThisWeek: newProductsThisWeek,
     });
@@ -351,34 +306,21 @@ const getPublicStats = async (req, res) => {
  * @access  Private (Farmer only)
  */
 const getFarmReport = async (req, res) => {
+  const month = parseInt(req.query.month);
+  const year = parseInt(req.query.year);
+
   try {
-    // Get Farm ID
     const farm = await Farm.findOne({ user: req.user._id });
     if (!farm) {
       return res.status(404).json({ message: 'Farm profile not found.' });
     }
     const farmId = farm._id;
 
-    // Get and validate date range from query params
-    const month = parseInt(req.query.month); // 1 (Jan) - 12 (Dec)
-    const year = parseInt(req.query.year);
-
-    if (!month || !year || month < 1 || month > 12) {
-      return res
-        .status(400)
-        .json({ message: 'Please provide a valid month (1-12) and year.' });
-    }
-
-    // Calculate start and end dates for the query
-    // JS Date months are 0-11, so (month - 1)
     const startDate = new Date(year, month - 1, 1, 0, 0, 0);
-    // Day 0 of the *next* month is the last day of the *current* month
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
-    // --- Run all aggregations in parallel ---
     const [salesData, bestSellingProductsData, topCustomersData] =
       await Promise.all([
-        // Query 1: Sales Overview
         Order.aggregate([
           {
             $match: {
@@ -396,8 +338,6 @@ const getFarmReport = async (req, res) => {
             },
           },
         ]),
-
-        // Query 2: Best-Selling Products
         Order.aggregate([
           {
             $match: {
@@ -406,19 +346,17 @@ const getFarmReport = async (req, res) => {
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
-          { $unwind: '$orderItems' }, // Deconstruct the orderItems array
+          { $unwind: '$orderItems' },
           {
             $group: {
-              _id: '$orderItems.productId', // Group by product ID
-              name: { $first: '$orderItems.name' }, // Get the name
+              _id: '$orderItems.productId',
+              name: { $first: '$orderItems.name' },
               totalQuantitySold: { $sum: '$orderItems.quantity' },
             },
           },
-          { $sort: { totalQuantitySold: -1 } }, // Sort by most sold
-          { $limit: 5 }, // Get top 5
+          { $sort: { totalQuantitySold: -1 } },
+          { $limit: 5 },
         ]),
-
-        // Query 3: Top Customers
         Order.aggregate([
           {
             $match: {
@@ -429,7 +367,7 @@ const getFarmReport = async (req, res) => {
           },
           {
             $group: {
-              _id: '$user', // Group by customer's User ID
+              _id: '$user',
               totalSpent: { $sum: '$totalAmount' },
               totalOrdersPlaced: { $sum: 1 },
             },
@@ -437,7 +375,6 @@ const getFarmReport = async (req, res) => {
           { $sort: { totalSpent: -1 } },
           { $limit: 3 },
           {
-            // Join with the 'users' collection to get customer names
             $lookup: {
               from: 'users',
               localField: '_id',
@@ -447,7 +384,6 @@ const getFarmReport = async (req, res) => {
           },
           { $unwind: '$customerDetails' },
           {
-            // Format the output
             $project: {
               _id: 0,
               userId: '$_id',
@@ -466,8 +402,6 @@ const getFarmReport = async (req, res) => {
         ]),
       ]);
 
-    // --- Format the final response ---
-    // Get the result from the aggregation, or a default object if no sales
     const salesResult = salesData[0] || {
       totalRevenue: 0,
       totalOrdersCompleted: 0,
@@ -478,7 +412,6 @@ const getFarmReport = async (req, res) => {
       reportMonth: `${startDate.toLocaleString('default', {
         month: 'long',
       })} ${year}`,
-      // Manually build the object to exclude the _id
       salesOverview: {
         totalRevenue: salesResult.totalRevenue,
         totalOrdersCompleted: salesResult.totalOrdersCompleted,

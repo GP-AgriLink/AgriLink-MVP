@@ -1,10 +1,9 @@
-import { validationResult } from "express-validator";
-import Order from "../models/Order.js";
-import Product from "../models/Product.js";
-import Farm from "../models/Farm.js";
-import Cart from "../models/Cart.js";
-import mongoose from "mongoose";
-import AppError from "../utils/AppError.js";
+import mongoose from 'mongoose';
+import Order from '../models/Order.js';
+import Product from '../models/Product.js';
+import Cart from '../models/Cart.js';
+import Farm from '../models/Farm.js';
+import AppError from '../utils/AppError.js';
 
 /**
  * @desc    Create new order(s) from the user's cart
@@ -12,30 +11,28 @@ import AppError from "../utils/AppError.js";
  * @access  Private
  */
 const createOrder = async (req, res) => {
-  // START A MONGOOSE SESSION (for the transaction)
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const userId = req.user._id;
 
-    // Get the user's cart (MUST use the session)
+    // Get the user's cart and populate products
     const cart = await Cart.findOne({ user: userId }).session(session);
 
     if (!cart || cart.items.length === 0) {
-      throw new AppError("Your cart is empty", 400);
+      throw new AppError('Your cart is empty', 400);
     }
 
     const farmGroups = new Map();
     const productsToUpdate = [];
 
-    // --- CRITICAL: RE-VALIDATE CART LOOP ---
-    // This loop checks for stale prices, integrity, and stock.
+    // --- RE-VALIDATE CART LOOP ---
     for (const item of cart.items) {
       const product = await Product.findById(item.product).session(session);
 
       // Check 1: Product Integrity
-      if (!product || product.isArchived || product.status === "inactive") {
+      if (!product || product.isArchived || product.status === 'inactive') {
         throw new AppError(
           `Product "${item.name}" is no longer available. Please remove it from your cart.`,
           400
@@ -48,7 +45,7 @@ const createOrder = async (req, res) => {
           400
         );
       }
-      // Check 3: Stock (Race Condition check)
+      // Check 3: Stock
       if (product.stock < item.quantity) {
         throw new AppError(
           `Not enough stock for "${item.name}". Only ${product.stock} left.`,
@@ -70,7 +67,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    //  --- CREATE ORDERS LOOP ---
+    // --- CREATE ORDERS LOOP ---
     const createdOrders = [];
     for (const [farmId, items] of farmGroups.entries()) {
       const totalAmount = items.reduce(
@@ -93,13 +90,11 @@ const createOrder = async (req, res) => {
         totalAmount,
       });
 
-      // We must save the new order using the session
       const savedOrder = await newOrder.save({ session });
       createdOrders.push(savedOrder);
     }
 
     // --- UPDATE STOCK (ATOMICALLY) ---
-    // This is safer than looping and saving one-by-one
     const bulkOps = productsToUpdate.map((p) => ({
       updateOne: {
         filter: { _id: p._id },
@@ -112,27 +107,19 @@ const createOrder = async (req, res) => {
     cart.items = [];
     await cart.save({ session });
 
-    // --- COMMIT THE TRANSACTION ---
-    // If all operations succeeded, commit the changes to the database.
     await session.commitTransaction();
 
     res.status(201).json(createdOrders);
   } catch (error) {
-    // --- ABORT THE TRANSACTION ---
-    // If any error occurred, roll back all changes.
     await session.abortTransaction();
+    console.error(error);
 
-    console.error(error.message);
-
-    // Check if it's our operational error
     if (error.isOperational) {
       return res.status(error.statusCode).json({ message: error.message });
     }
 
-    // If it's not, it's an unknown server error
-    res.status(500).send("Server Error: Order failed");
+    res.status(500).send('Server Error: Order failed');
   } finally {
-    // Always end the session
     session.endSession();
   }
 };
@@ -150,27 +137,26 @@ const getMyOrders = async (req, res) => {
 
     let query = {};
 
-    if (req.user.role === "customer") {
+    if (req.user.role === 'customer') {
       query = { user: req.user._id };
-    } else if (req.user.role === "farmer") {
+    } else if (req.user.role === 'farmer') {
       const farm = await Farm.findOne({ user: req.user._id });
       if (!farm) {
-        return res.status(404).json({ message: "Farm profile not found." });
+        return res.status(404).json({ message: 'Farm profile not found.' });
       }
       query = { farm: farm._id };
     }
 
-    // Check for a status in the query string
     if (req.query.status) {
       query.status = req.query.status;
     }
 
     const total = await Order.countDocuments(query);
     const orders = await Order.find(query)
-      .sort({ createdAt: -1 }) // Keep the sort
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate("user", "firstName lastName phone");
+      .populate('user', 'firstName lastName phone'); // Populate customer details
 
     res.json({
       data: orders,
@@ -180,7 +166,7 @@ const getMyOrders = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -194,58 +180,47 @@ const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(req.params.id);
     const newStatus = req.body.status;
 
-    // Check if the order exists
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
-
-    // Check if the order is properly linked to a farm
     if (!order.farm) {
       return res
         .status(500)
-        .json({ message: "Order is not linked to a farm (Data Error)" });
+        .json({ message: 'Order is not linked to a farm (Data Error)' });
     }
 
-    // Find the farm profile for the logged-in farmer
     const farm = await Farm.findOne({ user: req.user._id });
-
-    // Check if the farmer has a farm profile
     if (!farm) {
-      return res.status(404).json({ message: "Farmer profile not found" });
+      return res.status(404).json({ message: 'Farmer profile not found' });
     }
 
-    // --- CRITICAL: Ownership Check ---
-    // Compare the order's 'farm' field with the logged-in farmer's farm ID
     if (order.farm.toString() !== farm._id.toString()) {
       return res
         .status(401)
-        .json({ message: "Not authorized to update this order" });
+        .json({ message: 'Not authorized to update this order' });
     }
 
     // --- State Machine Logic ---
     const currentStatus = order.status;
 
-    // Check for final states
-    if (currentStatus === "Completed" || currentStatus === "Cancelled") {
+    if (currentStatus === 'Completed' || currentStatus === 'Cancelled') {
       return res.status(400).json({
         message: `Order is already ${currentStatus} and cannot be changed.`,
       });
     }
 
-    // Check for invalid reverse logic
-    if (currentStatus === "Ready for Delivery" && newStatus === "Incoming") {
+    if (currentStatus === 'Ready for Delivery' && newStatus === 'Incoming') {
       return res.status(400).json({
         message:
           'Order is already "Ready for Delivery" and cannot be moved back to "Incoming".',
       });
     }
 
-    // Check for valid new status
     const validStatuses = [
-      "Incoming",
-      "Ready for Delivery",
-      "Completed",
-      "Cancelled",
+      'Incoming',
+      'Ready for Delivery',
+      'Completed',
+      'Cancelled',
     ];
     if (!newStatus || !validStatuses.includes(newStatus)) {
       return res
@@ -253,13 +228,12 @@ const updateOrderStatus = async (req, res) => {
         .json({ message: `"${newStatus}" is not a valid or provided status.` });
     }
 
-    // All checks passed, update the status.
     order.status = newStatus;
     const updatedOrder = await order.save();
     res.json(updatedOrder);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 

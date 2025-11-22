@@ -1,4 +1,6 @@
-import express from "express";
+import express from 'express';
+import { body, query } from 'express-validator';
+import { validate } from '../middleware/validationMiddleware.js';
 import {
   getMyFarmProfile,
   updateMyFarmProfile,
@@ -8,53 +10,80 @@ import {
   getFarmStats,
   getPublicStats,
   getFarmReport,
-} from "../controllers/farmController.js";
-import { protect, isFarmer } from "../middleware/authMiddleware.js";
+} from '../controllers/farmController.js';
+import { protect, isFarmer } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // --- Farmer Private Routes ---
 
 // @route   GET /api/farms/myfarm/report
-// @desc    Get a monthly report for the logged-in farmer
-// @access  Private (Farmer only)
-router.get("/myfarm/report", protect, isFarmer, getFarmReport);
+router.get(
+  '/myfarm/report',
+  protect,
+  isFarmer,
+  [
+    query('month', 'Month must be between 1 and 12').isInt({ min: 1, max: 12 }),
+    query('year', 'Year must be a valid 4-digit year').isInt({
+      min: 2000,
+      max: 2100,
+    }),
+  ],
+  validate, // Validate Query Params
+  getFarmReport
+);
 
 // @route   GET /api/farms/myfarm/stats
-// @desc    Get dashboard stats for the logged-in farmer
-// @access  Private (Farmer only)
-router.get("/myfarm/stats", protect, isFarmer, getFarmStats);
+router.get('/myfarm/stats', protect, isFarmer, getFarmStats);
 
 // @route   GET /api/farms/myfarm
-// @desc    Get the logged-in farmer's own farm profile
-// @access  Private (Farmer only)
-router.get("/myfarm", protect, isFarmer, getMyFarmProfile);
+router.get('/myfarm', protect, isFarmer, getMyFarmProfile);
 
 // @route   PUT /api/farms/myfarm
-// @desc    Create or update the logged-in farmer's farm profile
-// @access  Private (Farmer only)
-router.put("/myfarm", protect, isFarmer, updateMyFarmProfile);
+router.put(
+  '/myfarm',
+  protect,
+  isFarmer,
+  [
+    body('farmName', 'Farm name cannot be empty').optional().not().isEmpty(),
+    body('farmBio', 'Bio must be less than 500 characters')
+      .optional()
+      .isLength({ max: 500 }),
+    body('avatarUrl', 'Avatar must be a valid URL').optional().isURL(),
+    body('specialties', 'Specialties must be an array of strings')
+      .optional()
+      .isArray(),
+    body(
+      'location.coordinates',
+      'Location must include valid coordinates [lng, lat]'
+    )
+      .optional()
+      .isArray({ min: 2, max: 2 }),
+  ],
+  validate,
+  updateMyFarmProfile
+);
 
 // --- Public Routes ---
 
-// @route   GET /api/farms/nearby
-// @desc    Get farms within a certain radius
-// @access  Public
-router.get("/nearby", getNearbyFarms);
-
 // @route   GET /api/farms/stats
-// @desc    Get public platform statistics
-// @access  Public
-router.get("/stats", getPublicStats);
+router.get('/stats', getPublicStats);
+
+// @route   GET /api/farms/nearby
+router.get(
+  '/nearby',
+  [
+    query('longitude', 'Longitude is required').not().isEmpty(),
+    query('latitude', 'Latitude is required').not().isEmpty(),
+  ],
+  validate, // Validate Query Params
+  getNearbyFarms
+);
 
 // @route   GET /api/farms
-// @desc    Get all farms for the homepage map
-// @access  Public
-router.get("/", getAllFarms);
+router.get('/', getAllFarms);
 
 // @route   GET /api/farms/:id
-// @desc    Get the public profile of a single farm
-// @access  Public
-router.get("/:id", getFarmById);
+router.get('/:id', getFarmById);
 
 export default router;

@@ -11,10 +11,10 @@ const upload = multer({ storage });
 // @desc    Upload an image and get its URL
 // @access  Private
 router.post(
-    '/',
-    protect, // Only logged-in users can upload
-    upload.single('image'), // 'image' is the form field name
-    uploadImage
+  '/',
+  protect, // Only logged-in users can upload
+  upload.single('image'), // 'image' is the form field name
+  uploadImage
 );
 
 export default router;

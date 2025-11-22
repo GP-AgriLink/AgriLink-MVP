@@ -7,9 +7,9 @@ import {
   updateUserProfile,
   forgotPassword,
   resetPassword,
-  getCustomerReport,
 } from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
+import { validate } from '../middleware/validationMiddleware.js';
 
 const router = express.Router();
 
@@ -22,6 +22,7 @@ router.post(
       min: 6,
     }),
     body('phone', 'Phone number is required').not().isEmpty(),
+    // Allow 'delivery' role now
     body('role', 'Role is required').isIn(['customer', 'farmer', 'delivery']),
     // Conditional validation: if role is 'farmer', farmName is required
     body('farmName')
@@ -30,6 +31,7 @@ router.post(
       .isEmpty()
       .withMessage('Farm name is required for farmers'),
   ],
+  validate,
   registerUser
 );
 
@@ -40,13 +42,9 @@ router.post(
     body('email', 'Please include a valid email').isEmail(),
     body('password', 'Password is required').exists(),
   ],
+  validate,
   loginUser
 );
-
-// @route   GET /api/users/profile/report
-// @desc    Get an annual spending report for the logged-in user
-// @access  Private
-router.get('/profile/report', protect, getCustomerReport);
 
 // @route   GET /api/users/profile
 // @route   PUT /api/users/profile

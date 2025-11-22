@@ -1,6 +1,5 @@
 import DeliveryProfile from '../models/DeliveryProfile.js';
 import User from '../models/User.js';
-import { validationResult } from 'express-validator';
 
 /**
  * @desc    Create or Update Delivery Profile
@@ -8,13 +7,6 @@ import { validationResult } from 'express-validator';
  * @access  Private (Delivery Role Only)
  */
 const updateDeliveryProfile = async (req, res) => {
-  // Check for validation errors first
-  // This prevents the crash if req.body is empty
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { vehicleType, licensePlate, nationalId, licenseUrl, nationalIdUrl } =
     req.body;
 

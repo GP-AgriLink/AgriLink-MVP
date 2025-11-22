@@ -1,5 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
+import { validate } from '../middleware/validationMiddleware.js';
 import { protect, isDriver } from '../middleware/authMiddleware.js';
 import {
   updateDeliveryProfile,
@@ -29,6 +30,7 @@ router
         .not()
         .isEmpty(),
     ],
+    validate,
     updateDeliveryProfile
   );
 

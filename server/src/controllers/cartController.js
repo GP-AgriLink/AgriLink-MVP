@@ -1,5 +1,5 @@
-import Cart from "../models/Cart.js";
-import Product from "../models/Product.js";
+import Cart from '../models/Cart.js';
+import Product from '../models/Product.js';
 
 // Helper function to get or create a cart
 const findOrCreateCart = async (userId) => {
@@ -10,11 +10,11 @@ const findOrCreateCart = async (userId) => {
   return cart;
 };
 
-// --- Helper to populate the cart for responses ---
+// Helper to populate the cart for responses
 const getPopulatedCart = (cart) => {
   return cart.populate([
-    { path: "items.product", select: "name price imageUrl stock" },
-    { path: "items.farm", select: "farmName avatarUrl" },
+    { path: 'items.product', select: 'name price imageUrl stock' },
+    { path: 'items.farm', select: 'farmName avatarUrl' },
   ]);
 };
 
@@ -30,7 +30,7 @@ const getCart = async (req, res) => {
     res.json(populatedCart);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -40,40 +40,42 @@ const getCart = async (req, res) => {
  * @access  Private
  */
 const addCartItem = async (req, res) => {
-  const { productId, quantity } = req.body;
+  // Default quantity to 1 if not sent
+  const { productId, quantity = 1 } = req.body;
 
   try {
     // Find the product and its farm
     const product = await Product.findById(productId);
-    // --- VALIDATION CHECKS ---
+
+    // Business Logic Validation
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: 'Product not found' });
     }
-    if (product.isArchived || product.status === "inactive") {
+    if (product.isArchived || product.status === 'inactive') {
       return res
         .status(400)
-        .json({ message: "This product is no longer available" });
+        .json({ message: 'This product is no longer available' });
     }
     if (product.stock < quantity) {
-      return res.status(400).json({ message: "Not enough stock available" });
+      return res.status(400).json({ message: 'Not enough stock available' });
     }
-    // --- END OF VALIDATION ---
 
     const cart = await findOrCreateCart(req.user._id);
 
+    // Check if item exists to update quantity vs add new
     const existingItem = cart.items.find(
       (item) => item.product.toString() === productId
     );
 
     if (existingItem) {
-      // Item already in cart, just update the quantity
+      // Update quantity
       existingItem.quantity = quantity;
     } else {
-      // Item not in cart, add it as a new item
+      // Add new item (Farm-Aware)
       cart.items.push({
         product: productId,
         farm: product.farm,
-        quantity: quantity,
+        quantity,
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl,
@@ -85,7 +87,7 @@ const addCartItem = async (req, res) => {
     res.status(201).json(populatedCart);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -97,6 +99,7 @@ const addCartItem = async (req, res) => {
 const removeCartItem = async (req, res) => {
   try {
     const cart = await findOrCreateCart(req.user._id);
+
     cart.items = cart.items.filter(
       (item) => item.product.toString() !== req.params.productId
     );
@@ -106,7 +109,7 @@ const removeCartItem = async (req, res) => {
     res.json(populatedCart);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -123,7 +126,7 @@ const clearCart = async (req, res) => {
     res.json(cart);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 

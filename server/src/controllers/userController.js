@@ -1,22 +1,15 @@
-import { validationResult } from "express-validator";
-import User from "../models/User.js";
-import Farm from "../models/Farm.js";
-import generateToken from "../utils/generateToken.js";
-
-import Order from "../models/Order.js";
-import mongoose from "mongoose";
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+import User from '../models/User.js';
+import Farm from '../models/Farm.js';
+import generateToken from '../utils/generateToken.js';
 
 /**
- * @desc    Register a new user (Customer or Farmer)
+ * @desc    Register a new user (Customer, Farmer, or Delivery)
  * @route   POST /api/users/register
  * @access  Public
  */
 const registerUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { email, password, phone, role, farmName } = req.body;
 
   try {
@@ -24,7 +17,7 @@ const registerUser = async (req, res) => {
     if (userExists) {
       return res
         .status(400)
-        .json({ message: "User with this email already exists" });
+        .json({ message: 'User with this email already exists' });
     }
 
     // Create the new User
@@ -36,7 +29,7 @@ const registerUser = async (req, res) => {
     });
 
     // If the user is a farmer, also create their Farm profile
-    if (user.role === "farmer") {
+    if (user.role === 'farmer') {
       await Farm.create({
         user: user._id,
         farmName: farmName,
@@ -51,7 +44,7 @@ const registerUser = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -61,11 +54,6 @@ const registerUser = async (req, res) => {
  * @access  Public
  */
 const loginUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
   const { email, password } = req.body;
 
   try {
@@ -79,11 +67,11 @@ const loginUser = async (req, res) => {
         token: generateToken(user._id),
       });
     } else {
-      res.status(401).json({ message: "Invalid email or password" });
+      res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -112,7 +100,6 @@ const updateUserProfile = async (req, res) => {
       user.phone = req.body.phone || user.phone;
       user.avatarUrl = req.body.avatarUrl || user.avatarUrl;
 
-      // Add logic to update password if needed (requires re-hashing) for future hima----
       if (req.body.password) {
         user.password = req.body.password;
       }
@@ -127,14 +114,14 @@ const updateUserProfile = async (req, res) => {
         lastName: updatedUser.lastName,
         phone: updatedUser.phone,
         avatarUrl: updatedUser.avatarUrl,
-        token: generateToken(updatedUser._id), // Re-issue token
+        token: generateToken(updatedUser._id),
       });
     } else {
-      res.status(404).json({ message: "User not found" });
+      res.status(404).json({ message: 'User not found' });
     }
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -151,29 +138,25 @@ const forgotPassword = async (req, res) => {
     if (!user) {
       return res
         .status(404)
-        .json({ message: "No user with that email found." });
+        .json({ message: 'No user with that email found.' });
     }
 
-    // 1. Generate token
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetToken = crypto.randomBytes(32).toString('hex');
 
-    // 2. Hash token and save to user
     user.passwordResetToken = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(resetToken)
-      .digest("hex");
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+      .digest('hex');
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000;
 
     await user.save();
 
-    // 3. Send email
     const resetURL = `${req.protocol}://${req.get(
-      "host"
+      'host'
     )}/reset-password/${resetToken}`;
 
-    // --- CONFIGURE YOUR EMAIL TRANSPORT ---
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USERNAME,
         pass: process.env.EMAIL_PASSWORD,
@@ -181,60 +164,18 @@ const forgotPassword = async (req, res) => {
     });
 
     const mailOptions = {
-      from: "AgriLink Support <support@agrilink.com>",
+      from: 'AgriLink Support <support@agrilink.com>',
       to: user.email,
-      subject: "Password Reset Request - AgriLink",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-          <div style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">🔒 Password Reset Request</h1>
-          </div>
-          
-          <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hello,</p>
-            
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-              You are receiving this email because you (or someone else) requested a password reset for your AgriLink account.
-            </p>
-            
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-              Please click the button below to reset your password. This link will expire in <strong>10 minutes</strong>.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetURL}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
-                Reset Password
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="color: #10b981; font-size: 14px; word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
-              ${resetURL}
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
-            
-            <p style="color: #ef4444; font-size: 14px; line-height: 1.6;">
-              ⚠️ <strong>Security Notice:</strong> If you did not request this password reset, please ignore this email. Your password will remain unchanged.
-            </p>
-            
-            <p style="color: #6b7280; font-size: 12px; margin-top: 30px; text-align: center;">
-              © 2025 AgriLink. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `,
-      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\nPlease click on the following link, or paste this into your browser to complete the process within ten minutes of receiving it:\n\n${resetURL}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n`,
+      subject: 'Password Reset Request',
+      text: `Click the following link to reset your password (valid for 10 minutes):\n\n${resetURL}\n\nIf you did not request this, please ignore this email.`,
     };
 
     await transporter.sendMail(mailOptions);
 
-    res.status(200).json({ message: "Token sent to email!" });
+    res.status(200).json({ message: 'Token sent to email!' });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error sending email" });
+    res.status(500).json({ message: 'Error sending email' });
   }
 };
 
@@ -246,9 +187,9 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   try {
     const hashedToken = crypto
-      .createHash("sha256")
+      .createHash('sha256')
       .update(req.params.token)
-      .digest("hex");
+      .digest('hex');
 
     const user = await User.findOne({
       passwordResetToken: hashedToken,
@@ -258,17 +199,15 @@ const resetPassword = async (req, res) => {
     if (!user) {
       return res
         .status(400)
-        .json({ message: "Token is invalid or has expired" });
+        .json({ message: 'Token is invalid or has expired' });
     }
 
-    // 3. Set new password
     user.password = req.body.password;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
 
-    await user.save(); // pre-save hook will hash the new password
+    await user.save();
 
-    // 4. Log the user in
     res.status(200).json({
       _id: user._id,
       email: user.email,
@@ -277,7 +216,7 @@ const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Error resetting password" });
+    res.status(500).json({ message: 'Error resetting password' });
   }
 };
 
@@ -289,19 +228,15 @@ const resetPassword = async (req, res) => {
 const getCustomerReport = async (req, res) => {
   // This will work for any logged-in user, but is designed for customers
   try {
-    // Get User ID
     const userId = req.user._id;
-
-    // Get and validate date range
     const year = parseInt(req.query.year);
     if (!year) {
-      return res.status(400).json({ message: "Please provide a valid year." });
+      return res.status(400).json({ message: 'Please provide a valid year.' });
     }
 
-    const startDate = new Date(year, 0, 1, 0, 0, 0); // Jan 1st
-    const endDate = new Date(year, 11, 31, 23, 59, 59); // Dec 31st
+    const startDate = new Date(year, 0, 1, 0, 0, 0);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    // --- Run all aggregations in parallel ---
     const [spendingSummaryData, favoriteFarmData, topProductsData] =
       await Promise.all([
         // Query 1: Spending Summary
@@ -309,14 +244,14 @@ const getCustomerReport = async (req, res) => {
           {
             $match: {
               user: userId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
           {
             $group: {
               _id: null,
-              totalSpent: { $sum: "$totalAmount" },
+              totalSpent: { $sum: '$totalAmount' },
               totalOrdersPlaced: { $sum: 1 },
             },
           },
@@ -327,14 +262,14 @@ const getCustomerReport = async (req, res) => {
           {
             $match: {
               user: userId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
           {
             $group: {
-              _id: "$farm",
-              totalSpent: { $sum: "$totalAmount" },
+              _id: '$farm',
+              totalSpent: { $sum: '$totalAmount' },
               ordersCount: { $sum: 1 },
             },
           },
@@ -342,17 +277,17 @@ const getCustomerReport = async (req, res) => {
           { $limit: 1 },
           {
             $lookup: {
-              from: "farms",
-              localField: "_id",
-              foreignField: "_id",
-              as: "farmDetails",
+              from: 'farms',
+              localField: '_id',
+              foreignField: '_id',
+              as: 'farmDetails',
             },
           },
-          { $unwind: "$farmDetails" },
+          { $unwind: '$farmDetails' },
           {
             $project: {
               _id: 0,
-              farmName: "$farmDetails.farmName",
+              farmName: '$farmDetails.farmName',
               totalSpent: 1,
               ordersCount: 1,
             },
@@ -364,16 +299,16 @@ const getCustomerReport = async (req, res) => {
           {
             $match: {
               user: userId,
-              status: "Completed",
+              status: 'Completed',
               createdAt: { $gte: startDate, $lte: endDate },
             },
           },
-          { $unwind: "$orderItems" },
+          { $unwind: '$orderItems' },
           {
             $group: {
-              _id: "$orderItems.productId",
-              name: { $first: "$orderItems.name" },
-              totalQuantity: { $sum: "$orderItems.quantity" },
+              _id: '$orderItems.productId',
+              name: { $first: '$orderItems.name' },
+              totalQuantity: { $sum: '$orderItems.quantity' },
             },
           },
           { $sort: { totalQuantity: -1 } },
@@ -383,7 +318,6 @@ const getCustomerReport = async (req, res) => {
       ]);
 
     // --- Format the final response ---
-    // Get the result from the aggregation, or a default object
     const spendingResult = spendingSummaryData[0] || {
       totalSpent: 0,
       totalOrdersPlaced: 0,
@@ -391,19 +325,18 @@ const getCustomerReport = async (req, res) => {
 
     const report = {
       reportYear: year,
-      // Manually build the object to exclude the _id
       spendingSummary: {
         totalSpent: spendingResult.totalSpent,
         totalOrdersPlaced: spendingResult.totalOrdersPlaced,
       },
-      favoriteFarm: favoriteFarmData[0] || null, // Can be null if no orders
+      favoriteFarm: favoriteFarmData[0] || null,
       topProducts: topProductsData,
     };
 
     res.json(report);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
