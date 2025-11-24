@@ -18,9 +18,11 @@ router.post(
   '/register',
   [
     body('email', 'Please include a valid email').isEmail(),
-    body('password', 'Password must be 6 or more characters').isLength({
-      min: 6,
-    }),
+    body('password', 'Password must be 6 or more characters')
+      .isLength({
+        min: 6,
+      })
+      .isString(),
     body('phone', 'Phone number is required').not().isEmpty(),
     // Allow 'delivery' role now
     body('role', 'Role is required').isIn(['customer', 'farmer', 'delivery']),
@@ -40,7 +42,7 @@ router.post(
   '/login',
   [
     body('email', 'Please include a valid email').isEmail(),
-    body('password', 'Password is required').exists(),
+    body('password', 'Password is required').exists().isString(),
   ],
   validate,
   loginUser
