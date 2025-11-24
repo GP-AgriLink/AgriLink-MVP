@@ -7,8 +7,7 @@
 
 // --- Module Imports ---
 import express from 'express';
-import sanitizeReq from './src/middleware/sanitizeMiddleware.js';
-import requireJson from './src/middleware/requireJson.js';
+import coreMiddleware from './src/middleware/coreMiddleware.js';
 import dotenv from 'dotenv';
 import connectDB from './src/config/db.js';
 import userRoutes from './src/routes/userRoutes.js';
@@ -33,13 +32,8 @@ connectDB();
 const app = express();
 
 // --- Middleware ---
+app.use(coreMiddleware);
 
-// This middleware is essential for parsing incoming request bodies with JSON payloads.
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(requireJson);
-
-app.use(sanitizeReq);
 // To connect with client
 const allowedOrigins = [
   'https://agrilink-server.vercel.app',
