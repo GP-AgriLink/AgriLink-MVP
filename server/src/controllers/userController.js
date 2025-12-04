@@ -2,6 +2,8 @@ import { validationResult } from "express-validator";
 import User from "../models/User.js";
 import Farm from "../models/Farm.js";
 import generateToken from "../utils/generateToken.js";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 import Order from "../models/Order.js";
 import mongoose from "mongoose";
@@ -167,9 +169,8 @@ const forgotPassword = async (req, res) => {
     await user.save();
 
     // 3. Send email
-    const resetURL = `${req.protocol}://${req.get(
-      "host"
-    )}/reset-password/${resetToken}`;
+    const clientURL = process.env.CLIENT_URL || "http://localhost:5173";
+    const resetURL = `${clientURL}/reset-password/${resetToken}`;
 
     // --- CONFIGURE YOUR EMAIL TRANSPORT ---
     const transporter = nodemailer.createTransport({
