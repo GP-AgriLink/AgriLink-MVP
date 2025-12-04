@@ -31,7 +31,7 @@ function App() {
         <MainLayout>
           <Routes>
             {/* --- PUBLIC ROUTES --- */}
-            <Route
+            {/* <Route
               path="/"
               element={
                 <div className="container mx-auto px-6 py-12">
@@ -69,7 +69,7 @@ function App() {
                   </div>
                 </div>
               }
-            />
+            /> */}
             {/* Authentication routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -95,7 +95,7 @@ function App() {
               }
             />
 
-            <Route path="/discover" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
             <Route path="/farm/:id" element={<FarmStorePage />} />
             <Route path="/cart" element={<CartPage />} />
 

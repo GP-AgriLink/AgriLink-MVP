@@ -12,7 +12,7 @@ const LoginPage = () => {
     // If user is already logged in, redirect them.
     // Farmers go to dashboard, customers go to discover.
     if (user) {
-      const destination = user.role === "farmer" ? "/dashboard" : "/discover";
+      const destination = user.role === "farmer" ? "/dashboard" : "/";
       navigate(destination, {
         replace: true,
       });

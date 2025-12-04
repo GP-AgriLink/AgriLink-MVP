@@ -13,7 +13,7 @@ const RegisterPage = () => {
 
   useEffect(() => {
     if (user) {
-      const destination = user.role === "farmer" ? "/dashboard" : "/discover";
+      const destination = user.role === "farmer" ? "/dashboard" : "/";
       navigate(destination, { replace: true });
     }
   }, [user, navigate]);

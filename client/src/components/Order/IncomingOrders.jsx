@@ -36,20 +36,20 @@ const IncomingOrders = ({ orders, onOrderUpdate, activeFilter, userRole }) => {
     <section className="space-y-8">
       {/* Header section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
+        <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
           {activeFilter === "incoming" ? "Incoming Orders" : "Delivery Orders"}
         </h2>
 
         {/* Search + Counter row */}
-        <div className="flex items-center gap-3 justify-center sm:justify-end">
+        <div className="flex items-center justify-center gap-3 sm:justify-end">
           <input
             type="text"
             placeholder="Search by item name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:w-72 px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-72"
           />
-          <span className="bg-green-100 text-green-700 px-4 py-1 rounded-full text-sm font-medium">
+          <span className="rounded-full bg-green-100 px-4 py-1 text-sm font-medium text-green-700">
             {filteredOrders.length} Active
           </span>
         </div>
@@ -59,24 +59,31 @@ const IncomingOrders = ({ orders, onOrderUpdate, activeFilter, userRole }) => {
       {filteredOrders.length > 0 ? (
         <>
           <div
-            className={`grid gap-8 justify-items-center grid-cols-1 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3 transition-opacity duration-300 ${fade ? "opacity-0" : "opacity-100"
-              }`}
+            className={`grid grid-cols-1 items-start justify-items-center gap-8 transition-opacity duration-300 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3 ${
+              fade ? "opacity-0" : "opacity-100"
+            }`}
           >
             {currentOrders.map((order) => (
-              <OrderCard key={order.id} order={order} onOrderUpdate={onOrderUpdate} userRole={userRole} />
+              <OrderCard
+                key={order.id}
+                order={order}
+                onOrderUpdate={onOrderUpdate}
+                userRole={userRole}
+              />
             ))}
           </div>
 
           {totalPages > 1 && (
-            <div className="flex justify-center flex-wrap mt-6 gap-3">
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
               {Array.from({ length: totalPages }, (_, idx) => (
                 <button
                   key={idx}
                   onClick={() => handlePageChange(idx + 1)}
-                  className={`px-4 py-2 rounded-md font-semibold transition ${currentPage === idx + 1
-                    ? "bg-[#13C191] text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                  className={`rounded-md px-4 py-2 font-semibold transition ${
+                    currentPage === idx + 1
+                      ? "bg-[#13C191] text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
                 >
                   {idx + 1}
                 </button>
@@ -86,14 +93,14 @@ const IncomingOrders = ({ orders, onOrderUpdate, activeFilter, userRole }) => {
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="bg-emerald-50 p-8 rounded-xl shadow-sm w-full max-w-md">
+          <div className="w-full max-w-md rounded-xl bg-emerald-50 p-8 shadow-sm">
             <img
               src="/noOrder_4.svg"
               alt="No orders"
-              className="w-[280px] sm:w-[350px] mx-auto opacity-90 object-contain"
+              className="mx-auto w-[280px] object-contain opacity-90 sm:w-[350px]"
             />
-            <p className="text-lg font-semibold text-emerald-700 mt-4">No Orders Found.</p>
-            <p className="text-sm text-gray-500 mt-2">Try a different item name.</p>
+            <p className="mt-4 text-lg font-semibold text-emerald-700">No Orders Found.</p>
+            <p className="mt-2 text-sm text-gray-500">Try a different item name.</p>
           </div>
         </div>
       )}

@@ -69,34 +69,36 @@ function Navbar() {
         <Logo iconOnly={true} iconContainerClass="w-12 h-12" className="lg:hidden" />
 
         <div className="hidden items-center gap-4 lg:flex">
-          <Link
-            to="/cart"
-            className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-gray-50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-400/80 hover:bg-gradient-to-br hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:shadow-xl hover:shadow-emerald-500/40"
-            aria-label="Shopping Cart"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="stroke-slate-600 transition-colors group-hover:stroke-white"
+          {user?.role === "customer" && (
+            <Link
+              to="/cart"
+              className="group relative flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/70 bg-gradient-to-br from-slate-50 to-gray-50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:scale-105 hover:border-emerald-400/80 hover:bg-gradient-to-br hover:from-emerald-500 hover:via-teal-500 hover:to-cyan-600 hover:shadow-xl hover:shadow-emerald-500/40"
+              aria-label="Shopping Cart"
             >
-              <circle cx="9" cy="21" r="1"></circle>
-              <circle cx="20" cy="21" r="1"></circle>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-            {/* Cart count display */}
-            {cartCount > 0 && (
-              <span className="absolute -right-2 -top-2 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-xs font-bold text-white shadow-lg shadow-red-500/60 ring-2 ring-white">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="stroke-slate-600 transition-colors group-hover:stroke-white"
+              >
+                <circle cx="9" cy="21" r="1"></circle>
+                <circle cx="20" cy="21" r="1"></circle>
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+              </svg>
+              {/* Cart count display */}
+              {cartCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-1.5 text-xs font-bold text-white shadow-lg shadow-red-500/60 ring-2 ring-white">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {!user ? (
             <>
@@ -326,38 +328,40 @@ function Navbar() {
           <div className="space-y-2.5 px-4 py-5">
             {!user ? (
               <>
-                <Link
-                  to="/cart"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-emerald-100 hover:to-teal-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 shadow-sm">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="stroke-emerald-600"
-                      >
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                      </svg>
+                {user?.role === "customer" && (
+                  <Link
+                    to="/cart"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-emerald-100 hover:to-teal-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 shadow-sm">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="stroke-emerald-600"
+                        >
+                          <circle cx="9" cy="21" r="1"></circle>
+                          <circle cx="20" cy="21" r="1"></circle>
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                      </div>
+                      <span>Shopping Cart</span>
                     </div>
-                    <span>Shopping Cart</span>
-                  </div>
-                  {cartCount > 0 && (
-                    <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-2 text-xs font-bold text-white shadow-md shadow-red-500/50">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
+                    {cartCount > 0 && (
+                      <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-2 text-xs font-bold text-white shadow-md shadow-red-500/50">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
 
                 <Link
                   to="/login"
@@ -433,38 +437,40 @@ function Navbar() {
                   </div>
                 </div>
 
-                <Link
-                  to="/cart"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-emerald-100 hover:to-teal-100"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 shadow-sm">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="stroke-emerald-600"
-                      >
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="20" cy="21" r="1"></circle>
-                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-                      </svg>
+                {user?.role === "customer" && (
+                  <Link
+                    to="/cart"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex w-full items-center justify-between rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:from-emerald-100 hover:to-teal-100"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 shadow-sm">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="stroke-emerald-600"
+                        >
+                          <circle cx="9" cy="21" r="1"></circle>
+                          <circle cx="20" cy="21" r="1"></circle>
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                        </svg>
+                      </div>
+                      <span>Shopping Cart</span>
                     </div>
-                    <span>Shopping Cart</span>
-                  </div>
-                  {cartCount > 0 && (
-                    <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-2 text-xs font-bold text-white shadow-md shadow-red-500/50">
-                      {cartCount}
-                    </span>
-                  )}
-                </Link>
+                    {cartCount > 0 && (
+                      <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600 px-2 text-xs font-bold text-white shadow-md shadow-red-500/50">
+                        {cartCount}
+                      </span>
+                    )}
+                  </Link>
+                )}
 
                 <button
                   onClick={() => handleNavigateToDashboard("orders")}

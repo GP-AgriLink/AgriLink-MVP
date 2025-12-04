@@ -56,7 +56,7 @@ const RegisterForm = ({ role }) => {
         if (result.user.role === "farmer") {
           navigate("/dashboard");
         } else {
-          navigate("/discover"); // Customers go to discover page
+          navigate("/"); // Customers go to discover page
         }
       } else {
         // Error handling
