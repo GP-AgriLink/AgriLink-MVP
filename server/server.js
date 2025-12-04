@@ -6,17 +6,17 @@
  */
 
 // --- Module Imports ---
-import express from "express";
-import dotenv from "dotenv";
-import connectDB from "./src/config/db.js";
+import express from 'express';
+import dotenv from 'dotenv';
+import connectDB from './src/config/db.js';
 import userRoutes from './src/routes/userRoutes.js';
-import productRoutes from "./src/routes/productRoutes.js";
-import farmRoutes from "./src/routes/farmRoutes.js";
-import orderRoutes from "./src/routes/orderRoutes.js";
-import { notFound, errorHandler } from "./src/middleware/errorMiddleware.js";
+import productRoutes from './src/routes/productRoutes.js';
+import farmRoutes from './src/routes/farmRoutes.js';
+import orderRoutes from './src/routes/orderRoutes.js';
+import { notFound, errorHandler } from './src/middleware/errorMiddleware.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import cartRoutes from './src/routes/cartRoutes.js';
-import cors from "cors";
+import cors from 'cors';
 
 // --- Configuration ---
 // Load environment variables from the .env file into process.env
@@ -30,33 +30,33 @@ const app = express();
 
 // To connect with client
 const allowedOrigins = [
-    "https://agrilink-server.vercel.app",
-    /http:\/\/localhost:\d+/,
-    /http:\/\/127.0.0.1:\d+/,
+  'https://agrilink-server.vercel.app',
+  /http:\/\/localhost:\d+/,
+  /http:\/\/127.0.0.1:\d+/,
 ];
 
 app.use(
-    cors({
-        origin: function (origin, callback) {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            if (!origin) return callback(null, true);
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
 
-            // Check if the origin is in our allowed list (or matches regex)
-            const isAllowed = allowedOrigins.some((allowedOrigin) => {
-                if (allowedOrigin instanceof RegExp) {
-                    return allowedOrigin.test(origin);
-                }
-                return allowedOrigin === origin;
-            });
+      // Check if the origin is in our allowed list (or matches regex)
+      const isAllowed = allowedOrigins.some((allowedOrigin) => {
+        if (allowedOrigin instanceof RegExp) {
+          return allowedOrigin.test(origin);
+        }
+        return allowedOrigin === origin;
+      });
 
-            if (isAllowed) {
-                callback(null, true);
-            } else {
-                callback(new Error("Not allowed by CORS"));
-            }
-        },
-        credentials: true,
-    })
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+  })
 );
 
 // --- Middleware ---
@@ -66,9 +66,9 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // --- API Routes ---
 app.use('/api/users', userRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/farms", farmRoutes);
-app.use("/api/orders", orderRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/farms', farmRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/cart', cartRoutes);
