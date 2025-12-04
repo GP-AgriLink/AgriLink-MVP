@@ -1,10 +1,11 @@
-import { validationResult } from "express-validator";
-import Order from "../models/Order.js";
-import Product from "../models/Product.js";
-import Farm from "../models/Farm.js";
-import Cart from "../models/Cart.js";
-import mongoose from "mongoose";
-import AppError from "../utils/AppError.js";
+import { validationResult } from 'express-validator';
+import Order from '../models/Order.js';
+import Product from '../models/Product.js';
+import Farm from '../models/Farm.js';
+import Cart from '../models/Cart.js';
+import mongoose from 'mongoose';
+import AppError from '../utils/AppError.js';
+import User from '../models/User.js';
 
 /**
  * @desc    Create new order(s) from the user's cart
@@ -23,7 +24,7 @@ const createOrder = async (req, res) => {
     const cart = await Cart.findOne({ user: userId }).session(session);
 
     if (!cart || cart.items.length === 0) {
-      throw new AppError("Your cart is empty", 400);
+      throw new AppError('Your cart is empty', 400);
     }
 
     const farmGroups = new Map();
@@ -35,7 +36,7 @@ const createOrder = async (req, res) => {
       const product = await Product.findById(item.product).session(session);
 
       // Check 1: Product Integrity
-      if (!product || product.isArchived || product.status === "inactive") {
+      if (!product || product.isArchived || product.status === 'inactive') {
         throw new AppError(
           `Product "${item.name}" is no longer available. Please remove it from your cart.`,
           400
@@ -130,15 +131,62 @@ const createOrder = async (req, res) => {
     }
 
     // If it's not, it's an unknown server error
-    res.status(500).send("Server Error: Order failed");
+    res.status(500).send('Server Error: Order failed');
   } finally {
     // Always end the session
     session.endSession();
   }
 };
 
+// /**
+//  * @desc    Get all orders for the logged-in user (Customer OR Farmer) (paginated)
+//  * @route   GET /api/orders/myorders
+//  * @access  Private
+//  */
+// const getMyOrders = async (req, res) => {
+//   try {
+//     const limit = Number(req.query.limit) || 10;
+//     const page = Number(req.query.page) || 1;
+//     const skip = (page - 1) * limit;
+
+//     let query = {};
+
+//     if (req.user.role === "customer") {
+//       query = { user: req.user._id };
+//     } else if (req.user.role === "farmer") {
+//       const farm = await Farm.findOne({ user: req.user._id });
+//       if (!farm) {
+//         return res.status(404).json({ message: "Farm profile not found." });
+//       }
+//       query = { farm: farm._id };
+//     }
+
+//     // Check for a status in the query string
+//     if (req.query.status) {
+//       query.status = req.query.status;
+//     }
+
+//     const total = await Order.countDocuments(query);
+//     const orders = await Order.find(query)
+//       .sort({ createdAt: -1 }) // Keep the sort
+//       .skip(skip)
+//       .limit(limit)
+//       .populate("user", "firstName lastName phone");
+
+//     res.json({
+//       data: orders,
+//       page,
+//       pages: Math.ceil(total / limit),
+//       total,
+//     });
+//   } catch (error) {
+//     console.error(error.message);
+//     res.status(500).send("Server Error");
+//   }
+// };
+
 /**
- * @desc    Get all orders for the logged-in user (Customer OR Farmer) (paginated)
+ * @desc    Get orders (Dynamic: specific to Customer or Farmer view)
  * @route   GET /api/orders/myorders
  * @access  Private
  */
@@ -149,28 +197,75 @@ const getMyOrders = async (req, res) => {
     const skip = (page - 1) * limit;
 
     let query = {};
+    let populateConfig = '';
 
-    if (req.user.role === "customer") {
-      query = { user: req.user._id };
-    } else if (req.user.role === "farmer") {
-      const farm = await Farm.findOne({ user: req.user._id });
-      if (!farm) {
-        return res.status(404).json({ message: "Farm profile not found." });
+    // --- SCENARIO 1: CUSTOMER ---
+    if (req.user.role === 'customer') {
+      query.user = req.user._id;
+
+      // Customer View: Show Farm details
+      populateConfig = {
+        path: 'farm',
+        select: 'farmName avatarUrl location',
+      };
+
+      // Search: "Customer searching for a specific Farm"
+      if (req.query.search) {
+        const matchingFarms = await Farm.find({
+          farmName: { $regex: req.query.search, $options: 'i' },
+        }).select('_id');
+
+        const farmIds = matchingFarms.map((farm) => farm._id);
+        query.farm = { $in: farmIds };
       }
-      query = { farm: farm._id };
     }
 
-    // Check for a status in the query string
+    // --- SCENARIO 2: FARMER ---
+    else if (req.user.role === 'farmer') {
+      const farm = await Farm.findOne({ user: req.user._id });
+      if (!farm) {
+        return res.status(404).json({ message: 'Farm profile not found.' });
+      }
+      query.farm = farm._id;
+
+      // Farmer View: Show Customer details
+      populateConfig = {
+        path: 'user',
+        select: 'firstName lastName phone email',
+      };
+
+      // Search: "Farmer searching for a Customer (Name OR Phone)"
+      if (req.query.search) {
+        // 1. Find users who match Name OR Phone
+        const matchingUsers = await User.find({
+          $or: [
+            { firstName: { $regex: req.query.search, $options: 'i' } },
+            { lastName: { $regex: req.query.search, $options: 'i' } },
+            { phone: { $regex: req.query.search, $options: 'i' } },
+          ],
+        }).select('_id');
+
+        // 2. Extract IDs
+        const userIds = matchingUsers.map((user) => user._id);
+
+        // 3. Filter orders made by these users
+        query.user = { $in: userIds };
+      }
+    }
+
+    // --- COMMON FILTERS ---
     if (req.query.status) {
       query.status = req.query.status;
     }
 
+    // --- EXECUTE QUERY ---
     const total = await Order.countDocuments(query);
+
     const orders = await Order.find(query)
-      .sort({ createdAt: -1 }) // Keep the sort
+      .populate(populateConfig)
+      .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limit)
-      .populate("user", "firstName lastName phone");
+      .limit(limit);
 
     res.json({
       data: orders,
@@ -180,7 +275,7 @@ const getMyOrders = async (req, res) => {
     });
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
@@ -196,14 +291,14 @@ const updateOrderStatus = async (req, res) => {
 
     // Check if the order exists
     if (!order) {
-      return res.status(404).json({ message: "Order not found" });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
     // Check if the order is properly linked to a farm
     if (!order.farm) {
       return res
         .status(500)
-        .json({ message: "Order is not linked to a farm (Data Error)" });
+        .json({ message: 'Order is not linked to a farm (Data Error)' });
     }
 
     // Find the farm profile for the logged-in farmer
@@ -211,7 +306,7 @@ const updateOrderStatus = async (req, res) => {
 
     // Check if the farmer has a farm profile
     if (!farm) {
-      return res.status(404).json({ message: "Farmer profile not found" });
+      return res.status(404).json({ message: 'Farmer profile not found' });
     }
 
     // --- CRITICAL: Ownership Check ---
@@ -219,21 +314,21 @@ const updateOrderStatus = async (req, res) => {
     if (order.farm.toString() !== farm._id.toString()) {
       return res
         .status(401)
-        .json({ message: "Not authorized to update this order" });
+        .json({ message: 'Not authorized to update this order' });
     }
 
     // --- State Machine Logic ---
     const currentStatus = order.status;
 
     // Check for final states
-    if (currentStatus === "Completed" || currentStatus === "Cancelled") {
+    if (currentStatus === 'Completed' || currentStatus === 'Cancelled') {
       return res.status(400).json({
         message: `Order is already ${currentStatus} and cannot be changed.`,
       });
     }
 
     // Check for invalid reverse logic
-    if (currentStatus === "Ready for Delivery" && newStatus === "Incoming") {
+    if (currentStatus === 'Ready for Delivery' && newStatus === 'Incoming') {
       return res.status(400).json({
         message:
           'Order is already "Ready for Delivery" and cannot be moved back to "Incoming".',
@@ -242,10 +337,10 @@ const updateOrderStatus = async (req, res) => {
 
     // Check for valid new status
     const validStatuses = [
-      "Incoming",
-      "Ready for Delivery",
-      "Completed",
-      "Cancelled",
+      'Incoming',
+      'Ready for Delivery',
+      'Completed',
+      'Cancelled',
     ];
     if (!newStatus || !validStatuses.includes(newStatus)) {
       return res
@@ -259,7 +354,7 @@ const updateOrderStatus = async (req, res) => {
     res.json(updatedOrder);
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Server Error");
+    res.status(500).send('Server Error');
   }
 };
 
