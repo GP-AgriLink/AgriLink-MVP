@@ -203,10 +203,14 @@ const getMyOrders = async (req, res) => {
     if (req.user.role === 'customer') {
       query.user = req.user._id;
 
-      // Customer View: Show Farm details
+      // Customer View: Show Farm details (including user's avatar as fallback)
       populateConfig = {
         path: 'farm',
-        select: 'farmName avatarUrl location',
+        select: 'farmName avatarUrl location user',
+        populate: {
+          path: 'user',
+          select: 'avatarUrl'
+        }
       };
 
       // Search: "Customer searching for a specific Farm"

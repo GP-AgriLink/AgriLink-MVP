@@ -4,6 +4,7 @@ import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import MainLayout from "./components/Layout/MainLayout";
 import { ProductsProvider } from "./context/ProductsContext";
+import { OrdersProvider } from "./context/OrdersContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
@@ -62,7 +63,9 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProductsProvider>
-                    <Dashboard />
+                    <OrdersProvider>
+                      <Dashboard />
+                    </OrdersProvider>
                   </ProductsProvider>
                 </ProtectedRoute>
               }
