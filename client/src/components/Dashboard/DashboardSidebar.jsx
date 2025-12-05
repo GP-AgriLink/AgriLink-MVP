@@ -143,12 +143,9 @@ const DashboardSidebar = memo(({ isSidebarOpen, setIsSidebarOpen }) => {
         </button>
 
         <button
-          onClick={() => {
-            user?.role === "farmer" ? navigate("/farmer/report") : navigate("/customer/report");
-            setIsSidebarOpen(false);
-          }}
+          onClick={() => handleNavigate("report")}
           className={`flex w-full items-center gap-3 rounded-xl px-4 py-2.5 font-semibold transition-all ${
-            location.pathname.includes("/report")
+            activeView === "report"
               ? "bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 text-white shadow-md hover:-translate-y-0.5"
               : "text-emerald-900 hover:bg-emerald-50"
           }`}
