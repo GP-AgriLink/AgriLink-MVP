@@ -8,6 +8,7 @@ import CounterSection from "../components/Discover/CounterSection";
 import CategoriesSection from "../components/Discover/CategoriesSection";
 import FarmersSection from "../components/Discover/FarmersSection";
 import SubscribeSection from "../components/Discover/SubscribeSection";
+import ScrollToTop from "../components/Discover/ScrollToTop";
 
 const DiscoverPage = () => {
   const [userCoords, setUserCoords] = useState(null);
@@ -31,6 +32,8 @@ const DiscoverPage = () => {
       <FarmersSection />
 
       <SubscribeSection />
+
+      <ScrollToTop />
     </div>
   );
 };
