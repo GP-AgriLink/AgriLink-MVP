@@ -7,6 +7,7 @@ import { ProductsProvider } from "./context/ProductsContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
+import AboutPage from "./pages/AboutPage";
 import EditProfile from "./pages/EditProfile";
 import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
@@ -39,14 +40,7 @@ function App() {
             {/* --- PUBLIC ROUTES --- */}
             <Route path="/" element={<LandingPage />} />
 
-            <Route
-              path="/about"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">About Page</h1>
-                </div>
-              }
-            />
+            <Route path="/about-us" element={<AboutPage />} />
             <Route
               path="/contact"
               element={
