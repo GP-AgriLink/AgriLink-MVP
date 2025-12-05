@@ -25,11 +25,12 @@ const FlyToLocation = ({ coords }) => {
     return null;
 };
 
-const HeroSection = ({ onLocationSet, userCoords }) => {
+const DiscoverSection = ({ onLocationSet, userCoords }) => {
     const [searchLocation, setSearchLocation] = useState("");
     const [loadingLocation, setLoadingLocation] = useState(false);
     const [error, setError] = useState(null);
     const [mapCenter, setMapCenter] = useState(FALLBACK_POSITION);
+    const [locationName, setLocationName] = useState("Your Selected Location");
 
     // Auto-fetch location on page load
     useEffect(() => {
@@ -50,6 +51,34 @@ const HeroSection = ({ onLocationSet, userCoords }) => {
             );
         }
     }, [onLocationSet]);
+
+    useEffect(() => {
+        if (userCoords) {
+            setLocationName("Fetching address...");
+
+            // 2. Call the API
+            fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCoords.latitude}&lon=${userCoords.longitude}`
+            )
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data && data.address) {
+                        const city = data.address.city || data.address.town || data.address.village || data.address.state;
+                        const country = data.address.country;
+
+                        const displayName = city ? `${city}, ${country}` : country;
+
+                        setLocationName(displayName || "Unknown Location");
+                    } else {
+                        setLocationName("Location Found");
+                    }
+                })
+                .catch((err) => {
+                    console.error("Reverse geocoding failed", err);
+                    setLocationName("Selected Location");
+                });
+        }
+    }, [userCoords]);
 
     // Handler for the "Use My Location" button
     const handleUseMyLocation = () => {
@@ -189,7 +218,7 @@ const HeroSection = ({ onLocationSet, userCoords }) => {
                             <Marker
                                 position={[userCoords.latitude, userCoords.longitude]}
                             >
-                                <Popup>Your Selected Location</Popup>
+                                <Popup>{locationName}</Popup>
                             </Marker>
                         )}
                     </MapContainer>
@@ -199,4 +228,4 @@ const HeroSection = ({ onLocationSet, userCoords }) => {
     );
 };
 
-export default HeroSection;
+export default DiscoverSection;

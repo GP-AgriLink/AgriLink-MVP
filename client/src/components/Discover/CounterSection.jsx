@@ -103,7 +103,7 @@ function HorizontalStatCard({ endValue, label, description, icon, startAnimation
                     <dd className="text-sm font-semibold text-green-100">{label}</dd>
                 </div>
             </div>
-            <p className="mt-3 text-xs text-green-200">{description}</p>
+            <p className="mt-3 text-lg text-green-900">{description}</p>
         </div>
     );
 }
