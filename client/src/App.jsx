@@ -13,6 +13,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
+import ContactUs from "./pages/ContactUs";
 
 import FarmerReportPage from "./pages/FarmerReport";
 import CustomerReportPage from "./pages/CoustmerReport";
@@ -47,14 +48,7 @@ function App() {
                 </div>
               }
             />
-            <Route
-              path="/contact"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">Contact Page</h1>
-                </div>
-              }
-            />
+            <Route path="/contact-us" element={<ContactUs />} />
 
             <Route path="/farm/:id" element={<FarmStorePage />} />
             <Route path="/cart" element={<CartPage />} />
