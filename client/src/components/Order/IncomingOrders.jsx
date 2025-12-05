@@ -1,111 +1,87 @@
-import { useState, useEffect } from "react";
+import { memo } from "react";
 import OrderCard from "./OrderCard";
+import { OrdersGridSkeleton } from "./Skeletons";
+import OrderSearchBar from "./OrderSearchBar";
+import { useOrders } from "../../context/OrdersContext";
 
-const ITEMS_PER_PAGE = 6;
+const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, isLoading }) => {
+  const { activeSearch, searchLoading } = useOrders();
 
-const IncomingOrders = ({ orders, onOrderUpdate, activeFilter, userRole }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const [fade, setFade] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filteredOrders, setFilteredOrders] = useState([]);
-
-  useEffect(() => {
-    const lowerTerm = searchTerm.toLowerCase();
-    const filtered = orders.filter((order) =>
-      order.items.some((item) => item.name.toLowerCase().includes(lowerTerm))
+  if (isLoading) {
+    return (
+      <section className="space-y-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
+            {activeFilter === "incoming" ? "Incoming Orders" : "Delivery Orders"}
+          </h2>
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-200" />
+            <div className="h-7 w-24 animate-pulse rounded-full bg-gray-200" />
+          </div>
+        </div>
+        <OrdersGridSkeleton />
+      </section>
     );
-    setFilteredOrders(filtered);
-    setCurrentPage(1);
-  }, [orders, searchTerm]);
-
-  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
-
-  const handlePageChange = (page) => {
-    if (page === currentPage) return;
-    setFade(true);
-    setTimeout(() => {
-      setCurrentPage(page);
-      setFade(false);
-    }, 300);
-  };
-
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentOrders = filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }
 
   return (
-    <section className="space-y-8">
-      {/* Header section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <section className="space-y-6">
+      {/* Header with Search and Counter */}
+      <div className="animate-fade-in flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
           {activeFilter === "incoming" ? "Incoming Orders" : "Delivery Orders"}
         </h2>
 
-        {/* Search + Counter row */}
-        <div className="flex items-center justify-center gap-3 sm:justify-end">
-          <input
-            type="text"
-            placeholder="Search by item name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-4 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-72"
-          />
-          <span className="rounded-full bg-green-100 px-4 py-1 text-sm font-medium text-green-700">
-            {filteredOrders.length} Active
-          </span>
+        {/* Compact Search + Counter */}
+        <div className="flex flex-wrap items-center gap-3">
+          <OrderSearchBar />
+          {searchLoading ? (
+            <span className="animate-pulse rounded-full bg-gradient-to-r from-gray-100 to-gray-200 px-3.5 py-1.5 text-sm font-semibold text-gray-600 shadow-sm ring-1 ring-gray-200">
+              Searching...
+            </span>
+          ) : (
+            <span className="rounded-full bg-gradient-to-r from-green-100 to-emerald-100 px-3.5 py-1.5 text-sm font-semibold text-green-700 shadow-sm ring-1 ring-green-200">
+              {activeSearch ? `${orders.length} Found` : `${orders.length} Active`}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Orders Section */}
-      {filteredOrders.length > 0 ? (
-        <>
-          <div
-            className={`grid grid-cols-1 items-start justify-items-center gap-8 transition-opacity duration-300 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3 ${
-              fade ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            {currentOrders.map((order) => (
-              <OrderCard
-                key={order.id}
-                order={order}
-                onOrderUpdate={onOrderUpdate}
-                userRole={userRole}
-              />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              {Array.from({ length: totalPages }, (_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handlePageChange(idx + 1)}
-                  className={`rounded-md px-4 py-2 font-semibold transition ${
-                    currentPage === idx + 1
-                      ? "bg-[#13C191] text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-          )}
-        </>
+      {orders.length > 0 ? (
+        <div className="animate-fade-in grid grid-cols-1 items-start justify-items-center gap-8 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3">
+          {orders.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              onOrderUpdate={onOrderUpdate}
+              userRole={userRole}
+            />
+          ))}
+        </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-10 text-center">
-          <div className="w-full max-w-md rounded-xl bg-emerald-50 p-8 shadow-sm">
+        <div className="animate-fade-in flex flex-col items-center justify-center py-10 text-center">
+          <div className="w-full max-w-md rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 p-8 shadow-lg ring-1 ring-green-100">
             <img
               src="/noOrder_4.svg"
               alt="No orders"
-              className="mx-auto w-[280px] object-contain opacity-90 sm:w-[350px]"
+              className="mx-auto w-[280px] object-contain opacity-90 drop-shadow-sm sm:w-[350px]"
             />
-            <p className="mt-4 text-lg font-semibold text-emerald-700">No Orders Found.</p>
-            <p className="mt-2 text-sm text-gray-500">Try a different item name.</p>
+            <p className="mt-4 text-lg font-semibold text-emerald-700">
+              {activeSearch ? "No Results Found" : "No Orders Yet"}
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              {activeSearch
+                ? `No orders found for "${activeSearch}". Try a different search term.`
+                : "Orders matching your criteria will appear here"}
+            </p>
           </div>
         </div>
       )}
     </section>
   );
-};
+});
+
+IncomingOrders.displayName = "IncomingOrders";
 
 export default IncomingOrders;
