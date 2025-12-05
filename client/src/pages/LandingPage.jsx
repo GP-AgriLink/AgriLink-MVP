@@ -8,8 +8,9 @@ import CounterSection from "../components/Discover/CounterSection";
 import CategoriesSection from "../components/Discover/CategoriesSection";
 import FarmersSection from "../components/Discover/FarmersSection";
 import SubscribeSection from "../components/Discover/SubscribeSection";
+import ScrollToTop from "../components/Discover/ScrollToTop";
 
-const DiscoverPage = () => {
+const LandingPage = () => {
   const [userCoords, setUserCoords] = useState(null);
 
   return (
@@ -31,8 +32,10 @@ const DiscoverPage = () => {
       <FarmersSection />
 
       <SubscribeSection />
+
+      <ScrollToTop />
     </div>
   );
 };
 
-export default DiscoverPage;
+export default LandingPage;
