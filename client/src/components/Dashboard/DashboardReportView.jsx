@@ -1,20 +1,22 @@
+import { memo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import FarmerReportPage from "../../pages/FarmerReport";
-import CustomerReportPage from "../../pages/CoustmerReport";
+import CustomerReportPage from "../../pages/CustomerReport";
 
 /**
- * DashboardReportView
- * Renders the appropriate report page based on user role within the dashboard layout
+ * DashboardReportView - Memoized role-based report router
+ * No max-height to allow parent scrollbar to work
  */
-const DashboardReportView = () => {
+const DashboardReportView = memo(() => {
   const { user } = useAuth();
 
-  // Render role-appropriate report
-  if (user?.role === "farmer") {
-    return <FarmerReportPage />;
-  }
+  return (
+    <div className="flex h-full min-h-[500px] flex-col py-6 pb-8">
+      {user?.role === "farmer" ? <FarmerReportPage /> : <CustomerReportPage />}
+    </div>
+  );
+});
 
-  return <CustomerReportPage />;
-};
+DashboardReportView.displayName = "DashboardReportView";
 
 export default DashboardReportView;

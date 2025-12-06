@@ -1,28 +1,45 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from "react";
 import { Outlet } from "react-router-dom";
 import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
-import AddProduct from "../components/FarmProduct/AddProduct";
-import EditProduct from "../components/FarmProduct/EditProduct";
+import { Menu, X } from "lucide-react";
 import { uploadImage } from "../services/uploadService";
 import { createProduct, updateProduct } from "../services/farmProductApi";
 import { useProducts } from "../context/ProductsContext";
 import { toast } from "react-toastify";
 
+// Lazy load modals for better initial bundle size
+const AddProduct = lazy(() => import("../components/FarmProduct/AddProduct"));
+const EditProduct = lazy(() => import("../components/FarmProduct/EditProduct"));
+
 /**
- * Dashboard - Optimized with stats refresh events
- * Uses ref callback pattern to trigger immediate stats updates
+ * Dashboard - Optimized with global scrolling and responsive design
+ * Features:
+ * - Global page scrolling (no internal scroll)
+ * - Min-height 95vh, grows with content
+ * - No horizontal overflow
+ * - Custom scrollbar styles (global)
  */
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Modal State & Logic
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const { setLoading, refreshProducts } = useProducts();
-
-  // Ref to trigger stats refresh from FarmProductsPage
   const statsRefreshCallbackRef = useRef(null);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (isAddProductOpen) setIsAddProductOpen(false);
+        if (isEditProductOpen) setIsEditProductOpen(false);
+        if (isSidebarOpen) setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAddProductOpen, isEditProductOpen, isSidebarOpen]);
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -39,7 +56,6 @@ const Dashboard = () => {
     };
   }, [isSidebarOpen]);
 
-  // Memoize handlers
   const handleAddProduct = useCallback(() => {
     setIsAddProductOpen(true);
   }, []);
@@ -51,7 +67,7 @@ const Dashboard = () => {
 
   const handleAddProductSubmit = useCallback(
     async (sanitizedData, imageFile, setUploadProgress, setIsUploading) => {
-      setLoading(true); // Use context's loading
+      setLoading(true);
       let finalData = { ...sanitizedData };
 
       try {
@@ -60,7 +76,6 @@ const Dashboard = () => {
           setUploadProgress(0);
           toast.info("Uploading image...");
 
-          // Upload with progress tracking
           const uploadResponse = await uploadImage(imageFile, (progress) => {
             setUploadProgress(progress);
           });
@@ -72,20 +87,17 @@ const Dashboard = () => {
         await createProduct(finalData);
         toast.success("Product Created");
         setIsAddProductOpen(false);
-
-        // Refresh products list
         await refreshProducts();
 
-        // Trigger immediate stats refresh if callback is available
         if (statsRefreshCallbackRef.current) {
           statsRefreshCallbackRef.current();
         }
       } catch (error) {
         console.error("Failed to create product:", error);
         toast.error(error.message || "Failed to create product");
-        setLoading(false); // Manually stop loading on error
+        setLoading(false);
         if (setIsUploading) setIsUploading(false);
-        throw error; // Re-throw to keep the modal open
+        throw error;
       }
     },
     [refreshProducts, setLoading]
@@ -106,7 +118,6 @@ const Dashboard = () => {
           throw new Error("Product ID is missing");
         }
         const productId = productToEdit._id || productToEdit.id;
-
         let finalUpdateData = { ...changedData };
 
         if (imageFile) {
@@ -114,7 +125,6 @@ const Dashboard = () => {
           setUploadProgress(0);
           toast.info("Uploading new image...");
 
-          // Upload with progress tracking
           const uploadResponse = await uploadImage(imageFile, (progress) => {
             setUploadProgress(progress);
           });
@@ -124,14 +134,11 @@ const Dashboard = () => {
         }
 
         await updateProduct(productId, finalUpdateData);
-
         toast.success("Product Updated");
         setIsEditProductOpen(false);
         setProductToEdit(null);
-
         await refreshProducts();
 
-        // Trigger stats refresh for updates that affect status
         if (
           statsRefreshCallbackRef.current &&
           (finalUpdateData.status || finalUpdateData.isArchived !== undefined)
@@ -149,12 +156,10 @@ const Dashboard = () => {
     [productToEdit, refreshProducts, setLoading]
   );
 
-  // Register stats refresh callback
   const handleRegisterStatsRefresh = useCallback((callback) => {
     statsRefreshCallbackRef.current = callback;
   }, []);
 
-  // Memoize context value  with stats refresh registration
   const outletContext = useMemo(
     () => ({
       onAddNew: handleAddProduct,
@@ -165,71 +170,62 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="box-border" style={{ minHeight: "calc(100vh - 200px)" }}>
-      <div className="mx-auto w-full px-4 py-6 sm:px-6">
-        <div className="flex flex-col gap-8 lg:flex-row">
-          {/* Mobile Menu Toggle Button */}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="fixed bottom-6 right-6 z-[500] rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 p-4 text-white shadow-lg transition-all hover:shadow-xl lg:hidden"
-            aria-label="Toggle menu"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              {isSidebarOpen ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
+    <div className="min-h-[95vh] w-full overflow-x-hidden bg-gradient-to-br from-emerald-50/30 to-teal-50/30">
+      {/* Mobile Menu Toggle Button */}
+      <button
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="group fixed bottom-6 right-6 z-[500] rounded-full bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-500 p-4 text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl lg:hidden"
+        aria-label="Toggle menu"
+      >
+        {isSidebarOpen ? (
+          <X className="h-6 w-6 transition-transform group-hover:rotate-90" />
+        ) : (
+          <Menu className="h-6 w-6" />
+        )}
+      </button>
 
-          {/* Overlay for mobile */}
-          {isSidebarOpen && (
-            <div
-              className="fixed inset-0 z-[500] bg-black/50 lg:hidden"
-              onClick={() => setIsSidebarOpen(false)}
-            />
-          )}
-
-          {/* Sidebar Component */}
-          <DashboardSidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
-
-          <main className="max-h-fit flex-1">
-            <div className="max-h-[90vh] min-h-fit overflow-auto rounded-2xl border border-emerald-100/70 bg-white/80 shadow-lg backdrop-blur-sm">
-              {/* Pass memoized handlers to children via Outlet context */}
-              <Outlet context={outletContext} />
-            </div>
-          </main>
-        </div>
-      </div>
-
-      {/* Modals are rendered here, outside the <main> element,
-          so they can cover the entire page */}
-      {isAddProductOpen && (
-        <AddProduct
-          isOpen={isAddProductOpen}
-          onClose={() => setIsAddProductOpen(false)}
-          onSubmit={handleAddProductSubmit}
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-[499] bg-black/50 backdrop-blur-sm lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
+      {/* Dashboard Container */}
+      <div className="mx-auto flex w-full max-w-[1920px] gap-6 p-6 lg:gap-8">
+        {/* Sidebar */}
+        <DashboardSidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+
+        {/* Main Content Area */}
+        <main className="w-full flex-1 overflow-x-hidden rounded-2xl border border-emerald-100/70 bg-white/80 shadow-lg backdrop-blur-sm lg:w-auto">
+          <Outlet context={outletContext} />
+        </main>
+      </div>
+
+      {/* Lazy-loaded Modals */}
+      {isAddProductOpen && (
+        <Suspense fallback={null}>
+          <AddProduct
+            isOpen={isAddProductOpen}
+            onClose={() => setIsAddProductOpen(false)}
+            onSubmit={handleAddProductSubmit}
+          />
+        </Suspense>
+      )}
+
       {isEditProductOpen && (
-        <EditProduct
-          isOpen={isEditProductOpen}
-          onClose={() => {
-            setIsEditProductOpen(false);
-            setProductToEdit(null);
-          }}
-          onSubmit={handleEditProductSubmit}
-          product={productToEdit}
-        />
+        <Suspense fallback={null}>
+          <EditProduct
+            isOpen={isEditProductOpen}
+            onClose={() => {
+              setIsEditProductOpen(false);
+              setProductToEdit(null);
+            }}
+            onSubmit={handleEditProductSubmit}
+            product={productToEdit}
+          />
+        </Suspense>
       )}
     </div>
   );
