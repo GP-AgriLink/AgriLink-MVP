@@ -3,7 +3,7 @@ import { LogoIconSvg } from '../common/Logo';
 
 function Footer() {
   return (
-    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-6 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-50 bottom-0">
+    <footer className="font-['Inter'] box-border bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 backdrop-blur-lg border-t-0 border-emerald-200/50 pt-6 pb-6 shadow-[0_-12px_32px_rgba(6,78,59,0.06)] rounded-t-3xl z-40 bottom-0">
       <div className="w-full lg:w-5/6 mx-auto px-4 sm:px-6 lg:px-6">
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-6">
           <div className="flex flex-col items-center md:items-start gap-3">
@@ -50,7 +50,7 @@ function Footer() {
               </Link>
 
               <Link
-                to="/contact"
+                to="/contact-us"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="Contact AgriLink"
               >
