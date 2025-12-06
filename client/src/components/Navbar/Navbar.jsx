@@ -26,7 +26,7 @@ function Navbar() {
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Near Me", path: "/#DiscoverSection", isScroll: true },
-    { name: "About Us", path: "/about-us" },
+    { name: "About Us", path: "/about" },
     { name: "Contact Us", path: "/contact-us" },
   ];
 

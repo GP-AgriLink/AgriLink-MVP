@@ -15,6 +15,10 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
+import ContactUs from "./pages/ContactUs";
+
+import FarmerReportPage from "./pages/FarmerReport";
+import CustomerReportPage from "./pages/CoustmerReport";
 import CartPage from "./pages/CartPage";
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
@@ -38,6 +42,15 @@ function App() {
             {/* --- PUBLIC ROUTES --- */}
             <Route path="/" element={<LandingPage />} />
 
+            <Route
+              path="/about"
+              element={
+                <div className="container mx-auto px-6 py-12">
+                  <h1 className="text-4xl font-bold text-gray-900">About Page</h1>
+                </div>
+              }
+            />
+            <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/about-us" element={<AboutPage />} />
             <Route
               path="/contact"
