@@ -1,21 +1,46 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useOutletContext } from "react-router-dom";
 import { useProducts } from "../context/ProductsContext";
 import ProductList from "../components/FarmProduct/ProductList";
 import { archiveProduct, updateProduct } from "../services/farmProductApi";
 import { getDashboardStats } from "../services/farmApi";
 import { toast } from "react-toastify";
+import { ProductsPageSkeleton } from "../components/FarmProduct/Skeletons";
 
-// MyProductsPage: debounced stats fetching and memoized handlers
+/**
+ * MyProductsPage - Optimized with smart stats updates
+ * Features:
+ * - Optimistic stats updates on product actions
+ * - Debounced stats fetching for network optimization
+ * - Immediate UI feedback
+ * - Registers stats refresh callback with Dashboard
+ */
 const MyProductsPage = ({ onEdit, onAddNew }) => {
   const { products, loading, error, refreshProducts, setLoading } = useProducts();
   const [stats, setStats] = useState({ active: 0, inactive: 0, archived: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const fetchStatsTimeoutRef = useRef(null);
+  const lastProductsLengthRef = useState(0);
 
+  // Get stats refresh registration from Dashboard outlet context
+  const outletContext = useOutletContext() || {};
+  const { onRegisterStatsRefresh } = outletContext;
+
+  // Smart stats update effect with optimization
   useEffect(() => {
+    // Skip if products length hasn't changed
+    if (products.length === lastProductsLengthRef.current && stats.active !== 0) {
+      return;
+    }
+
+    lastProductsLengthRef.current = products.length;
+
+    // Clear any pending fetch
     if (fetchStatsTimeoutRef.current) {
       clearTimeout(fetchStatsTimeoutRef.current);
     }
+
+    // Debounced stats fetch
     fetchStatsTimeoutRef.current = setTimeout(async () => {
       try {
         setStatsLoading(true);
@@ -28,51 +53,131 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
         setStatsLoading(false);
       }
     }, 300);
+
     return () => {
       if (fetchStatsTimeoutRef.current) {
         clearTimeout(fetchStatsTimeoutRef.current);
       }
     };
-  }, [products.length]);
+  }, [products.length, stats.active]);
 
-  const handleArchiveProduct = useCallback(async (productId) => {
-    setLoading(true);
+  // Optimistic stats update helper
+  const updateStatsOptimistically = useCallback((updates) => {
+    setStats((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleArchiveProduct = useCallback(
+    async (productId) => {
+      const product = products.find((p) => (p._id || p.id) === productId);
+      if (!product) return;
+
+      setLoading(true);
+
+      // Optimistic update UI immediately
+      const wasActive = product.status === "active";
+      const wasInactive = product.status === "inactive";
+
+      updateStatsOptimistically({
+        active: stats.active - (wasActive ? 1 : 0),
+        inactive: stats.inactive - (wasInactive ? 1 : 0),
+        archived: stats.archived + 1,
+      });
+
+      try {
+        await archiveProduct(productId);
+        toast.success("Product Archived");
+        await refreshProducts();
+
+        // Stats will auto-refresh from useEffect
+      } catch (err) {
+        console.error("Error archiving product:", err);
+        toast.error(err.message || "Failed to archive product");
+
+        // Revert optimistic update on error
+        updateStatsOptimistically({
+          active: stats.active,
+          inactive: stats.inactive,
+          archived: stats.archived,
+        });
+
+        setLoading(false);
+      }
+    },
+    [products, refreshProducts, setLoading, stats, updateStatsOptimistically]
+  );
+
+  const handleRestoreProduct = useCallback(
+    async (productId) => {
+      const productToRestore = products.find((p) => (p._id || p.id) === productId);
+      if (!productToRestore) {
+        toast.error("Product not found");
+        return;
+      }
+
+      setLoading(true);
+
+      const stock = productToRestore.stock || 0;
+      const willBeActive = stock > 0;
+
+      // Optimistic update
+      updateStatsOptimistically({
+        active: stats.active + (willBeActive ? 1 : 0),
+        inactive: stats.inactive + (!willBeActive ? 1 : 0),
+        archived: stats.archived - 1,
+      });
+
+      const updateData = {
+        isArchived: false,
+        status: willBeActive ? "active" : "inactive",
+      };
+
+      try {
+        await updateProduct(productId, updateData);
+        toast.success("Product Restored");
+        await refreshProducts();
+
+        // Stats will auto-refresh from useEffect
+      } catch (err) {
+        const errorMessage = err.message || "Failed to restore product. Please try again.";
+        toast.error(errorMessage);
+
+        // Revert optimistic update
+        updateStatsOptimistically({
+          active: stats.active,
+          inactive: stats.inactive,
+          archived: stats.archived,
+        });
+
+        setLoading(false);
+      }
+    },
+    [products, refreshProducts, setLoading, stats, updateStatsOptimistically]
+  );
+
+  // Manual stats refresh (called after adding product)
+  const handleStatsRefresh = useCallback(async () => {
     try {
-      await archiveProduct(productId);
-      toast.success("Product Archived");
-      refreshProducts();
+      setStatsLoading(true);
+      const data = await getDashboardStats();
+      setStats(data.products || { active: 0, inactive: 0, archived: 0 });
     } catch (err) {
-      console.error("Error archiving product:", err);
-      toast.error(err.message || "Failed to archive product");
-      setLoading(false);
+      console.error("Failed to refresh stats", err);
+    } finally {
+      setStatsLoading(false);
     }
-  }, [refreshProducts, setLoading]);
+  }, []);
 
-  const handleRestoreProduct = useCallback(async (productId) => {
-    setLoading(true);
-    const productToRestore = products.find((p) => (p._id || p.id) === productId);
-    if (!productToRestore) {
-      toast.error("Product not found");
-      setLoading(false);
-      return;
+  // Register stats refresh callback with Dashboard
+  useEffect(() => {
+    if (onRegisterStatsRefresh) {
+      onRegisterStatsRefresh(handleStatsRefresh);
     }
+  }, [onRegisterStatsRefresh, handleStatsRefresh]);
 
-    const stock = productToRestore.stock || 0;
-    const updateData = {
-      isArchived: false,
-      status: stock > 0 ? "active" : "inactive",
-    };
-
-    try {
-      await updateProduct(productId, updateData);
-      toast.success("Product Restored");
-      refreshProducts();
-    } catch (err) {
-      const errorMessage = err.message || "Failed to restore product. Please try again.";
-      toast.error(errorMessage);
-      setLoading(false);
-    }
-  }, [products, refreshProducts, setLoading]);
+  // Show skeleton during initial loading
+  if (loading) {
+    return <ProductsPageSkeleton />;
+  }
 
   if (error) {
     return (
@@ -116,6 +221,7 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
           onAddNew={onAddNew}
           stats={stats}
           statsLoading={statsLoading}
+          onStatsRefresh={handleStatsRefresh}
         />
       </div>
     </div>

@@ -4,6 +4,7 @@ import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import MainLayout from "./components/Layout/MainLayout";
 import { ProductsProvider } from "./context/ProductsContext";
+import { OrdersProvider } from "./context/OrdersContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
@@ -13,13 +14,10 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
-
-import FarmerReportPage from "./pages/FarmerReport";
-import CustomerReportPage from "./pages/CoustmerReport";
 import CartPage from "./pages/CartPage";
-
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
+import DashboardReportView from "./components/Dashboard/DashboardReportView";
 import OrdersPage from "./pages/OrdersPage";
 
 function App() {
@@ -65,7 +63,9 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProductsProvider>
-                    <Dashboard />
+                    <OrdersProvider>
+                      <Dashboard />
+                    </OrdersProvider>
                   </ProductsProvider>
                 </ProtectedRoute>
               }
@@ -84,6 +84,7 @@ function App() {
                 }
               />
               <Route path="orders" element={<OrdersPage />} />
+              <Route path="report" element={<DashboardReportView />} />
             </Route>
 
             {/* Edit Profile - Farmers only (customers edit in dashboard) */}
@@ -92,24 +93,6 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["farmer"]}>
                   <EditProfile />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Report routes */}
-            <Route
-              path="/farmer/report"
-              element={
-                <ProtectedRoute>
-                  <FarmerReportPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customer/report"
-              element={
-                <ProtectedRoute>
-                  <CustomerReportPage />
                 </ProtectedRoute>
               }
             />

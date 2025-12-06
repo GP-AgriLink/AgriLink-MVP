@@ -1,18 +1,18 @@
+import { memo } from "react";
+import OrdersPage from "../../pages/OrdersPage";
+
 /**
- * DashboardOrdersView
- * Renders the orders management interface within the dashboard layout
- * Note: This component is currently not used in the routing.
- * The /dashboard/orders route directly uses OrdersPage.jsx instead.
+ * DashboardOrdersView - Memoized wrapper for orders page
+ * No max-height to allow parent scrollbar to work
  */
-
-import OrdersPage from '../../pages/OrdersPage';
-
-const DashboardOrdersView = () => {
+const DashboardOrdersView = memo(() => {
   return (
-    <div className="min-h-[400px]">
+    <div className="flex h-full min-h-[500px] flex-col pb-8">
       <OrdersPage />
     </div>
   );
-};
+});
+
+DashboardOrdersView.displayName = "DashboardOrdersView";
 
 export default DashboardOrdersView;

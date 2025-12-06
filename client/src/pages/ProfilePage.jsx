@@ -71,15 +71,20 @@ const ProfilePage = ({ isEditing = false, onEditToggle = null }) => {
         const [fetchedUser, fetchedFarm = null] = await Promise.all(promises);
 
         if (fetchedUser) {
-          // Set User Data
+          // Set User Data - normalize phone to local format
+          let displayPhone = fetchedUser.phone || "";
+          displayPhone = displayPhone.replace(/\D/g, "");
+          if (displayPhone.startsWith("20") && displayPhone.length === 12) {
+            displayPhone = "0" + displayPhone.substring(2);
+          }
+          if (!displayPhone.startsWith("0") && displayPhone.length === 10) {
+            displayPhone = "0" + displayPhone;
+          }
+
           setUserData({
             ...getDefaultUser(),
             ...fetchedUser,
-            phoneNumber: fetchedUser.phone
-              ? fetchedUser.phone.startsWith("+2")
-                ? fetchedUser.phone
-                : `+2${fetchedUser.phone}`
-              : "",
+            phoneNumber: displayPhone,
           });
 
           // Set Farm Data (only if fetched)
@@ -232,8 +237,8 @@ const ProfilePage = ({ isEditing = false, onEditToggle = null }) => {
           {user?.role === "customer" && userData && (
             <>
               {isEditing ? (
-                <UserProfileForm 
-                  initialData={userData} 
+                <UserProfileForm
+                  initialData={userData}
                   onSaveSuccess={handleSaveSuccess}
                   key={`edit-${userData.email}`}
                 />
