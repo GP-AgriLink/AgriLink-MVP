@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Outlet } from "react-router-dom";
 import DashboardSidebar from "../components/Dashboard/DashboardSidebar";
 import AddProduct from "../components/FarmProduct/AddProduct";
@@ -8,6 +8,10 @@ import { createProduct, updateProduct } from "../services/farmProductApi";
 import { useProducts } from "../context/ProductsContext";
 import { toast } from "react-toastify";
 
+/**
+ * Dashboard - Optimized with stats refresh events
+ * Uses ref callback pattern to trigger immediate stats updates
+ */
 const Dashboard = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -16,6 +20,9 @@ const Dashboard = () => {
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState(null);
   const { setLoading, refreshProducts } = useProducts();
+
+  // Ref to trigger stats refresh from FarmProductsPage
+  const statsRefreshCallbackRef = useRef(null);
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -42,70 +49,119 @@ const Dashboard = () => {
     setIsEditProductOpen(true);
   }, []);
 
-  const handleAddProductSubmit = useCallback(async (sanitizedData, imageFile) => {
-    setLoading(true); // Use context's loading
-    let finalData = { ...sanitizedData };
+  const handleAddProductSubmit = useCallback(
+    async (sanitizedData, imageFile, setUploadProgress, setIsUploading) => {
+      setLoading(true); // Use context's loading
+      let finalData = { ...sanitizedData };
 
-    try {
-      if (imageFile) {
-        toast.info("Uploading image...");
-        const uploadResponse = await uploadImage(imageFile);
-        finalData.imageUrl = uploadResponse.imageUrl;
+      try {
+        if (imageFile) {
+          setIsUploading(true);
+          setUploadProgress(0);
+          toast.info("Uploading image...");
+
+          // Upload with progress tracking
+          const uploadResponse = await uploadImage(imageFile, (progress) => {
+            setUploadProgress(progress);
+          });
+
+          finalData.imageUrl = uploadResponse.imageUrl;
+          setIsUploading(false);
+        }
+
+        await createProduct(finalData);
+        toast.success("Product Created");
+        setIsAddProductOpen(false);
+
+        // Refresh products list
+        await refreshProducts();
+
+        // Trigger immediate stats refresh if callback is available
+        if (statsRefreshCallbackRef.current) {
+          statsRefreshCallbackRef.current();
+        }
+      } catch (error) {
+        console.error("Failed to create product:", error);
+        toast.error(error.message || "Failed to create product");
+        setLoading(false); // Manually stop loading on error
+        if (setIsUploading) setIsUploading(false);
+        throw error; // Re-throw to keep the modal open
+      }
+    },
+    [refreshProducts, setLoading]
+  );
+
+  const handleEditProductSubmit = useCallback(
+    async (changedData, imageFile, setUploadProgress, setIsUploading) => {
+      if (Object.keys(changedData).length === 0 && !imageFile) {
+        toast.info("No changes to save.");
+        setIsEditProductOpen(false);
+        setProductToEdit(null);
+        return;
       }
 
-      await createProduct(finalData);
-      toast.success("Product Created");
-      setIsAddProductOpen(false);
-      refreshProducts(); // This will set loading to false
-    } catch (error) {
-      console.error("Failed to create product:", error);
-      toast.error(error.message || "Failed to create product");
-      setLoading(false); // Manually stop loading on error
-      throw error; // Re-throw to keep the modal open
-    }
-  }, [refreshProducts, setLoading]);
+      setLoading(true);
+      try {
+        if (!productToEdit?._id && !productToEdit?.id) {
+          throw new Error("Product ID is missing");
+        }
+        const productId = productToEdit._id || productToEdit.id;
 
-  const handleEditProductSubmit = useCallback(async (changedData, imageFile) => {
-    if (Object.keys(changedData).length === 0 && !imageFile) {
-      toast.info("No changes to save.");
-      setIsEditProductOpen(false);
-      setProductToEdit(null);
-      return;
-    }
+        let finalUpdateData = { ...changedData };
 
-    setLoading(true);
-    try {
-      if (!productToEdit?._id && !productToEdit?.id) {
-        throw new Error("Product ID is missing");
+        if (imageFile) {
+          setIsUploading(true);
+          setUploadProgress(0);
+          toast.info("Uploading new image...");
+
+          // Upload with progress tracking
+          const uploadResponse = await uploadImage(imageFile, (progress) => {
+            setUploadProgress(progress);
+          });
+
+          finalUpdateData.imageUrl = uploadResponse.imageUrl;
+          setIsUploading(false);
+        }
+
+        await updateProduct(productId, finalUpdateData);
+
+        toast.success("Product Updated");
+        setIsEditProductOpen(false);
+        setProductToEdit(null);
+
+        await refreshProducts();
+
+        // Trigger stats refresh for updates that affect status
+        if (
+          statsRefreshCallbackRef.current &&
+          (finalUpdateData.status || finalUpdateData.isArchived !== undefined)
+        ) {
+          statsRefreshCallbackRef.current();
+        }
+      } catch (error) {
+        console.error("Failed to update product:", error);
+        toast.error(error.message || "Failed to update product");
+        setLoading(false);
+        if (setIsUploading) setIsUploading(false);
+        throw error;
       }
-      const productId = productToEdit._id || productToEdit.id;
+    },
+    [productToEdit, refreshProducts, setLoading]
+  );
 
-      let finalUpdateData = { ...changedData };
+  // Register stats refresh callback
+  const handleRegisterStatsRefresh = useCallback((callback) => {
+    statsRefreshCallbackRef.current = callback;
+  }, []);
 
-      if (imageFile) {
-        toast.info("Uploading new image...");
-        const uploadResponse = await uploadImage(imageFile);
-        finalUpdateData.imageUrl = uploadResponse.imageUrl;
-      }
-
-      await updateProduct(productId, finalUpdateData);
-
-      toast.success("Product Updated");
-      setIsEditProductOpen(false);
-      setProductToEdit(null);
-      refreshProducts();
-    } catch (error) {
-      console.error("Failed to update product:", error);
-      toast.error(error.message || "Failed to update product");
-      setLoading(false);
-      throw error;
-    }
-  }, [productToEdit, refreshProducts, setLoading]);
-
-  // Memoize context value
+  // Memoize context value  with stats refresh registration
   const outletContext = useMemo(
-    () => ({ onAddNew: handleAddProduct, onEdit: handleEditProduct }),
-    [handleAddProduct, handleEditProduct]
+    () => ({
+      onAddNew: handleAddProduct,
+      onEdit: handleEditProduct,
+      onRegisterStatsRefresh: handleRegisterStatsRefresh,
+    }),
+    [handleAddProduct, handleEditProduct, handleRegisterStatsRefresh]
   );
 
   return (

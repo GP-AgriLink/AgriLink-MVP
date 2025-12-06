@@ -1,4 +1,12 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { getMyProducts } from "../services/farmProductApi";
 import { useAuth } from "./AuthContext";
 import { toast } from "react-toastify";
@@ -55,6 +63,10 @@ export const ProductsProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const { user } = useAuth();
 
+  // Client-side cache with 2-minute TTL
+  const cacheRef = useRef(new Map());
+  const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
   useEffect(() => {
     if (!user) {
       setProductsData({ data: [], page: 1, pages: 1, total: 0 });
@@ -93,17 +105,49 @@ export const ProductsProvider = ({ children }) => {
           // Only send isArchived when it's true
           params.isArchived = true;
         } else if (pagination.filter) {
-          // For 'active' or 'inactive', only send status 
+          // For 'active' or 'inactive', only send status
           params.status = pagination.filter;
+        }
+
+        // Check cache first
+        const cacheKey = JSON.stringify({
+          page: params.page,
+          limit: params.limit,
+          filter: params.filter || pagination.filter,
+          search: params.search,
+          category: params.category,
+          isArchived: params.isArchived,
+          status: params.status,
+        });
+
+        const cached = cacheRef.current.get(cacheKey);
+        const now = Date.now();
+
+        if (cached && now - cached.timestamp < CACHE_TTL) {
+          setProductsData(cached.data);
+          setLoading(false);
+          return;
         }
 
         // Actually call the API with the params
         const data = await getMyProducts(params);
 
+        // Cache the response
+        cacheRef.current.set(cacheKey, {
+          data,
+          timestamp: now,
+        });
+
+        // Clean old cache entries (keep only last 10)
+        if (cacheRef.current.size > 10) {
+          const firstKey = cacheRef.current.keys().next().value;
+          cacheRef.current.delete(firstKey);
+        }
+
         setProductsData(data);
       } catch (err) {
         console.error("Error fetching products:", err);
-        
+
         // Handle auth errors strictly
         if (err.response?.status === 401 || err.response?.status === 403) {
           setError(err.message || "Authentication required");
@@ -122,7 +166,14 @@ export const ProductsProvider = ({ children }) => {
     };
 
     fetchProducts();
-  }, [user, pagination.page, pagination.limit, pagination.filter, pagination.search, pagination.category]); // Re-fetch when search or category changes
+  }, [
+    user,
+    pagination.page,
+    pagination.limit,
+    pagination.filter,
+    pagination.search,
+    pagination.category,
+  ]); // Re-fetch when search or category changes
 
   /**
    * Manually re-runs the fetch with the current pagination settings.
@@ -130,12 +181,15 @@ export const ProductsProvider = ({ children }) => {
    */
   const refreshProducts = useCallback(async () => {
     if (!user) return;
-    
+
     // Only refresh products if user is a farmer
     if (user.role !== "farmer") {
       return;
     }
-    
+
+    // Clear cache on manual refresh
+    cacheRef.current.clear();
+
     setLoading(true);
     setError(null);
     try {
@@ -228,28 +282,50 @@ export const ProductsProvider = ({ children }) => {
     }));
   };
 
-  const value = {
-    products: productsData.data,
-    loading,
-    error,
-    refreshProducts,
-    setLoading,
-    page: productsData.page,
-    totalPages: productsData.pages,
-    totalProducts: productsData.total,
-    goToPage,
-    setFilter,
-    activeFilter: pagination.filter,
-    activeSearch: pagination.search,
-    activeCategory: pagination.category,
-    searchInput,
-    setSearchInput,
-    categoryInput,
-    setCategoryInput,
-    applyFilters,
-    setCategoryFilter,
-    clearFilters,
-  };
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      products: productsData.data,
+      loading,
+      error,
+      refreshProducts,
+      setLoading,
+      page: productsData.page,
+      totalPages: productsData.pages,
+      totalProducts: productsData.total,
+      goToPage,
+      setFilter,
+      activeFilter: pagination.filter,
+      activeSearch: pagination.search,
+      activeCategory: pagination.category,
+      searchInput,
+      setSearchInput,
+      categoryInput,
+      setCategoryInput,
+      applyFilters,
+      setCategoryFilter,
+      clearFilters,
+    }),
+    [
+      productsData.data,
+      productsData.page,
+      productsData.pages,
+      productsData.total,
+      loading,
+      error,
+      pagination.filter,
+      pagination.search,
+      pagination.category,
+      searchInput,
+      categoryInput,
+      refreshProducts,
+      goToPage,
+      setFilter,
+      applyFilters,
+      setCategoryFilter,
+      clearFilters,
+    ]
+  );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 };
