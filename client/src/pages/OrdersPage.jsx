@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
 import { updateOrderStatus } from "../services/orderApi";
 import { getDashboardStats } from "../services/farmApi";
 import { useAuth } from "../context/AuthContext";
@@ -16,10 +15,8 @@ const isFarmer = (user) => user?.role === "farmer";
 const isCustomer = (user) => user?.role === "customer";
 
 const OrdersPage = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const activeFilter = searchParams.get("filter") || "incoming";
+  const [activeFilter, setActiveFilter] = useState("incoming");
 
   // Use OrdersContext for orders data
   const {
@@ -86,12 +83,11 @@ const OrdersPage = () => {
     fetchStats();
   }, [fetchStats]);
 
-  // Initialize status from URL on mount only
+  // Initialize status filter on mount
   useEffect(() => {
     const statusValue = getStatusFromFilter(activeFilter);
     setStatusFilter(statusValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount
+  }, [activeFilter, getStatusFromFilter, setStatusFilter]);
 
   // Transform orders from context to UI format
   const orders = useMemo(() => {
@@ -149,13 +145,14 @@ const OrdersPage = () => {
   );
 
   const handleFilterClick = useCallback(
-    (filter) => {
-      navigate(`/dashboard/orders?filter=${filter}`);
-      // Also update context status directly
-      const statusValue = getStatusFromFilter(filter);
+    async (filterValue) => {
+      setActiveFilter(filterValue);
+      const statusValue = getStatusFromFilter(filterValue);
       setStatusFilter(statusValue);
+      await refreshOrders();
+      await fetchStats();
     },
-    [navigate, setStatusFilter]
+    [getStatusFromFilter, setStatusFilter, refreshOrders, fetchStats]
   );
 
   // Memoize empty state message based on user role and search state
@@ -257,9 +254,6 @@ const OrdersPage = () => {
             )}
           </>
         ) : null}
-
-        {/* Only show page-level empty state when truly no orders exist (not from search) */}
-        {!loading && totalOrders === 0 && !activeSearch && renderEmptyState()}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import OrderCard from "./OrderCard";
 import { OrdersGridSkeleton } from "./Skeletons";
 import OrderSearchBar from "./OrderSearchBar";
 import { useOrders } from "../../context/OrdersContext";
+import { Sparkles } from "lucide-react";
 
 const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, isLoading }) => {
   const { activeSearch, searchLoading } = useOrders();
@@ -47,6 +48,13 @@ const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, is
         </div>
       </div>
 
+      {/* Description */}
+      <p className="animate-fade-in text-left text-sm text-gray-500">
+        {activeFilter === "incoming"
+          ? "Manage your pending orders awaiting confirmation."
+          : "Track orders that are currently being delivered."}
+      </p>
+
       {/* Orders Section */}
       {orders.length > 0 ? (
         <div className="animate-fade-in grid grid-cols-1 items-start justify-items-center gap-8 md:grid-cols-2 xl:grid-cols-2 3xl:grid-cols-3">
@@ -60,22 +68,73 @@ const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, is
           ))}
         </div>
       ) : (
-        <div className="animate-fade-in flex flex-col items-center justify-center py-10 text-center">
-          <div className="w-full max-w-md rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 p-8 shadow-lg ring-1 ring-green-100">
-            <img
-              src="/noOrder_4.svg"
-              alt="No orders"
-              className="mx-auto w-[280px] object-contain opacity-90 drop-shadow-sm sm:w-[350px]"
-            />
-            <p className="mt-4 text-lg font-semibold text-emerald-700">
-              {activeSearch ? "No Results Found" : "No Orders Yet"}
-            </p>
-            <p className="mt-2 text-sm text-gray-500">
-              {activeSearch
-                ? `No orders found for "${activeSearch}". Try a different search term.`
-                : "Orders matching your criteria will appear here"}
-            </p>
+        <div
+          className="flex min-h-[50vh] flex-col items-center justify-center p-4 text-center"
+          style={{ animation: "fadeInScale 0.6s ease-out" }}
+        >
+          {/* Animated container with gradient border */}
+          <div className="group relative max-w-lg">
+            {/* Gradient border effect */}
+            <div className="absolute -inset-0.5 animate-pulse rounded-3xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-30 blur-sm transition-opacity duration-300 group-hover:opacity-50" />
+
+            {/* Content container */}
+            <div className="relative rounded-3xl bg-white p-8 shadow-xl">
+              {/* Image with float animation */}
+              <div className="relative mb-6">
+                <img
+                  src="/noOrder_4.svg"
+                  alt="No orders"
+                  className="mx-auto h-64 w-64 object-contain transition-transform duration-500 group-hover:scale-105"
+                  style={{ animation: "float 3s ease-in-out infinite" }}
+                />
+
+                {/* Sparkle decorations */}
+                <Sparkles className="absolute left-1/4 top-4 h-6 w-6 animate-pulse text-emerald-400 opacity-70" />
+                <Sparkles
+                  className="absolute right-1/4 top-12 h-5 w-5 animate-pulse text-teal-400 opacity-50 delay-150"
+                  style={{ animationDelay: "150ms" }}
+                />
+                <Sparkles
+                  className="absolute bottom-8 left-1/3 h-4 w-4 animate-pulse text-emerald-300 opacity-60 delay-300"
+                  style={{ animationDelay: "300ms" }}
+                />
+              </div>
+
+              {/* Title with gradient */}
+              <h2 className="mb-3 bg-gradient-to-r from-gray-800 to-emerald-700 bg-clip-text text-3xl font-bold text-transparent">
+                {activeSearch ? "No Results Found" : "No Orders Yet"}
+              </h2>
+
+              {/* Message */}
+              <p className="leading-relaxed text-gray-600">
+                {activeSearch
+                  ? `No orders found for "${activeSearch}". Try a different search term.`
+                  : "Orders matching your criteria will appear here"}
+              </p>
+            </div>
           </div>
+
+          <style>{`
+            @keyframes fadeInScale {
+              from {
+                opacity: 0;
+                transform: scale(0.9);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+            
+            @keyframes float {
+              0%, 100% {
+                transform: translateY(0px);
+              }
+              50% {
+                transform: translateY(-10px);
+              }
+            }
+          `}</style>
         </div>
       )}
     </section>
