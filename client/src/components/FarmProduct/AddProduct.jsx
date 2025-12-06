@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import LogoSpinner from "../common/LogoSpinner";
 import { getAllCategories } from "../../services/farmProductApi";
-import { X } from "lucide-react";
+import { X, Upload, Image as ImageIcon, CheckCircle } from "lucide-react";
 import { sanitizeProductData, sanitizeString } from "../../utils/sanitizers";
 import { toast } from "react-toastify";
 
@@ -28,7 +28,16 @@ const getDefaultFormData = () => ({
   customCategory: "",
 });
 
-const AddProduct = ({ isOpen, onClose, onSubmit }) => {
+/**
+ * AddProduct - Optimized with upload progress and performance enhancements
+ * Features:
+ * - Real-time upload progress tracking
+ * - Memoized computations
+ * - Optimized re-renders
+ * - Visual upload feedback
+ * - No image compression
+ */
+const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState(getDefaultFormData());
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,11 +45,13 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [imageInputMode, setImageInputMode] = useState("url");
   const fileInputRef = useRef(null);
   const localPreviewRef = useRef(null);
 
+  // Fetch categories on mount
   useEffect(() => {
     if (isOpen) {
       const fetchCategories = async () => {
@@ -61,6 +72,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
       setImagePreview("");
       setImageInputMode("url");
       setShowCustomInput(false);
+      setUploadProgress(0);
       if (localPreviewRef.current) {
         URL.revokeObjectURL(localPreviewRef.current);
         localPreviewRef.current = null;
@@ -68,64 +80,78 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
     }
   }, [isOpen]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Memoized handlers for better performance
+  const handleChange = useCallback(
+    (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({ ...prev, [name]: value }));
 
-    if (name === "category") {
-      if (value === "Other") {
-        setShowCustomInput(true);
-      } else {
-        setShowCustomInput(false);
-        setFormData((prev) => ({ ...prev, customCategory: "" }));
+      if (name === "category") {
+        if (value === "Other") {
+          setShowCustomInput(true);
+        } else {
+          setShowCustomInput(false);
+          setFormData((prev) => ({ ...prev, customCategory: "" }));
+        }
       }
-    }
 
-    if (name === "imageUrl") {
-      setImageFile(null);
-      setImagePreview(value);
-    }
+      if (name === "imageUrl") {
+        setImageFile(null);
+        setImagePreview(value);
+      }
 
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
-    }
-    if (name === "category" && errors.customCategory) {
-      setErrors((prev) => ({ ...prev, customCategory: "" }));
-    }
-  };
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: "" }));
+      }
+      if (name === "category" && errors.customCategory) {
+        setErrors((prev) => ({ ...prev, customCategory: "" }));
+      }
+    },
+    [errors]
+  );
 
-  const handleCustomCategoryBlur = () => {
+  const handleCustomCategoryBlur = useCallback(() => {
     const customCat = formData.customCategory.trim();
     if (customCat) {
-      // Add to allCategories if not already present
       if (!allCategories.includes(customCat)) {
         setAllCategories((prev) => [...prev, customCat]);
       }
-      // Set the custom category as the selected category and hide input
-      setFormData((prev) => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         category: customCat,
-        customCategory: customCat
+        customCategory: customCat,
       }));
       setShowCustomInput(false);
     }
-  };
+  }, [formData.customCategory, allCategories]);
 
-  const removeImage = () => {
+  const removeImage = useCallback(() => {
     setFormData((prev) => ({ ...prev, imageUrl: "" }));
     setImagePreview("");
     setImageFile(null);
+    setUploadProgress(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  };
+    if (localPreviewRef.current) {
+      URL.revokeObjectURL(localPreviewRef.current);
+      localPreviewRef.current = null;
+    }
+  }, []);
 
-  const handleFileChange = async (e) => {
+  const handleFileChange = useCallback(async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File is too large (Max 5MB)");
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select a valid image file");
       return;
     }
 
@@ -139,9 +165,10 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
     setImageFile(file);
     setImagePreview(localPreviewUrl);
     setFormData((prev) => ({ ...prev, imageUrl: "" }));
-  };
+    setUploadProgress(0);
+  }, []);
 
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors = {};
     const name = formData.name.trim();
     const price = parseFloat(formData.price);
@@ -158,12 +185,10 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
 
     if (!formData.unit) newErrors.unit = "Unit is required";
 
-    // --- TASK 2.1.3: Stock validation logic changed ---
     if (formData.stock === "" || isNaN(stock) || stock < 1)
       newErrors.stock = "Stock must be at least 1";
     else if (stock !== parseInt(formData.stock, 10))
       newErrors.stock = "Stock must be a whole number";
-    // --- End of change ---
 
     if (!formData.category) {
       newErrors.category = "Please select a category";
@@ -175,56 +200,68 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData, showCustomInput]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateForm()) return;
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!validateForm()) return;
 
-    setIsSubmitting(true);
-    try {
-      // Determine the final category
-      let finalCategory = formData.category;
-      if (formData.category === "Other" || showCustomInput) {
-        if (!formData.customCategory.trim()) {
-          throw new Error("Please enter a custom category");
+      setIsSubmitting(true);
+      try {
+        // Determine the final category
+        let finalCategory = formData.category;
+        if (formData.category === "Other" || showCustomInput) {
+          if (!formData.customCategory.trim()) {
+            throw new Error("Please enter a custom category");
+          }
+          finalCategory = sanitizeString(formData.customCategory.trim());
         }
-        finalCategory = sanitizeString(formData.customCategory.trim());
+
+        const productData = {
+          name: formData.name,
+          price: formData.price,
+          unit: formData.unit,
+          stock: formData.stock,
+          categories: [finalCategory],
+          imageUrl: formData.imageUrl,
+          status: parseInt(formData.stock, 10) === 0 ? "inactive" : "active",
+        };
+
+        const sanitizedData = sanitizeProductData(productData);
+
+        // Pass upload progress callback to parent
+        await onSubmit(sanitizedData, imageFile, setUploadProgress, setIsUploading);
+
+        onClose();
+      } catch (error) {
+        console.error("Error adding product:", error);
+        setErrors({ submit: error.message || "Failed to add product" });
+      } finally {
+        setIsSubmitting(false);
+        setUploadProgress(0);
       }
+    },
+    [formData, showCustomInput, validateForm, onSubmit, onClose, imageFile]
+  );
 
-      const productData = {
-        name: formData.name,
-        price: formData.price,
-        unit: formData.unit,
-        stock: formData.stock,
-        categories: [finalCategory],
-        imageUrl: formData.imageUrl,
-        // This logic is still correct, as validated stock will be >= 1
-        status: parseInt(formData.stock, 10) === 0 ? "inactive" : "active",
-      };
-
-      const sanitizedData = sanitizeProductData(productData);
-
-      await onSubmit(sanitizedData, imageFile);
-
-      onClose();
-    } catch (error) {
-      console.error("Error adding product:", error);
-      setErrors({ submit: error.message || "Failed to add product" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (!isSubmitting) {
+  const handleClose = useCallback(() => {
+    if (!isSubmitting && !isUploading) {
       onClose();
     }
-  };
+  }, [isSubmitting, isUploading, onClose]);
+
+  // Memoize display image URL
+  const displayImageUrl = useMemo(() => imagePreview, [imagePreview]);
+
+  // Memoize file size display
+  const fileSizeDisplay = useMemo(() => {
+    if (!imageFile) return null;
+    const sizeMB = (imageFile.size / (1024 * 1024)).toFixed(2);
+    return `${sizeMB} MB`;
+  }, [imageFile]);
 
   if (!isOpen) return null;
-
-  const displayImageUrl = imagePreview;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/75 p-2 backdrop-blur-sm sm:p-4">
@@ -232,23 +269,69 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
         className="relative flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:max-h-[85vh] sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Loading Overlay with Progress */}
         {(isSubmitting || isUploading) && (
-          <LogoSpinner message={isUploading ? "Uploading..." : "Creating Product..."} />
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-sm">
+            {isUploading && uploadProgress > 0 ? (
+              <div className="flex flex-col items-center gap-4 px-6">
+                <div className="relative h-32 w-32">
+                  {/* Circular progress */}
+                  <svg className="h-32 w-32 -rotate-90 transform">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-gray-200"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 56}`}
+                      strokeDashoffset={`${2 * Math.PI * 56 * (1 - uploadProgress / 100)}`}
+                      className="text-emerald-600 transition-all duration-300"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    {uploadProgress === 100 ? (
+                      <CheckCircle className="h-12 w-12 animate-bounce text-emerald-600" />
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 animate-pulse text-emerald-600" />
+                        <span className="mt-1 text-2xl font-bold text-emerald-600">
+                          {uploadProgress}%
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-gray-800">
+                    {uploadProgress === 100 ? "Processing..." : "Uploading Image..."}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {uploadProgress === 100 ? "Almost done!" : `${uploadProgress}% complete`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <LogoSpinner message="Creating Product..." />
+            )}
+          </div>
         )}
 
+        {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 px-4 py-2 text-white sm:px-5">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-white bg-opacity-20 p-1.5 backdrop-blur-sm sm:p-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
+              <ImageIcon className="h-5 w-5" strokeWidth={2.5} />
             </div>
             <div>
               <h2 className="text-sm font-bold sm:text-base">Add New Product</h2>
@@ -256,20 +339,11 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
           </div>
           <button
             onClick={handleClose}
-            disabled={isSubmitting}
-            className="rounded-full p-1.5 text-white transition-all duration-200 hover:bg-white hover:bg-opacity-20 sm:p-2"
+            disabled={isSubmitting || isUploading}
+            className="rounded-full p-1.5 text-white transition-all duration-200 hover:bg-white hover:bg-opacity-20 disabled:opacity-50 sm:p-2"
             type="button"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 sm:h-6 sm:w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
@@ -277,10 +351,11 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="space-y-3 p-4 sm:p-5">
             {errors.submit && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              <div className="animate-shake rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {errors.submit}
               </div>
             )}
+
             <div className="grid grid-cols-4 gap-3 sm:grid-cols-4">
               <div className="col-span-2">
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700">
@@ -292,11 +367,13 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="e.g., Fresh Apples"
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                    errors.name ? "border-red-500" : "border-gray-300"
+                  className={`w-full rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    errors.name ? "shake border-red-500" : "border-gray-300"
                   }`}
                 />
-                {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+                {errors.name && (
+                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.name}</p>
+                )}
               </div>
               <div className="col-span-2">
                 <label className="mb-1.5 block text-sm font-semibold text-gray-700">
@@ -310,8 +387,10 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                     onChange={handleChange}
                     onBlur={handleCustomCategoryBlur}
                     placeholder="e.g., Sweets, Dairy, etc."
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      errors.category || errors.customCategory ? "border-red-500" : "border-gray-300"
+                    className={`w-full rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                      errors.category || errors.customCategory
+                        ? "border-red-500"
+                        : "border-gray-300"
                     }`}
                     list="category-suggestions"
                     autoFocus
@@ -321,7 +400,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    className={`w-full rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                       errors.category ? "border-red-500" : "border-gray-300"
                     }`}
                   >
@@ -345,10 +424,13 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   ))}
                 </datalist>
                 {(errors.category || errors.customCategory) && (
-                  <p className="mt-1 text-xs text-red-500">{errors.category || errors.customCategory}</p>
+                  <p className="animate-fadeIn mt-1 text-xs text-red-500">
+                    {errors.category || errors.customCategory}
+                  </p>
                 )}
               </div>
             </div>
+
             {/* Price, Unit, and Stock in Grid */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {/* Price */}
@@ -366,12 +448,14 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                     placeholder="0.00"
                     step="0.01"
                     min="0"
-                    className={`w-full rounded-lg border py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    className={`w-full rounded-lg border py-2 pl-8 pr-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                       errors.price ? "border-red-500" : "border-gray-300"
                     }`}
                   />
                 </div>
-                {errors.price && <p className="mt-1 text-xs text-red-500">{errors.price}</p>}
+                {errors.price && (
+                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.price}</p>
+                )}
               </div>
 
               <div>
@@ -382,7 +466,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   name="unit"
                   value={formData.unit}
                   onChange={handleChange}
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  className={`w-full rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                     errors.unit ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -393,7 +477,9 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                     </option>
                   ))}
                 </select>
-                {errors.unit && <p className="mt-1 text-xs text-red-500">{errors.unit}</p>}
+                {errors.unit && (
+                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.unit}</p>
+                )}
               </div>
 
               <div>
@@ -407,13 +493,17 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   onChange={handleChange}
                   placeholder="1"
                   min="1"
-                  className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                  className={`w-full rounded-lg border px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                     errors.stock ? "border-red-500" : "border-gray-300"
                   }`}
                 />
-                {errors.stock && <p className="mt-1 text-xs text-red-500">{errors.stock}</p>}
+                {errors.stock && (
+                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.stock}</p>
+                )}
               </div>
             </div>
+
+            {/* Image Upload Section */}
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-700">
                 Product Image <span className="text-xs text-gray-400">(Optional)</span>
@@ -433,14 +523,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1.5">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                      />
-                    </svg>
+                    <ImageIcon className="h-4 w-4" />
                     Image URL
                   </div>
                 </button>
@@ -454,14 +537,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   }`}
                 >
                   <div className="flex items-center justify-center gap-1.5">
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                      />
-                    </svg>
+                    <Upload className="h-4 w-4" />
                     Upload
                   </div>
                 </button>
@@ -475,10 +551,10 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                     value={formData.imageUrl}
                     onChange={handleChange}
                     placeholder="https://example.com/image.jpg"
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   {displayImageUrl && !imageFile && (
-                    <div className="relative inline-block">
+                    <div className="group relative inline-block">
                       <img
                         src={displayImageUrl}
                         alt="Preview"
@@ -486,12 +562,12 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                           e.target.src =
                             "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' font-size='14' text-anchor='middle' dy='.3em' fill='%239ca3af'%3ENo Image%3C/text%3E%3C/svg%3E";
                         }}
-                        className="h-24 w-24 rounded-lg border-2 border-emerald-200 object-cover"
+                        className="h-24 w-24 rounded-lg border-2 border-emerald-200 object-cover transition-transform group-hover:scale-105"
                       />
                       <button
                         type="button"
                         onClick={removeImage}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-colors hover:bg-red-600"
+                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-all hover:scale-110 hover:bg-red-600"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -511,45 +587,46 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
                   />
 
                   {imageFile && displayImageUrl ? (
-                    <div className="relative mt-2 inline-block">
-                      <img
-                        src={displayImageUrl}
-                        alt="Preview"
-                        className="h-24 w-24 rounded-lg border-2 border-emerald-200 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-colors hover:bg-red-600"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
+                    <div className="space-y-2">
+                      <div className="group relative inline-block">
+                        <img
+                          src={displayImageUrl}
+                          alt="Preview"
+                          className="h-32 w-32 rounded-lg border-2 border-emerald-200 object-cover transition-transform group-hover:scale-105"
+                        />
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1.5 text-white shadow-lg transition-all hover:scale-110 hover:bg-red-600"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        <p className="font-medium">{imageFile.name}</p>
+                        <p className="text-gray-400">Size: {fileSizeDisplay}</p>
+                      </div>
                     </div>
                   ) : (
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isUploading}
-                      className="w-full rounded-lg border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50 to-emerald-50/30 p-4 text-center transition hover:border-emerald-400"
+                      className="group w-full rounded-lg border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50 to-emerald-50/30 p-6 text-center transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50"
                     >
-                      <div className="flex flex-col items-center gap-2">
-                        <svg
-                          className="h-12 w-12 text-gray-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                          />
-                        </svg>
-                        <span className="text-sm font-semibold text-gray-700">
-                          Click to upload image
-                        </span>
-                        <span className="text-xs text-gray-500">PNG, JPG, WEBP (Max 5MB)</span>
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="rounded-full bg-emerald-100 p-4 transition-transform group-hover:scale-110">
+                          <Upload className="h-8 w-8 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-700">
+                            Click to upload image
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP (Max 5MB)</p>
+                          <p className="mt-1 text-xs font-medium text-emerald-600">
+                            Original quality preserved
+                          </p>
+                        </div>
                       </div>
                     </button>
                   )}
@@ -564,7 +641,7 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
               <button
                 type="button"
                 onClick={handleClose}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isUploading}
                 className="flex-1 rounded-lg border-2 border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-all hover:border-gray-400 hover:bg-gray-100 disabled:opacity-50"
               >
                 Cancel
@@ -572,26 +649,45 @@ const AddProduct = ({ isOpen, onClose, onSubmit }) => {
               <button
                 type="submit"
                 disabled={isSubmitting || isUploading}
-                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-700 hover:to-emerald-600 disabled:opacity-50"
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition-all hover:from-emerald-700 hover:to-emerald-600 hover:shadow-xl active:scale-95 disabled:opacity-50"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
+                <ImageIcon className="h-4 w-4" />
                 Add Product
               </button>
             </div>
           </div>
         </form>
+
+        {/* Animations */}
+        <style>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+          }
+          
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          
+          .animate-shake {
+            animation: shake 0.3s ease-in-out;
+          }
+          
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-in;
+          }
+          
+          .shake {
+            animation: shake 0.3s ease-in-out;
+          }
+        `}</style>
       </div>
     </div>
   );
-};
+});
+
+AddProduct.displayName = "AddProduct";
 
 export default AddProduct;

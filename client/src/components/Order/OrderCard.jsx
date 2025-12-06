@@ -1,11 +1,73 @@
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
+import { reverseGeocodeSmart } from "../../utils/geoCode";
+
+// Memoized OrderItem component for better performance
+const OrderItem = memo(({ item, formatNumber }) => (
+  <div className="flex justify-between border-b border-gray-100 py-1 text-sm text-gray-600 last:border-none">
+    <div className="flex flex-col text-left">
+      <span className="font-medium">{item.name}</span>
+      <span className="text-xs text-gray-500">
+        {item.qty} pcs × ${formatNumber(item.price)}
+      </span>
+    </div>
+    <span className="font-semibold text-gray-700">
+      ${formatNumber(item.qty * item.price)}
+    </span>
+  </div>
+));
+
+OrderItem.displayName = 'OrderItem';
+
+// Skeleton loader component
+const OrderCardSkeleton = memo(() => (
+  <div className="w-full max-w-[420px] 3xl:max-w-[520px] bg-white border border-green-100 rounded-2xl p-5 sm:p-6 shadow-lg animate-pulse">
+    <div className="mb-3 flex justify-between">
+      <div className="h-4 w-24 bg-gray-200 rounded" />
+      <div className="h-6 w-20 bg-gray-200 rounded" />
+    </div>
+    <div className="h-6 w-32 bg-gray-200 rounded mb-2" />
+    <div className="flex items-center gap-2 mb-1">
+      <div className="h-8 w-8 bg-gray-200 rounded-full" />
+      <div className="h-5 w-40 bg-gray-200 rounded" />
+    </div>
+    <div className="h-4 w-48 bg-gray-200 rounded mb-4" />
+    <div className="h-16 bg-gray-100 rounded-xl mb-4" />
+  </div>
+));
+
+OrderCardSkeleton.displayName = 'OrderCardSkeleton';
 
 const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const [fadeOut, setFadeOut] = useState(false);
   const [isItemsExpanded, setIsItemsExpanded] = useState(false);
+  const [isLocationExpanded, setIsLocationExpanded] = useState(false);
+  const [locationName, setLocationName] = useState("");
+  const [isResolvingLocation, setIsResolvingLocation] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [avatarLoaded, setAvatarLoaded] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+  
+  const cardRef = useCallback((node) => {
+    if (!node) return;
+    
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "100px" }
+    );
+    
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const orderData = order;
   const isFarmer = userRole === "farmer";
+  const isCustomer = userRole === "customer";
 
   // Determine the initial status
   const initialStatus =
@@ -16,6 +78,60 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
     if (orderData.status === "Ready for Delivery") setStatus("Delivery");
     else setStatus(orderData.status);
   }, [orderData.status]);
+
+  // Lazy load farm location only when user expands location section
+  useEffect(() => {
+    if (!isCustomer || !orderData.farmLocation || !isLocationExpanded || locationName) {
+      return;
+    }
+
+    let mounted = true;
+    let timeoutId;
+    
+    const resolveLocation = async () => {
+      setIsResolvingLocation(true);
+      
+      // Set a timeout fallback
+      timeoutId = setTimeout(() => {
+        if (mounted && !locationName) {
+          const [lon, lat] = orderData.farmLocation;
+          setLocationName(`${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+          setIsResolvingLocation(false);
+        }
+      }, 5000);
+      
+      try {
+        const name = await reverseGeocodeSmart(orderData.farmLocation);
+        if (mounted) {
+          clearTimeout(timeoutId);
+          if (name) {
+            setLocationName(name);
+          } else {
+            const [lon, lat] = orderData.farmLocation;
+            setLocationName(`${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to resolve location:", error);
+        if (mounted) {
+          clearTimeout(timeoutId);
+          const [lon, lat] = orderData.farmLocation;
+          setLocationName(`${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`);
+        }
+      } finally {
+        if (mounted) {
+          setIsResolvingLocation(false);
+        }
+      }
+    };
+
+    resolveLocation();
+
+    return () => {
+      mounted = false;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [orderData.farmLocation, isCustomer, isLocationExpanded, locationName]);
 
   const formatNumber = useCallback((num) =>
     typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00",
@@ -51,52 +167,60 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const handleClick = useCallback(async (newStatus) => {
     if (newStatus === status) return;
 
-    // Validate the status transition
     const validation = validateTransition(status, newStatus);
     if (!validation.valid) {
       alert(validation.message);
       return;
     }
 
-    if (newStatus === "Delivery") {
-      setStatus("Delivery");
-      setFadeOut(true);
-      setTimeout(async () => {
-        try {
-          await onOrderUpdate(orderData.id, "Ready for Delivery");
-        } catch (err) {
-          console.error("Failed to update order:", err);
-          alert("Failed to update order status. Please try again.");
-          setFadeOut(false);
-        }
-      }, 300);
-    } else {
-      setFadeOut(true);
-      setTimeout(async () => {
-        try {
-          await onOrderUpdate(orderData.id, newStatus);
-        } catch (err) {
-          console.error("Failed to update order:", err);
-          alert("Failed to update order status. Please try again.");
-          setFadeOut(false);
-        }
-      }, 300);
-    }
+    const actualStatus = newStatus === "Delivery" ? "Ready for Delivery" : newStatus;
+    
+    setStatus(newStatus === "Delivery" ? "Delivery" : newStatus);
+    setFadeOut(true);
+    
+    setTimeout(async () => {
+      try {
+        await onOrderUpdate(orderData.id, actualStatus);
+      } catch (err) {
+        console.error("Failed to update order:", err);
+        alert("Failed to update order status. Please try again.");
+        setFadeOut(false);
+        setStatus(status); // Revert to previous status
+      }
+    }, 300);
   }, [orderData.id, onOrderUpdate, status, validateTransition]);
 
   const toggleItems = useCallback(() => {
     setIsItemsExpanded(prev => !prev);
   }, []);
 
+  const toggleLocation = useCallback(() => {
+    setIsLocationExpanded(prev => !prev);
+  }, []);
+
   const cardStyle = useMemo(() => 
     status === "Delivery" ? "bg-gray-50 border-gray-200" : "bg-white border-green-100",
   [status]);
 
-  const items = orderData.items || [];
-  const customer = orderData.customer || "Unknown Customer";
-  const phone = orderData.phone || "No Phone";
-  const total = orderData.total || 0;
-  const date = orderData.date;
+  // Memoize expensive computations
+  const items = useMemo(() => orderData.items || [], [orderData.items]);
+  const displayName = useMemo(
+    () => orderData.displayName || (isFarmer ? "Unknown Customer" : "Unknown Farm"),
+    [orderData.displayName, isFarmer]
+  );
+  const contactInfo = useMemo(() => orderData.contactInfo || "N/A", [orderData.contactInfo]);
+  const total = useMemo(() => orderData.total || 0, [orderData.total]);
+  const date = useMemo(() => orderData.date, [orderData.date]);
+  const avatarUrl = useMemo(() => orderData.avatarUrl, [orderData.avatarUrl]);
+  const hasLocation = useMemo(
+    () => isCustomer && orderData.farmLocation,
+    [isCustomer, orderData.farmLocation]
+  );
+
+  // Show skeleton if card hasn't been viewed yet and it's for lazy loading
+  if (!isVisible) {
+    return <div ref={cardRef}><OrderCardSkeleton /></div>;
+  }
 
   return (
     <div
@@ -127,8 +251,95 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
               : status}
         </h3>
 
-        <p className="pb-1 font-medium text-gray-700">{customer}</p>
-        <p className="mb-4 text-sm text-gray-500">{phone}</p>
+        {/* Display Name with Avatar for Customers */}
+        <div className="mb-1 flex items-center gap-2">
+          {isCustomer && isVisible && (
+            <div className="relative h-8 w-8 flex-shrink-0">
+              {avatarUrl && !avatarError ? (
+                <>
+                  {!avatarLoaded && (
+                    <div className="h-full w-full animate-pulse rounded-full bg-gray-200" />
+                  )}
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className={`h-full w-full rounded-full object-cover shadow-sm ring-2 ring-emerald-100 transition-opacity duration-300 ${
+                      avatarLoaded ? "opacity-100" : "opacity-0"
+                    }`}
+                    onLoad={() => setAvatarLoaded(true)}
+                    onError={() => {
+                      setAvatarError(true);
+                      setAvatarLoaded(true);
+                    }}
+                    loading="lazy"
+                  />
+                </>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-emerald-100 to-teal-100 text-xs font-semibold text-emerald-700 shadow-sm ring-2 ring-emerald-100">
+                  {displayName.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </div>
+          )}
+          <p className="font-medium text-gray-700">{displayName}</p>
+        </div>
+
+        {/* Contact Info for Farmers */}
+        {isFarmer && (
+          <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>
+        )}
+
+        {/* Location Section for Customers */}
+        {isCustomer && (
+          <div className="mb-4">
+            {hasLocation ? (
+              <div className="flex items-center gap-2">
+                {!isLocationExpanded ? (
+                  <button
+                    onClick={toggleLocation}
+                    className="group inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60 transition-all hover:from-emerald-100 hover:to-teal-100 hover:ring-emerald-300 hover:shadow-sm active:scale-95"
+                  >
+                    <MapPin className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
+                    <span>View Location</span>
+                  </button>
+                ) : (
+                  <div className="flex w-full flex-col gap-2 rounded-lg border border-emerald-200/80 bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/50 p-3 shadow-sm">
+                    <div className="flex items-start justify-between gap-2">
+                      {isResolvingLocation ? (
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+                          <span className="text-xs">Resolving location...</span>
+                        </div>
+                      ) : locationName ? (
+                        <div className="flex flex-1 items-start gap-2">
+                          <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+                          <p className="flex-1 text-xs leading-relaxed text-gray-700">
+                            {locationName}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">Unable to resolve location</p>
+                      )}
+                      <button
+                        onClick={toggleLocation}
+                        className="rounded p-1 text-emerald-600 transition-colors hover:bg-emerald-100 active:scale-95"
+                        aria-label="Hide location"
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">{contactInfo}</p>
+            )}
+          </div>
+        )}
+
+        {!isCustomer && !isFarmer && (
+          <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>
+        )}
 
         {/* Items Dropdown */}
         <div
@@ -152,20 +363,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
           {isItemsExpanded && (
             <div className="px-4 pb-4 space-y-1">
               {items.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between border-b border-gray-100 py-1 text-sm text-gray-600 last:border-none"
-                >
-                  <div className="flex flex-col text-left">
-                    <span className="font-medium">{item.name}</span>
-                    <span className="text-xs text-gray-500">
-                      {item.qty} pcs × ${formatNumber(item.price)}
-                    </span>
-                  </div>
-                  <span className="font-semibold text-gray-700">
-                    ${formatNumber(item.qty * item.price)}
-                  </span>
-                </div>
+                <OrderItem key={`${item.name}-${index}`} item={item} formatNumber={formatNumber} />
               ))}
             </div>
           )}
@@ -214,4 +412,5 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
 
 OrderCard.displayName = 'OrderCard';
 
+export { OrderCardSkeleton };
 export default OrderCard;

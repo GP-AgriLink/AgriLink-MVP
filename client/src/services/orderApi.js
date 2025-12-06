@@ -1,30 +1,33 @@
 import apiClient, { API_ENDPOINTS } from "../config/api";
 
 /**
- * Get all orders for the logged-in farmer
+ * Get all orders for the logged-in user (farmer or customer)
  * GET /api/orders/myorders
  * @param {Object} params - Query parameters
+ * @param {number} params.page - Page number
+ * @param {number} params.limit - Items per page
  * @param {string} params.status - Filter by status: "Incoming", "Ready for Delivery", "Completed", "Cancelled"
- * @returns {Promise<Array>} A list of the farmer's orders
+ * @param {string} params.search - Search term
+ * @returns {Promise<Object>} Paginated response { data: [], page, pages, total }
  */
 export const getMyOrders = async (params = {}) => {
   try {
+    // Build query params object with only valid query parameters
     const queryParams = {};
-    
-    // Add status filter if provided
-    if (params.status) {
-      queryParams.status = params.status;
-    }
-    
+
+    if (params.page) queryParams.page = params.page;
+    if (params.limit) queryParams.limit = params.limit;
+    if (params.status) queryParams.status = params.status;
+    if (params.search) queryParams.search = params.search;
+
     const { data } = await apiClient.get(API_ENDPOINTS.orders.myOrders, {
-      params: queryParams
+      params: queryParams,
     });
-    // The server returns a paginated object { data: [...] }, not just the array.
-    // We must return data.data to get the array of orders.
-    return data.data || []; // Ensure an array is always returned
+    // Return the full pagination object from server
+    return data;
   } catch (error) {
-    console.error("Error fetching farmer orders:", error);
-    throw error; // Re-throw for the component to handle (e.g., setLoading)
+    console.error("Error fetching orders:", error);
+    throw error;
   }
 };
 
