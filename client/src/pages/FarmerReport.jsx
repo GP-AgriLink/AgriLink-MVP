@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthToken, clearAuthData, useAuth } from "../context/AuthContext";
 import { getMyFarmReport } from "../services/farmApi";
-import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Award } from "lucide-react";
+import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Sparkles } from "lucide-react";
 
 const FarmerReportPage = () => {
   const navigate = useNavigate();
@@ -62,11 +62,11 @@ const FarmerReportPage = () => {
     fetchReport();
   }, [navigate, user, month, year]);
 
-  // Loading UI
+  // Loading UI with animation
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
+        <div className="text-center" style={{ animation: "fadeInScale 0.4s ease-out" }}>
           <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
           <p className="text-lg font-medium text-gray-600">Loading report...</p>
         </div>
@@ -78,7 +78,7 @@ const FarmerReportPage = () => {
   if (error) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
-        <div className="max-w-md rounded-xl border border-red-200 bg-red-50 p-8 text-center">
+        <div className="animate-fade-in max-w-md rounded-xl border border-red-200 bg-red-50 p-8 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="mx-auto mb-4 h-16 w-16 text-red-500"
@@ -97,7 +97,7 @@ const FarmerReportPage = () => {
           <p className="mb-4 text-sm text-red-600">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="rounded-lg bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700"
+            className="rounded-lg bg-red-600 px-6 py-2 font-semibold text-white transition hover:bg-red-700 active:scale-95"
           >
             Try Again
           </button>
@@ -122,10 +122,45 @@ const FarmerReportPage = () => {
     return badges[index] || { bg: "bg-gray-100", text: "text-gray-700", icon: `#${index + 1}` };
   };
 
+  // Render animated empty state for sections
+  const renderEmptyState = (icon, message) => (
+    <div
+      className="flex min-h-[200px] flex-col items-center justify-center p-4"
+      style={{ animation: "fadeInScale 0.5s ease-out" }}
+    >
+      <div className="group relative max-w-sm">
+        {/* Gradient border effect */}
+        <div className="absolute -inset-0.5 animate-pulse rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-20 blur-sm transition-opacity duration-300 group-hover:opacity-40" />
+
+        {/* Content */}
+        <div className="relative rounded-2xl bg-white p-6 text-center shadow-lg">
+          <div className="relative mb-4">
+            {React.createElement(icon, {
+              className:
+                "mx-auto h-16 w-16 text-gray-300 transition-transform duration-500 group-hover:scale-110",
+              style: { animation: "float 3s ease-in-out infinite" },
+            })}
+
+            {/* Sparkles */}
+            <Sparkles className="absolute left-1/4 top-2 h-4 w-4 animate-pulse text-emerald-400 opacity-60" />
+            <Sparkles
+              className="absolute right-1/4 top-4 h-3 w-3 animate-pulse text-teal-400 opacity-50"
+              style={{ animationDelay: "200ms" }}
+            />
+          </div>
+
+          <p className="bg-gradient-to-r from-gray-700 to-emerald-600 bg-clip-text text-lg font-semibold text-transparent">
+            {message}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-6 px-4 py-8 sm:px-8">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
             Sales Report
@@ -178,8 +213,11 @@ const FarmerReportPage = () => {
       {/* Stats Overview Cards */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {/* Total Revenue */}
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-md transition-all hover:shadow-xl">
-          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3">
+        <div
+          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
+          style={{ animation: "fadeInScale 0.4s ease-out" }}
+        >
+          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3 transition-transform group-hover:scale-110">
             <DollarSign className="h-6 w-6 text-emerald-600" />
           </div>
           <div className="space-y-1">
@@ -193,8 +231,11 @@ const FarmerReportPage = () => {
         </div>
 
         {/* Orders Completed */}
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:shadow-xl">
-          <div className="absolute right-4 top-4 rounded-full bg-teal-100 p-3">
+        <div
+          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
+          style={{ animation: "fadeInScale 0.5s ease-out" }}
+        >
+          <div className="absolute right-4 top-4 rounded-full bg-teal-100 p-3 transition-transform group-hover:scale-110">
             <ShoppingBag className="h-6 w-6 text-teal-600" />
           </div>
           <div className="space-y-1">
@@ -208,8 +249,11 @@ const FarmerReportPage = () => {
         </div>
 
         {/* Average Order Value */}
-        <div className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:shadow-xl sm:col-span-2 lg:col-span-1">
-          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3">
+        <div
+          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl sm:col-span-2 lg:col-span-1"
+          style={{ animation: "fadeInScale 0.6s ease-out" }}
+        >
+          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3 transition-transform group-hover:scale-110">
             <TrendingUp className="h-6 w-6 text-emerald-600" />
           </div>
           <div className="space-y-1">
@@ -226,7 +270,7 @@ const FarmerReportPage = () => {
       {/* Best Selling Products & Top Customers */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Best Selling Products */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+        <div className="animate-fade-in rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-lg bg-emerald-100 p-2">
               <Package className="h-5 w-5 text-emerald-600" />
@@ -235,10 +279,7 @@ const FarmerReportPage = () => {
           </div>
 
           {!reportData?.bestSellingProducts || reportData.bestSellingProducts.length === 0 ? (
-            <div className="py-8 text-center">
-              <Package className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-              <p className="text-sm text-gray-500">No product sales for this period</p>
-            </div>
+            renderEmptyState(Package, "No product sales for this period")
           ) : (
             <div className="space-y-3">
               {reportData.bestSellingProducts.map((product, index) => {
@@ -246,7 +287,8 @@ const FarmerReportPage = () => {
                 return (
                   <div
                     key={product._id || index}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:border-emerald-200 hover:bg-emerald-50/50"
+                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:scale-[1.02] hover:border-emerald-200 hover:bg-emerald-50/50"
+                    style={{ animation: `fadeInScale ${0.3 + index * 0.1}s ease-out` }}
                   >
                     <div className="flex items-center gap-3">
                       <div
@@ -275,7 +317,7 @@ const FarmerReportPage = () => {
         </div>
 
         {/* Top Customers */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
+        <div className="animate-fade-in rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
           <div className="mb-6 flex items-center gap-3">
             <div className="rounded-lg bg-teal-100 p-2">
               <Users className="h-5 w-5 text-teal-600" />
@@ -284,10 +326,7 @@ const FarmerReportPage = () => {
           </div>
 
           {!reportData?.topCustomers || reportData.topCustomers.length === 0 ? (
-            <div className="py-8 text-center">
-              <Users className="mx-auto mb-3 h-12 w-12 text-gray-300" />
-              <p className="text-sm text-gray-500">No customer data for this period</p>
-            </div>
+            renderEmptyState(Users, "No customer data for this period")
           ) : (
             <div className="space-y-3">
               {reportData.topCustomers.map((customer, index) => {
@@ -301,7 +340,8 @@ const FarmerReportPage = () => {
                 return (
                   <div
                     key={customer.userId || index}
-                    className="rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:border-teal-200 hover:bg-teal-50/50"
+                    className="rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:scale-[1.02] hover:border-teal-200 hover:bg-teal-50/50"
+                    style={{ animation: `fadeInScale ${0.3 + index * 0.1}s ease-out` }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
@@ -334,6 +374,29 @@ const FarmerReportPage = () => {
           )}
         </div>
       </div>
+
+      {/* Keyframe animations */}
+      <style>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+      `}</style>
     </div>
   );
 };
