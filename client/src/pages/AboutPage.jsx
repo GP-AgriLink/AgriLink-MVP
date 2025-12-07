@@ -12,16 +12,16 @@ const AboutPage = () => {
             <Leaf className="w-4 h-4" />
             About Us
           </div>
-          
+
           <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6">
             Meet{' '}
             <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
               AgriLink
             </span>
           </h1>
-          
+
           <p className="text-xl text-gray-600 leading-relaxed">
-            Connecting Egyptian farmers directly with customers who value fresh, 
+            Connecting Egyptian farmers directly with customers who value fresh,
             quality produce and sustainable agriculture.
           </p>
         </div>
@@ -37,14 +37,14 @@ const AboutPage = () => {
               </h2>
               <div className="space-y-4 text-lg text-gray-700">
                 <p>
-                  AgriLink is a digital marketplace platform that bridges the gap 
-                  between local farmers and consumers across Egypt. We eliminate 
-                  intermediaries, allowing farmers to showcase their products and 
+                  AgriLink is a digital marketplace platform that bridges the gap
+                  between local farmers and consumers across Egypt. We eliminate
+                  intermediaries, allowing farmers to showcase their products and
                   connect directly with customers.
                 </p>
                 <p>
-                  Our platform empowers farmers to set fair prices, manage their 
-                  inventory, and grow their business while giving customers access 
+                  Our platform empowers farmers to set fair prices, manage their
+                  inventory, and grow their business while giving customers access
                   to fresh, locally-sourced produce.
                 </p>
               </div>
@@ -84,10 +84,10 @@ const AboutPage = () => {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl font-bold text-gray-900 mb-6">Our Vision</h2>
           <p className="text-xl text-gray-600 leading-relaxed">
-            We envision a future where every Egyptian household has easy access to 
-            farm-fresh produce, and every farmer has the tools and platform to thrive. 
-            AgriLink aims to be the leading marketplace connecting agriculture to 
-            communities across Egypt, promoting sustainable farming and supporting 
+            We envision a future where every Egyptian household has easy access to
+            farm-fresh produce, and every farmer has the tools and platform to thrive.
+            AgriLink aims to be the leading marketplace connecting agriculture to
+            communities across Egypt, promoting sustainable farming and supporting
             local economies.
           </p>
         </div>
@@ -115,7 +115,7 @@ const AboutPage = () => {
                 Collaborative
               </h3>
               <p className="text-gray-600">
-                We work together as a team, combining our skills to build 
+                We work together as a team, combining our skills to build
                 the best solution for farmers and customers.
               </p>
             </div>
@@ -129,7 +129,7 @@ const AboutPage = () => {
                 Tech-Driven
               </h3>
               <p className="text-gray-600">
-                We leverage modern technologies to create a seamless, 
+                We leverage modern technologies to create a seamless,
                 efficient platform for the agricultural community.
               </p>
             </div>
@@ -143,7 +143,7 @@ const AboutPage = () => {
                 Purpose-Driven
               </h3>
               <p className="text-gray-600">
-                We're motivated by making a positive impact on Egyptian 
+                We're motivated by making a positive impact on Egyptian
                 agriculture and supporting local communities.
               </p>
             </div>
@@ -157,10 +157,10 @@ const AboutPage = () => {
           <div className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 md:p-12 text-white">
             <h2 className="text-3xl font-bold mb-4">Built with Modern Technology</h2>
             <p className="text-emerald-100 mb-6 text-lg">
-              We use cutting-edge technologies to ensure a fast, reliable, and 
+              We use cutting-edge technologies to ensure a fast, reliable, and
               secure platform for all users.
             </p>
-            
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 text-center transition-all duration-300 hover:scale-110 hover:bg-white/20 cursor-pointer">
                 <p className="font-semibold">React</p>
@@ -190,7 +190,7 @@ const AboutPage = () => {
             Join Our Community
           </h2>
           <p className="text-lg text-gray-600 mb-8">
-            Whether you're a farmer looking to grow your business or a customer 
+            Whether you're a farmer looking to grow your business or a customer
             seeking fresh produce, we'd love to have you.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -201,7 +201,7 @@ const AboutPage = () => {
               Explore Farms
             </Link>
             <Link
-              to="/contact"
+              to="/contact-us"
               className="px-8 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 hover:scale-105 hover:-translate-y-1 transition-all duration-200"
             >
               Contact Us

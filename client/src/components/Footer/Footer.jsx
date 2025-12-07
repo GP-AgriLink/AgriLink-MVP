@@ -62,7 +62,7 @@ function Footer() {
               </Link>
 
               <Link
-                to="/about"
+                to="/about-us"
                 className="group flex items-center gap-2 text-emerald-800/70 font-medium text-sm cursor-pointer transition-all hover:text-emerald-700 no-underline hover:translate-x-0.5"
                 aria-label="About AgriLink"
               >
