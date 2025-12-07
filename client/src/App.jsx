@@ -1,4 +1,4 @@
-import { Routes, Route, Link, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
@@ -8,12 +8,14 @@ import { OrdersProvider } from "./context/OrdersContext";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LandingPage from "./pages/LandingPage";
+import AboutPage from "./pages/AboutPage";
 import EditProfile from "./pages/EditProfile";
 import ForgotPasswordFlow from "./pages/ForgotPasswordFlow";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import FarmStorePage from "./pages/FarmStorePage";
+import ContactUs from "./pages/ContactUs";
 import CartPage from "./pages/CartPage";
 import DashboardProfileView from "./components/Dashboard/DashboardProfileView";
 import DashboardProductsView from "./components/Dashboard/DashboardProductsView";
@@ -37,22 +39,8 @@ function App() {
             {/* --- PUBLIC ROUTES --- */}
             <Route path="/" element={<LandingPage />} />
 
-            <Route
-              path="/about"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">About Page</h1>
-                </div>
-              }
-            />
-            <Route
-              path="/contact"
-              element={
-                <div className="container mx-auto px-6 py-12">
-                  <h1 className="text-4xl font-bold text-gray-900">Contact Page</h1>
-                </div>
-              }
-            />
+            <Route path="/contact-us" element={<ContactUs />} />
+            <Route path="/about-us" element={<AboutPage />} />
 
             <Route path="/farm/:id" element={<FarmStorePage />} />
             <Route path="/cart" element={<CartPage />} />
