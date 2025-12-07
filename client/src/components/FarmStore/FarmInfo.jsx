@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { reverseGeocodeSmart } from "../../utils/geoCode.js";
 
 // Fallback data in case farm is missing fields
