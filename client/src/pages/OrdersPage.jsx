@@ -180,7 +180,15 @@ const OrdersPage = () => {
 
   // Enhanced skeleton for initial load
   if (loading && statsLoading) {
-    return <OrderPageSkeleton />;
+    return (
+      <>
+        <OrderPageSkeleton />
+        <div className="relative min-h-screen">
+          <LogoSpinner message="Loading cart..." />
+        </div>
+        ;
+      </>
+    );
   }
 
   return (

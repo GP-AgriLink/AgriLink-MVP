@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthToken, clearAuthData, useAuth } from "../context/AuthContext";
 import { getMyFarmReport } from "../services/farmApi";
 import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Sparkles } from "lucide-react";
+import LogoSpinner from "../components/common/LogoSpinner.jsx";
 
 const FarmerReportPage = () => {
   const navigate = useNavigate();
@@ -65,11 +66,8 @@ const FarmerReportPage = () => {
   // Loading UI with animation
   if (loading) {
     return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center" style={{ animation: "fadeInScale 0.4s ease-out" }}>
-          <div className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
-          <p className="text-lg font-medium text-gray-600">Loading report...</p>
-        </div>
+      <div className="relative min-h-screen">
+        <LogoSpinner message="Loading report..." />
       </div>
     );
   }

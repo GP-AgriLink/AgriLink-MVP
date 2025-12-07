@@ -6,6 +6,7 @@ import { archiveProduct, updateProduct } from "../services/farmProductApi";
 import { getDashboardStats } from "../services/farmApi";
 import { toast } from "react-toastify";
 import { ProductsPageSkeleton } from "../components/FarmProduct/Skeletons";
+import LogoSpinner from "../components/common/LogoSpinner.jsx";
 
 /**
  * MyProductsPage - Optimized with smart stats updates
@@ -176,7 +177,14 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
 
   // Show skeleton during initial loading
   if (loading) {
-    return <ProductsPageSkeleton />;
+    return (
+      <>
+        <ProductsPageSkeleton />
+        <div className="relative min-h-screen">
+          <LogoSpinner message="Loading orders..." />
+        </div>
+      </>
+    );
   }
 
   if (error) {
