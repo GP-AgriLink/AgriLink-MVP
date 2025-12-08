@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { ChevronDown, ChevronUp, MapPin } from "lucide-react";
 import { reverseGeocodeSmart } from "../../utils/geoCode";
+import { getStatusLabel } from "../../utils/orderStatusLabels";
 
 // Memoized OrderItem component for better performance
 const OrderItem = memo(({ item, formatNumber }) => (
@@ -11,32 +12,30 @@ const OrderItem = memo(({ item, formatNumber }) => (
         {item.qty} pcs × ${formatNumber(item.price)}
       </span>
     </div>
-    <span className="font-semibold text-gray-700">
-      ${formatNumber(item.qty * item.price)}
-    </span>
+    <span className="font-semibold text-gray-700">${formatNumber(item.qty * item.price)}</span>
   </div>
 ));
 
-OrderItem.displayName = 'OrderItem';
+OrderItem.displayName = "OrderItem";
 
 // Skeleton loader component
 const OrderCardSkeleton = memo(() => (
-  <div className="w-full max-w-[420px] 3xl:max-w-[520px] bg-white border border-green-100 rounded-2xl p-5 sm:p-6 shadow-lg animate-pulse">
+  <div className="w-full max-w-[420px] animate-pulse rounded-2xl border border-green-100 bg-white p-5 shadow-lg sm:p-6 3xl:max-w-[520px]">
     <div className="mb-3 flex justify-between">
-      <div className="h-4 w-24 bg-gray-200 rounded" />
-      <div className="h-6 w-20 bg-gray-200 rounded" />
+      <div className="h-4 w-24 rounded bg-gray-200" />
+      <div className="h-6 w-20 rounded bg-gray-200" />
     </div>
-    <div className="h-6 w-32 bg-gray-200 rounded mb-2" />
-    <div className="flex items-center gap-2 mb-1">
-      <div className="h-8 w-8 bg-gray-200 rounded-full" />
-      <div className="h-5 w-40 bg-gray-200 rounded" />
+    <div className="mb-2 h-6 w-32 rounded bg-gray-200" />
+    <div className="mb-1 flex items-center gap-2">
+      <div className="h-8 w-8 rounded-full bg-gray-200" />
+      <div className="h-5 w-40 rounded bg-gray-200" />
     </div>
-    <div className="h-4 w-48 bg-gray-200 rounded mb-4" />
-    <div className="h-16 bg-gray-100 rounded-xl mb-4" />
+    <div className="mb-4 h-4 w-48 rounded bg-gray-200" />
+    <div className="mb-4 h-16 rounded-xl bg-gray-100" />
   </div>
 ));
 
-OrderCardSkeleton.displayName = 'OrderCardSkeleton';
+OrderCardSkeleton.displayName = "OrderCardSkeleton";
 
 const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const [fadeOut, setFadeOut] = useState(false);
@@ -47,10 +46,10 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [avatarLoaded, setAvatarLoaded] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
-  
+
   const cardRef = useCallback((node) => {
     if (!node) return;
-    
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -60,7 +59,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
       },
       { rootMargin: "100px" }
     );
-    
+
     observer.observe(node);
     return () => observer.disconnect();
   }, []);
@@ -70,8 +69,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   const isCustomer = userRole === "customer";
 
   // Determine the initial status
-  const initialStatus =
-    orderData.status === "Ready for Delivery" ? "Delivery" : orderData.status;
+  const initialStatus = orderData.status === "Ready for Delivery" ? "Delivery" : orderData.status;
   const [status, setStatus] = useState(initialStatus);
 
   useEffect(() => {
@@ -87,10 +85,10 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
 
     let mounted = true;
     let timeoutId;
-    
+
     const resolveLocation = async () => {
       setIsResolvingLocation(true);
-      
+
       // Set a timeout fallback
       timeoutId = setTimeout(() => {
         if (mounted && !locationName) {
@@ -99,7 +97,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
           setIsResolvingLocation(false);
         }
       }, 5000);
-      
+
       try {
         const name = await reverseGeocodeSmart(orderData.farmLocation);
         if (mounted) {
@@ -133,9 +131,10 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
     };
   }, [orderData.farmLocation, isCustomer, isLocationExpanded, locationName]);
 
-  const formatNumber = useCallback((num) =>
-    typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00",
-  []);
+  const formatNumber = useCallback(
+    (num) => (typeof num === "number" && !isNaN(num) ? num.toFixed(2) : "0.00"),
+    []
+  );
 
   // Validate order status transitions
   const validateTransition = useCallback((currentStatus, newStatus) => {
@@ -150,57 +149,67 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
     // From "Incoming": can only go to "Ready for Delivery" or "Cancelled"
     if (actualCurrent === "Incoming") {
       if (actualNew !== "Ready for Delivery" && actualNew !== "Cancelled") {
-        return { valid: false, message: 'Incoming orders can only be set to "Ready for Delivery" or "Cancelled".' };
+        return {
+          valid: false,
+          message: 'Incoming orders can only be set to "Ready for Delivery" or "Cancelled".',
+        };
       }
     }
 
     // From "Ready for Delivery": can only go to "Completed" or "Cancelled"
     if (actualCurrent === "Ready for Delivery") {
       if (actualNew !== "Completed" && actualNew !== "Cancelled") {
-        return { valid: false, message: 'Orders ready for delivery can only be set to "Completed" or "Cancelled".' };
+        return {
+          valid: false,
+          message: 'Orders ready for delivery can only be set to "Completed" or "Cancelled".',
+        };
       }
     }
 
     return { valid: true };
   }, []);
 
-  const handleClick = useCallback(async (newStatus) => {
-    if (newStatus === status) return;
+  const handleClick = useCallback(
+    async (newStatus) => {
+      if (newStatus === status) return;
 
-    const validation = validateTransition(status, newStatus);
-    if (!validation.valid) {
-      alert(validation.message);
-      return;
-    }
-
-    const actualStatus = newStatus === "Delivery" ? "Ready for Delivery" : newStatus;
-    
-    setStatus(newStatus === "Delivery" ? "Delivery" : newStatus);
-    setFadeOut(true);
-    
-    setTimeout(async () => {
-      try {
-        await onOrderUpdate(orderData.id, actualStatus);
-      } catch (err) {
-        console.error("Failed to update order:", err);
-        alert("Failed to update order status. Please try again.");
-        setFadeOut(false);
-        setStatus(status); // Revert to previous status
+      const validation = validateTransition(status, newStatus);
+      if (!validation.valid) {
+        alert(validation.message);
+        return;
       }
-    }, 300);
-  }, [orderData.id, onOrderUpdate, status, validateTransition]);
+
+      const actualStatus = newStatus === "Delivery" ? "Ready for Delivery" : newStatus;
+
+      setStatus(newStatus === "Delivery" ? "Delivery" : newStatus);
+      setFadeOut(true);
+
+      setTimeout(async () => {
+        try {
+          await onOrderUpdate(orderData.id, actualStatus);
+        } catch (err) {
+          console.error("Failed to update order:", err);
+          alert("Failed to update order status. Please try again.");
+          setFadeOut(false);
+          setStatus(status); // Revert to previous status
+        }
+      }, 300);
+    },
+    [orderData.id, onOrderUpdate, status, validateTransition]
+  );
 
   const toggleItems = useCallback(() => {
-    setIsItemsExpanded(prev => !prev);
+    setIsItemsExpanded((prev) => !prev);
   }, []);
 
   const toggleLocation = useCallback(() => {
-    setIsLocationExpanded(prev => !prev);
+    setIsLocationExpanded((prev) => !prev);
   }, []);
 
-  const cardStyle = useMemo(() => 
-    status === "Delivery" ? "bg-gray-50 border-gray-200" : "bg-white border-green-100",
-  [status]);
+  const cardStyle = useMemo(
+    () => (status === "Delivery" ? "bg-gray-50 border-gray-200" : "bg-white border-green-100"),
+    [status]
+  );
 
   // Memoize expensive computations
   const items = useMemo(() => orderData.items || [], [orderData.items]);
@@ -217,15 +226,27 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
     [isCustomer, orderData.farmLocation]
   );
 
+  // Get customer-friendly status label
+  const displayStatus = useMemo(() => {
+    // Map internal "Delivery" back to "Ready for Delivery" for label lookup
+    const actualStatus = status === "Delivery" ? "Ready for Delivery" : status;
+    return getStatusLabel(actualStatus, userRole);
+  }, [status, userRole]);
+
   // Show skeleton if card hasn't been viewed yet and it's for lazy loading
   if (!isVisible) {
-    return <div ref={cardRef}><OrderCardSkeleton /></div>;
+    return (
+      <div ref={cardRef}>
+        <OrderCardSkeleton />
+      </div>
+    );
   }
 
   return (
     <div
-      className={`w-full max-w-[420px] 3xl:max-w-[520px] ${cardStyle} flex flex-col justify-between rounded-2xl border p-5 shadow-lg transition-all duration-300 sm:p-6 ${fadeOut ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
-        }`}
+      className={`w-full max-w-[420px] 3xl:max-w-[520px] ${cardStyle} flex flex-col justify-between rounded-2xl border p-5 shadow-lg transition-all duration-300 sm:p-6 ${
+        fadeOut ? "translate-y-2 opacity-0" : "translate-y-0 opacity-100"
+      }`}
     >
       <div>
         {/* Order Info */}
@@ -241,14 +262,11 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
         </div>
 
         <h3
-          className={`mb-1 text-left text-lg font-semibold ${status === "Delivery" ? "text-green-700" : "text-gray-800"
-            }`}
+          className={`mb-1 text-left text-lg font-semibold ${
+            status === "Delivery" ? "text-green-700" : "text-gray-800"
+          }`}
         >
-          {status === "Incoming"
-            ? "Incoming Order"
-            : status === "Delivery"
-              ? "Delivery Order"
-              : status}
+          {displayStatus} Order
         </h3>
 
         {/* Display Name with Avatar for Customers */}
@@ -285,9 +303,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
         </div>
 
         {/* Contact Info for Farmers */}
-        {isFarmer && (
-          <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>
-        )}
+        {isFarmer && <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>}
 
         {/* Location Section for Customers */}
         {isCustomer && (
@@ -297,7 +313,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
                 {!isLocationExpanded ? (
                   <button
                     onClick={toggleLocation}
-                    className="group inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60 transition-all hover:from-emerald-100 hover:to-teal-100 hover:ring-emerald-300 hover:shadow-sm active:scale-95"
+                    className="group inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-emerald-50 to-teal-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-emerald-200/60 transition-all hover:from-emerald-100 hover:to-teal-100 hover:shadow-sm hover:ring-emerald-300 active:scale-95"
                   >
                     <MapPin className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
                     <span>View Location</span>
@@ -337,18 +353,17 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
           </div>
         )}
 
-        {!isCustomer && !isFarmer && (
-          <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>
-        )}
+        {!isCustomer && !isFarmer && <p className="mb-4 text-sm text-gray-500">{contactInfo}</p>}
 
         {/* Items Dropdown */}
         <div
-          className={`${status === "Delivery" ? "border-green-200 bg-gray-100" : "border-green-100 bg-green-50"
-            } mb-4 rounded-xl border overflow-hidden`}
+          className={`${
+            status === "Delivery" ? "border-green-200 bg-gray-100" : "border-green-100 bg-green-50"
+          } mb-4 overflow-hidden rounded-xl border`}
         >
           <button
             onClick={toggleItems}
-            className="w-full flex items-center justify-between p-4 text-left hover:opacity-80 transition-opacity"
+            className="flex w-full items-center justify-between p-4 text-left transition-opacity hover:opacity-80"
           >
             <span className="text-sm font-semibold tracking-wide text-gray-700">
               Items ({items.length})
@@ -361,7 +376,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
           </button>
 
           {isItemsExpanded && (
-            <div className="px-4 pb-4 space-y-1">
+            <div className="space-y-1 px-4 pb-4">
               {items.map((item, index) => (
                 <OrderItem key={`${item.name}-${index}`} item={item} formatNumber={formatNumber} />
               ))}
@@ -410,7 +425,7 @@ const OrderCard = memo(({ order, onOrderUpdate, userRole }) => {
   );
 });
 
-OrderCard.displayName = 'OrderCard';
+OrderCard.displayName = "OrderCard";
 
 export { OrderCardSkeleton };
 export default OrderCard;

@@ -17,6 +17,7 @@ const isCustomer = (user) => user?.role === "customer";
 const OrdersPage = () => {
   const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState("incoming");
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   // Use OrdersContext for orders data
   const {
@@ -83,18 +84,68 @@ const OrdersPage = () => {
     fetchStats();
   }, [fetchStats]);
 
+  // Mark as initially loaded once both stats and orders have loaded at least once
+  useEffect(() => {
+    if (!loading && !statsLoading && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true);
+    }
+  }, [loading, statsLoading, hasInitiallyLoaded]);
+
   // Initialize status filter on mount
   useEffect(() => {
     const statusValue = getStatusFromFilter(activeFilter);
     setStatusFilter(statusValue);
   }, [activeFilter, getStatusFromFilter, setStatusFilter]);
 
-  // Transform orders from context to UI format
+  const lastRefreshTimeRef = useRef(0);
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastRefreshTimeRef.current;
+        const THROTTLE_INTERVAL = 60000; // 60 seconds
+
+        // Only refresh if 60+ seconds passed since last refresh
+        if (timeSinceLastRefresh >= THROTTLE_INTERVAL) {
+          lastRefreshTimeRef.current = now;
+          refreshOrders();
+          fetchStats();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [refreshOrders, fetchStats]);
+
+  const prevStatsRef = useRef(null);
+  useEffect(() => {
+    if (!hasInitiallyLoaded || statsLoading) {
+      prevStatsRef.current = orderStats;
+      return;
+    }
+
+    const prev = prevStatsRef.current;
+    const current = orderStats;
+
+    // Explicit comparison of each stat property
+    if (
+      prev &&
+      (prev.Incoming !== current.Incoming ||
+        prev["Ready for Delivery"] !== current["Ready for Delivery"] ||
+        prev.Completed !== current.Completed ||
+        prev.Cancelled !== current.Cancelled)
+    ) {
+      refreshOrders();
+    }
+
+    prevStatsRef.current = current;
+  }, [orderStats, hasInitiallyLoaded, statsLoading, refreshOrders]);
+
   const orders = useMemo(() => {
     if (!ordersData || !Array.isArray(ordersData)) return [];
 
     return ordersData.map((o) => {
-      // Role-based data extraction
       const displayName = isCustomer(user)
         ? o.farm?.farmName || "Unknown Farm"
         : o.user?.firstName
@@ -149,13 +200,11 @@ const OrdersPage = () => {
       setActiveFilter(filterValue);
       const statusValue = getStatusFromFilter(filterValue);
       setStatusFilter(statusValue);
-      await refreshOrders();
       await fetchStats();
     },
-    [getStatusFromFilter, setStatusFilter, refreshOrders, fetchStats]
+    [getStatusFromFilter, setStatusFilter, fetchStats]
   );
 
-  // Memoize empty state message based on user role and search state
   const emptyMessage = useMemo(() => {
     if (activeSearch) {
       return `No orders found for "${activeSearch}". Try adjusting your search.`;
@@ -178,15 +227,14 @@ const OrdersPage = () => {
     [emptyMessage, activeSearch]
   );
 
-  // Enhanced skeleton for initial load
-  if (loading && statsLoading) {
+  // Show full skeleton only on true initial load, not on filter changes
+  if (!hasInitiallyLoaded && loading && statsLoading) {
     return (
       <>
         <OrderPageSkeleton />
         <div className="relative min-h-screen">
-          <LogoSpinner message="Loading cart..." />
+          <LogoSpinner message="Loading orders..." />
         </div>
-        ;
       </>
     );
   }
@@ -198,6 +246,7 @@ const OrdersPage = () => {
           orderStats={orderStats}
           activeFilter={activeFilter}
           onStatClick={handleFilterClick}
+          userRole={user?.role}
         />
 
         {/* Always render child components - they handle their own empty states */}

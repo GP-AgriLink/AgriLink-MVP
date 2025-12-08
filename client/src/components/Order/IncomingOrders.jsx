@@ -4,17 +4,23 @@ import { OrdersGridSkeleton } from "./Skeletons";
 import OrderSearchBar from "./OrderSearchBar";
 import { useOrders } from "../../context/OrdersContext";
 import { Sparkles } from "lucide-react";
+import { getFilterLabel } from "../../utils/orderStatusLabels";
 
 const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, isLoading }) => {
   const { activeSearch, searchLoading } = useOrders();
+
+  // Get dynamic label based on user role
+  const pageTitle = getFilterLabel(activeFilter, userRole) + " Orders";
+  const description =
+    activeFilter === "incoming"
+      ? "Manage your pending orders awaiting confirmation."
+      : `Track orders that are currently ${userRole === "customer" ? "ready for pickup" : "being delivered"}.`;
 
   if (isLoading) {
     return (
       <section className="space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
-            {activeFilter === "incoming" ? "Incoming Orders" : "Delivery Orders"}
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">{pageTitle}</h2>
           <div className="flex items-center gap-2">
             <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-200" />
             <div className="h-7 w-24 animate-pulse rounded-full bg-gray-200" />
@@ -29,9 +35,7 @@ const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, is
     <section className="space-y-6">
       {/* Header with Search and Counter */}
       <div className="animate-fade-in flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
-          {activeFilter === "incoming" ? "Incoming Orders" : "Delivery Orders"}
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">{pageTitle}</h2>
 
         {/* Compact Search + Counter */}
         <div className="flex flex-wrap items-center gap-3">
@@ -49,11 +53,7 @@ const IncomingOrders = memo(({ orders, onOrderUpdate, activeFilter, userRole, is
       </div>
 
       {/* Description */}
-      <p className="animate-fade-in text-left text-sm text-gray-500">
-        {activeFilter === "incoming"
-          ? "Manage your pending orders awaiting confirmation."
-          : "Track orders that are currently being delivered."}
-      </p>
+      <p className="animate-fade-in text-left text-sm text-gray-500">{description}</p>
 
       {/* Orders Section */}
       {orders.length > 0 ? (

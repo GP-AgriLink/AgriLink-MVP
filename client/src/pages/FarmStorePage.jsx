@@ -56,7 +56,7 @@ const FarmStorePage = () => {
         setFarm(farmRes.data);
 
         const allProds = allProductsRes.data.data || [];
-        const cats = allProds.flatMap((p) => p.categories || []);
+        const cats = allProds.map((p) => p.category).filter((cat) => cat);
         setAllCategories([...new Set(cats)]);
       } catch (err) {
         console.error("Error fetching initial data:", err);

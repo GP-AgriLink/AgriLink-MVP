@@ -34,7 +34,7 @@ export const OrdersProvider = ({ children }) => {
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
-    status: "", // empty means all statuses
+    status: "Incoming", // Default to "Incoming" filter
     search: "",
   });
 

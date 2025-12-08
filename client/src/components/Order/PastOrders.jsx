@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import OrderSearchBar from "./OrderSearchBar";
 import { TableSkeleton } from "./Skeletons";
 import { useOrders } from "../../context/OrdersContext";
+import { getFilterLabel } from "../../utils/orderStatusLabels";
 
 /**
  * Format date safely - utility function outside component to avoid recreation
@@ -32,6 +33,13 @@ const formatDate = (order) => {
 const PastOrders = memo(({ orders, activeFilter, userRole, isLoading }) => {
   const { activeSearch, searchLoading } = useOrders();
 
+  // Get dynamic label based on user role
+  const pageTitle = getFilterLabel(activeFilter, userRole) + " Orders";
+  const description =
+    activeFilter === "completed"
+      ? "Review your completed deliveries for reference."
+      : "Here you can review your cancelled orders.";
+
   // Memoize filtered counts to avoid re-filtering on every render
   const completedCount = useMemo(
     () => orders.filter((o) => o.status === "Completed").length,
@@ -47,9 +55,7 @@ const PastOrders = memo(({ orders, activeFilter, userRole, isLoading }) => {
     return (
       <section className="relative space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
-            {activeFilter === "completed" ? "Completed Orders" : "Cancelled Orders"}
-          </h2>
+          <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">{pageTitle}</h2>
           <div className="flex items-center gap-2">
             <div className="h-8 w-48 animate-pulse rounded-lg bg-gray-200" />
             <div className="h-7 w-24 animate-pulse rounded-full bg-gray-200" />
@@ -65,9 +71,7 @@ const PastOrders = memo(({ orders, activeFilter, userRole, isLoading }) => {
     <section className="relative space-y-6">
       {/* Header with Search and Counter */}
       <div className="animate-fade-in flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">
-          {activeFilter === "completed" ? "Completed Orders" : "Cancelled Orders"}
-        </h2>
+        <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">{pageTitle}</h2>
 
         {/* Search + Status Counter */}
         <div className="flex flex-wrap items-center gap-3">
@@ -94,11 +98,7 @@ const PastOrders = memo(({ orders, activeFilter, userRole, isLoading }) => {
       </div>
 
       {/* Description */}
-      <p className="animate-fade-in text-left text-sm text-gray-500">
-        {activeFilter === "completed"
-          ? "Review your completed deliveries for reference."
-          : "Here you can review your cancelled orders."}
-      </p>
+      <p className="animate-fade-in text-left text-sm text-gray-500">{description}</p>
 
       {/* Table Section */}
       <div className="animate-fade-in relative">
