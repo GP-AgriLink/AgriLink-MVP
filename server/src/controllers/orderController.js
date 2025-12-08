@@ -216,7 +216,7 @@ const getMyOrders = async (req, res) => {
       // Search: "Customer searching for a specific Farm"
       if (req.query.search) {
         const matchingFarms = await Farm.find({
-          farmName: { $regex: req.query.search, $options: 'i' },
+          $text: { $search: req.query.search }
         }).select('_id');
 
         const farmIds = matchingFarms.map((farm) => farm._id);
@@ -238,15 +238,11 @@ const getMyOrders = async (req, res) => {
         select: 'firstName lastName phone email',
       };
 
-      // Search: "Farmer searching for a Customer (Name OR Phone)"
+      // Search: "Farmer searching for a Customer (Name, Phone, Email)"
       if (req.query.search) {
-        // 1. Find users who match Name OR Phone
+        // 1. Find users using Text Index
         const matchingUsers = await User.find({
-          $or: [
-            { firstName: { $regex: req.query.search, $options: 'i' } },
-            { lastName: { $regex: req.query.search, $options: 'i' } },
-            { phone: { $regex: req.query.search, $options: 'i' } },
-          ],
+          $text: { $search: req.query.search }
         }).select('_id');
 
         // 2. Extract IDs
@@ -263,6 +259,7 @@ const getMyOrders = async (req, res) => {
     }
 
     // --- EXECUTE QUERY ---
+    // Indexes on Order (farm+status+createdAt or user+createdAt) will automatically optimize this
     const total = await Order.countDocuments(query);
 
     const orders = await Order.find(query)

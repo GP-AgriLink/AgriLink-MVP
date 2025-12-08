@@ -68,10 +68,7 @@ const getMyProducts = async (req, res) => {
 
         // --- ADD SEARCH LOGIC ---
         if (req.query.search) {
-            query.name = { 
-                $regex: req.query.search, // The search term
-                $options: 'i' // 'i' for case-insensitivity
-            };
+            query.$text = { $search: req.query.search };
         }
 
         // status filters
@@ -127,10 +124,7 @@ const getProductsByFarm = async (req, res) => {
 
         // --- ADD SEARCH LOGIC ---
         if (req.query.search) {
-            query.name = { 
-                $regex: req.query.search, 
-                $options: 'i' 
-            };
+            query.$text = { $search: req.query.search };
         }
 
         const total = await Product.countDocuments(query);
@@ -251,9 +245,6 @@ const getAllCategories = async (req, res) => {
         res.status(500).send('Server Error');
     }
 };
-
-
-
 
 export {
   createProduct,

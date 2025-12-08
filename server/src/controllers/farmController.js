@@ -295,7 +295,7 @@ const getPublicStats = async (req, res) => {
       newProductsThisWeek,
     ] = await Promise.all([
       // Count all Farms
-      Farm.countDocuments({}),
+      Farm.estimatedDocumentCount(),
 
       // Count all visible Products
       Product.countDocuments({ status: "active", isArchived: false }),
