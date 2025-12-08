@@ -7,7 +7,7 @@ import {
   getProductsByFarm,
   updateProduct,
   archiveProduct,
-  getAllCategories
+  getAllCategories,
 } from "../controllers/productController.js";
 
 const router = express.Router();
@@ -28,19 +28,19 @@ router.post(
       min: 0,
     }),
 
-    body('imageUrl', 'Image URL is optional').optional().isURL(),
-    body('categories', 'Categories must be an array of strings').optional().isArray()
+    body("imageUrl", "Image URL must be a valid URL")
+      .optional({ checkFalsy: true })
+      .isURL(),
+    body("category", "Category is required").notEmpty().trim(),
   ],
   createProduct
 );
-
-
 
 // --- NEW: Add this route at the top ---
 // @route   GET /api/products/categories
 // @desc    Get all unique product categories
 // @access  Public
-router.get('/categories', getAllCategories);
+router.get("/categories", getAllCategories);
 
 // @route   GET /api/products/myproducts
 // @desc    Get all products for the logged-in farmer
@@ -55,9 +55,13 @@ router.get("/farm/:farmId", getProductsByFarm);
 // @route   PUT /api/products/:id
 // @desc    Update a product
 // @access  Private
-router.put("/:id", protect, isFarmer,[ 
-        body('categories', 'Categories must be an array of strings').optional().isArray()
-    ], updateProduct);
+router.put(
+  "/:id",
+  protect,
+  isFarmer,
+  [body("category", "Category must be a valid string").optional().trim()],
+  updateProduct
+);
 
 // @route   DELETE /api/products/:id
 // @desc    Delete a product

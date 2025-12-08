@@ -50,9 +50,17 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
   const [allCategories, setAllCategories] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
 
+  // Helper function to get the final category value
+  const getFinalCategory = useCallback((category, customCategory) => {
+    if (category === "Other" || !CATEGORY_OPTIONS.includes(category)) {
+      return sanitizeString(customCategory.trim());
+    }
+    return category;
+  }, []);
+
   useEffect(() => {
     if (product && isOpen) {
-      const loadedCategory = (product.categories && product.categories[0]) || "";
+      const loadedCategory = product.category || "";
       let initialCategory = "";
       let initialCustomCategory = "";
 
@@ -79,7 +87,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       setImagePreview(product.imageUrl || "");
       setErrors({});
       setIsValid(true);
-      setShowCustomInput(false);
+      setShowCustomInput(initialCategory === "Other");
       setUploadProgress(0);
 
       const fetchCategories = async () => {
@@ -207,14 +215,14 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
     if (!sanitizedOriginalProduct) return false;
     if (imageFile) return true;
 
-    const currentFinalCategory =
-      sanitizedFormData.category === "Other" || showCustomInput
-        ? sanitizedFormData.customCategory
-        : sanitizedFormData.category;
-    const originalFinalCategory =
-      sanitizedOriginalProduct.category === "Other"
-        ? sanitizedOriginalProduct.customCategory
-        : sanitizedOriginalProduct.category;
+    const currentFinalCategory = getFinalCategory(
+      sanitizedFormData.category,
+      sanitizedFormData.customCategory
+    );
+    const originalFinalCategory = getFinalCategory(
+      sanitizedOriginalProduct.category,
+      sanitizedOriginalProduct.customCategory
+    );
 
     if (sanitizedFormData.name !== sanitizedOriginalProduct.name) return true;
     if (sanitizedFormData.price !== sanitizedOriginalProduct.price) return true;
@@ -226,7 +234,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
     if (currentFinalCategory !== originalFinalCategory) return true;
 
     return false;
-  }, [sanitizedFormData, sanitizedOriginalProduct, imageFile, showCustomInput]);
+  }, [sanitizedFormData, sanitizedOriginalProduct, imageFile, getFinalCategory]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -256,17 +264,17 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
           changedData.imageUrl = sanitizedFormData.imageUrl;
         }
 
-        const currentFinalCategory =
-          sanitizedFormData.category === "Other" || showCustomInput
-            ? sanitizeString(sanitizedFormData.customCategory.trim())
-            : sanitizedFormData.category;
-        const originalFinalCategory =
-          sanitizedOriginalProduct.category === "Other"
-            ? sanitizeString(sanitizedOriginalProduct.customCategory.trim())
-            : sanitizedOriginalProduct.category;
+        const currentFinalCategory = getFinalCategory(
+          sanitizedFormData.category,
+          sanitizedFormData.customCategory
+        );
+        const originalFinalCategory = getFinalCategory(
+          sanitizedOriginalProduct.category,
+          sanitizedOriginalProduct.customCategory
+        );
 
         if (currentFinalCategory !== originalFinalCategory) {
-          changedData.categories = [currentFinalCategory];
+          changedData.category = currentFinalCategory;
         }
 
         const newStatus =
@@ -300,6 +308,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       sanitizedOriginalProduct,
       showCustomInput,
       imageFile,
+      getFinalCategory,
       onSubmit,
       onClose,
     ]

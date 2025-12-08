@@ -35,9 +35,9 @@ const productSchema = new Schema(
       default: "active",
     },
 
-    categories: {
-        type: [String], 
-        required: false,
+    category: {
+        type: String, 
+        required: true,
         index: true // Add an index for faster searching
     },
 

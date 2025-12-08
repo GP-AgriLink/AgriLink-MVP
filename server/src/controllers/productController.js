@@ -22,14 +22,14 @@ const createProduct = async (req, res) => {
         .json({ message: "Farm profile not found for this user." });
     }
 
-    const { name, price, unit, stock,categories, imageUrl } = req.body;
+    const { name, price, unit, stock,category, imageUrl } = req.body;
 
     const newProduct = new Product({
       name,
       price,
       unit,
       stock,
-      categories,
+      category,
       imageUrl,
       farm: farm._id, // Use the Farm's ID, not the User's ID
     });
@@ -63,7 +63,7 @@ const getMyProducts = async (req, res) => {
 
         // --- Add category filter if it exists ---
         if (req.query.category) {
-            query.categories = { $in: [req.query.category] };
+            query.category = req.query.category;
         }
 
         // --- ADD SEARCH LOGIC ---
@@ -119,7 +119,7 @@ const getProductsByFarm = async (req, res) => {
         };
 
         if (req.query.category) {
-            query.categories = { $in: [req.query.category] };
+            query.category = req.query.category;
         }
 
         // --- ADD SEARCH LOGIC ---
@@ -176,7 +176,7 @@ const updateProduct = async (req, res) => {
       status,
       stock,
       isArchived,
-      categories
+      category
     } = req.body;
     if (name) product.name = name;
     if (description) product.description = description;
@@ -186,7 +186,7 @@ const updateProduct = async (req, res) => {
     if (status) product.status = status;
     if (stock !== undefined) product.stock = stock;
     if (isArchived !== undefined) product.isArchived = isArchived;
-    if (categories) product.categories = categories;
+    if (category) product.category = category;
 
     product = await product.save();
     res.json(product);
@@ -236,9 +236,9 @@ const archiveProduct = async (req, res) => {
  */
 const getAllCategories = async (req, res) => {
     try {
-        // 'distinct' scans the 'categories' field across all products
+        // 'distinct' scans the 'category' field across all products
         // and returns an array of unique values.
-        const categories = await Product.find().distinct('categories');
+        const categories = await Product.find().distinct('category');
         res.json(categories);
     } catch (error) {
         console.error(error.message);
