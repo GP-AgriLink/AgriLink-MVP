@@ -47,5 +47,13 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
 
+// --- Indexes ---
+// Text Index: Allows farmers to quickly search for customers by name, email, or phone
+userSchema.index({ firstName: 'text', lastName: 'text', email: 'text', phone: 'text' });
+
+// --- Global Index (For Landing Page Stats) ---
+// Optimizes "Total Customers Joined"
+userSchema.index({ role: 1 });
+
 const User = mongoose.model('User', userSchema);
 export default User;

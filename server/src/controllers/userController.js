@@ -302,90 +302,82 @@ const getCustomerReport = async (req, res) => {
     const startDate = new Date(year, 0, 1, 0, 0, 0); // Jan 1st
     const endDate = new Date(year, 11, 31, 23, 59, 59); // Dec 31st
 
-    // --- Run all aggregations in parallel ---
-    const [spendingSummaryData, favoriteFarmData, topProductsData] =
-      await Promise.all([
-        // Query 1: Spending Summary
-        Order.aggregate([
-          {
-            $match: {
-              user: userId,
-              status: "Completed",
-              createdAt: { $gte: startDate, $lte: endDate },
+    // --- OPTIMIZATION: Single Pipeline with $facet ---
+    // Merges 3 separate queries into 1, reducing database scans by 66%
+    const reportData = await Order.aggregate([
+      // 1. Common Filter (Uses Index: { user: 1, createdAt: -1 })
+      {
+        $match: {
+          user: userId,
+          status: "Completed",
+          createdAt: { $gte: startDate, $lte: endDate },
+        },
+      },
+      // 2. Split into multiple analysis pipelines
+      {
+        $facet: {
+          // Pipeline A: Spending Summary
+          spendingSummary: [
+            {
+              $group: {
+                _id: null,
+                totalSpent: { $sum: "$totalAmount" },
+                totalOrdersPlaced: { $sum: 1 },
+              },
             },
-          },
-          {
-            $group: {
-              _id: null,
-              totalSpent: { $sum: "$totalAmount" },
-              totalOrdersPlaced: { $sum: 1 },
+          ],
+          // Pipeline B: Favorite Farm (by total spent)
+          favoriteFarm: [
+            {
+              $group: {
+                _id: "$farm",
+                totalSpent: { $sum: "$totalAmount" },
+                ordersCount: { $sum: 1 },
+              },
             },
-          },
-        ]),
+            { $sort: { totalSpent: -1 } },
+            { $limit: 1 },
+            {
+              $lookup: {
+                from: "farms",
+                localField: "_id",
+                foreignField: "_id",
+                as: "farmDetails",
+              },
+            },
+            { $unwind: "$farmDetails" },
+            {
+              $project: {
+                _id: 0,
+                farmName: "$farmDetails.farmName",
+                totalSpent: 1,
+                ordersCount: 1,
+              },
+            },
+          ],
+          // Pipeline C: Top Products (by quantity)
+          topProducts: [
+            { $unwind: "$orderItems" },
+            {
+              $group: {
+                _id: "$orderItems.productId",
+                name: { $first: "$orderItems.name" },
+                totalQuantity: { $sum: "$orderItems.quantity" },
+              },
+            },
+            { $sort: { totalQuantity: -1 } },
+            { $limit: 3 },
+            { $project: { _id: 0, name: 1, totalQuantity: 1 } },
+          ],
+        },
+      },
+    ]);
 
-        // Query 2: Favorite Farm (by total spent)
-        Order.aggregate([
-          {
-            $match: {
-              user: userId,
-              status: "Completed",
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          {
-            $group: {
-              _id: "$farm",
-              totalSpent: { $sum: "$totalAmount" },
-              ordersCount: { $sum: 1 },
-            },
-          },
-          { $sort: { totalSpent: -1 } },
-          { $limit: 1 },
-          {
-            $lookup: {
-              from: "farms",
-              localField: "_id",
-              foreignField: "_id",
-              as: "farmDetails",
-            },
-          },
-          { $unwind: "$farmDetails" },
-          {
-            $project: {
-              _id: 0,
-              farmName: "$farmDetails.farmName",
-              totalSpent: 1,
-              ordersCount: 1,
-            },
-          },
-        ]),
+    // Extract results (Facet always returns an array with one document)
+    const results = reportData[0];
 
-        // Query 3: Top Products (by quantity)
-        Order.aggregate([
-          {
-            $match: {
-              user: userId,
-              status: "Completed",
-              createdAt: { $gte: startDate, $lte: endDate },
-            },
-          },
-          { $unwind: "$orderItems" },
-          {
-            $group: {
-              _id: "$orderItems.productId",
-              name: { $first: "$orderItems.name" },
-              totalQuantity: { $sum: "$orderItems.quantity" },
-            },
-          },
-          { $sort: { totalQuantity: -1 } },
-          { $limit: 3 },
-          { $project: { _id: 0, name: 1, totalQuantity: 1 } },
-        ]),
-      ]);
-
-    // --- Format the final response ---
     // Get the result from the aggregation, or a default object
-    const spendingResult = spendingSummaryData[0] || {
+    const spendingResult = results.spendingSummary[0] || {
       totalSpent: 0,
       totalOrdersPlaced: 0,
     };
@@ -397,8 +389,8 @@ const getCustomerReport = async (req, res) => {
         totalSpent: spendingResult.totalSpent,
         totalOrdersPlaced: spendingResult.totalOrdersPlaced,
       },
-      favoriteFarm: favoriteFarmData[0] || null, // Can be null if no orders
-      topProducts: topProductsData,
+      favoriteFarm: results.favoriteFarm[0] || null, // Can be null if no orders
+      topProducts: results.topProducts,
     };
 
     res.json(report);

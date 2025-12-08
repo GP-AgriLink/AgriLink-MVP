@@ -25,5 +25,8 @@ const farmSchema = new mongoose.Schema({
 // Geospatial index
 farmSchema.index({ location: '2dsphere' });
 
+// Text Index: For searching farms by name on the landing page
+farmSchema.index({ farmName: 'text' });
+
 const Farm = mongoose.model('Farm', farmSchema);
 export default Farm;

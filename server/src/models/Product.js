@@ -59,5 +59,20 @@ const productSchema = new Schema(
   }
 );
 
+// --- Indexes ---
+// Compound Index: Optimizes dashboard filtering by farm + status + archived state
+productSchema.index({ farm: 1, status: 1, isArchived: 1 });
+
+// Text Index: Enables high-performance text search on name and description
+// Weights give 'name' higher priority in search results than 'description'
+productSchema.index(
+  { name: "text", description: "text" },
+  { weights: { name: 10, description: 5 } }
+);
+
+// --- Global Index (For Landing Page Stats) ---
+// Optimizes "Total Active Products" & "New Products This Week" queries
+productSchema.index({ status: 1, isArchived: 1, createdAt: -1 });
+
 const Product = mongoose.model("Product", productSchema);
 export default Product;
