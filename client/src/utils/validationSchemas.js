@@ -196,10 +196,9 @@ export const productValidationSchema = Yup.object({
     .min(0, "Stock cannot be negative")
     .max(999999, "Stock exceeds maximum value")
     .required("Stock quantity is required"),
-  categories: Yup.array()
-    .of(Yup.string().transform(sanitizeString))
-    .min(1, "At least one category is required")
-    .required("Categories are required"),
+  category: Yup.string()
+    .transform(sanitizeString)
+    .required("Category is required"),
   description: Yup.string()
     .transform(sanitizeTextArea)
     .max(1000, "Description exceeds maximum length (1000 characters)")
