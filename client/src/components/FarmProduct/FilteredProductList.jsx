@@ -18,7 +18,17 @@ import { getAllCategories } from "../../services/farmProductApi";
  * @param {Function} onRestore - Handler for restore action
  */
 const FilteredProductList = memo(
-  ({ products, isArchived = false, onEdit, onArchive, onRestore, emptyTitle, emptyMessage }) => {
+  ({
+    products,
+    isArchived = false,
+    activeFilter,
+    onEdit,
+    onArchive,
+    onRestore,
+    onActivate,
+    emptyTitle,
+    emptyMessage,
+  }) => {
     const [categories, setCategories] = useState([]);
     const [loadingCategories, setLoadingCategories] = useState(false);
 
@@ -237,9 +247,11 @@ const FilteredProductList = memo(
                   product={product}
                   index={i}
                   isArchived={isArchived}
+                  activeFilter={activeFilter}
                   onEdit={onEdit}
                   onArchive={onArchive}
                   onRestore={onRestore}
+                  onActivate={onActivate}
                 />
               ))}
             </div>

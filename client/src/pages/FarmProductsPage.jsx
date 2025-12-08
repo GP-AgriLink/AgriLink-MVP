@@ -168,6 +168,50 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
     }
   }, []);
 
+  // Quick activate handler for inactive products
+  const handleActivateProduct = useCallback(
+    async (productId) => {
+      const product = products.find((p) => (p._id || p.id) === productId);
+      if (!product) {
+        toast.error("Product not found");
+        return;
+      }
+
+      // Don't activate if already active
+      if (product.status === "active") {
+        toast.info("Product is already active");
+        return;
+      }
+
+      setLoading(true);
+
+      // Optimistic update - move from inactive to active
+      updateStatsOptimistically({
+        active: stats.active + 1,
+        inactive: stats.inactive - 1,
+      });
+
+      try {
+        await updateProduct(productId, { status: "active" });
+        toast.success("Product Activated");
+        await refreshProducts();
+        // Stats will auto-refresh from useEffect
+      } catch (err) {
+        console.error("Error activating product:", err);
+        toast.error(err.message || "Failed to activate product");
+
+        // Revert optimistic update on error
+        updateStatsOptimistically({
+          active: stats.active,
+          inactive: stats.inactive,
+        });
+
+        setLoading(false);
+      }
+    },
+    [products, refreshProducts, setLoading, stats, updateStatsOptimistically]
+  );
+
   // Register stats refresh callback with Dashboard
   useEffect(() => {
     if (onRegisterStatsRefresh) {
@@ -226,6 +270,7 @@ const MyProductsPage = ({ onEdit, onAddNew }) => {
           onEdit={onEdit}
           onArchive={handleArchiveProduct}
           onRestore={handleRestoreProduct}
+          onActivate={handleActivateProduct}
           onAddNew={onAddNew}
           stats={stats}
           statsLoading={statsLoading}
