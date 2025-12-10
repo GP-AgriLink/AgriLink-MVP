@@ -184,50 +184,150 @@ const forgotPassword = async (req, res) => {
     const mailOptions = {
       from: "AgriLink Support <support@agrilink.com>",
       to: user.email,
-      subject: "Password Reset Request - AgriLink",
+      subject: "🔒 Password Reset Request - AgriLink",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-          <div style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">🔒 Password Reset Request</h1>
-          </div>
-          
-          <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">Hello,</p>
-            
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-              You are receiving this email because you (or someone else) requested a password reset for your AgriLink account.
-            </p>
-            
-            <p style="color: #374151; font-size: 16px; line-height: 1.6;">
-              Please click the button below to reset your password. This link will expire in <strong>10 minutes</strong>.
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetURL}" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
-                Reset Password
-              </a>
-            </div>
-            
-            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="color: #10b981; font-size: 14px; word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
-              ${resetURL}
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">
-            
-            <p style="color: #ef4444; font-size: 14px; line-height: 1.6;">
-              ⚠️ <strong>Security Notice:</strong> If you did not request this password reset, please ignore this email. Your password will remain unchanged.
-            </p>
-            
-            <p style="color: #6b7280; font-size: 12px; margin-top: 30px; text-align: center;">
-              © 2025 AgriLink. All rights reserved.
-            </p>
-          </div>
-        </div>
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="X-UA-Compatible" content="IE=edge">
+          <title>Password Reset - AgriLink</title>
+          <!--[if mso]>
+          <style type="text/css">
+            table {border-collapse: collapse;}
+          </style>
+          <![endif]-->
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+          <!-- Email Container -->
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <!-- Main Email Card -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                  
+                  <!-- Header with Gradient -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 50%, #06b6d4 100%); padding: 40px 30px; text-align: center;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td align="center">
+                            <!-- Logo/Icon -->
+                            <div style="background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; width: 80px; height: 80px; margin: 0 auto 20px; display: inline-flex; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+                              <span style="font-size: 40px;">🔒</span>
+                            </div>
+                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Password Reset Request</h1>
+                            <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0; font-size: 14px;">Secure your AgriLink account</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Main Content -->
+                  <tr>
+                    <td style="padding: 40px 30px;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td>
+                            <p style="color: #1f2937; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">Hello,</p>
+                            
+                            <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 20px;">
+                              We received a request to reset the password for your <strong style="color: #10b981;">AgriLink</strong> account. If you made this request, click the button below to set a new password.
+                            </p>
+                            
+                            <!-- Timer Notice -->
+                            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 15px; border-radius: 8px; margin: 0 0 30px;">
+                              <p style="color: #92400e; font-size: 14px; line-height: 1.5; margin: 0;">
+                                <strong>⏱️ Time Sensitive:</strong> This reset link will expire in <strong>10 minutes</strong> for security reasons.
+                              </p>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                              <tr>
+                                <td align="center" style="padding: 20px 0 30px;">
+                                  <!--[if mso]>
+                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${resetURL}" style="height:50px;v-text-anchor:middle;width:250px;" arcsize="16%" stroke="f" fillcolor="#10b981">
+                                    <w:anchorlock/>
+                                    <center style="color:#ffffff;font-family:sans-serif;font-size:16px;font-weight:bold;">Reset My Password</center>
+                                  </v:roundrect>
+                                  <![endif]-->
+                                  <!--[if !mso]><!-->
+                                  <a href="${resetURL}" style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transition: all 0.3s ease;" target="_blank">
+                                    🔓 Reset My Password
+                                  </a>
+                                  <!--<![endif]-->
+                                </td>
+                              </tr>
+                            </table>
+                            
+                            <!-- Alternative Link -->
+                            <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 0 0 25px;">
+                              <p style="color: #6b7280; font-size: 13px; line-height: 1.5; margin: 0 0 10px;">
+                                <strong>Button not working?</strong> Copy and paste this link into your browser:
+                              </p>
+                              <p style="color: #10b981; font-size: 13px; word-break: break-all; margin: 0; font-family: 'Courier New', monospace;">
+                                ${resetURL}
+                              </p>
+                            </div>
+                            
+                            <!-- Security Warning -->
+                            <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #ef4444; padding: 15px; border-radius: 8px; margin: 0 0 20px;">
+                              <p style="color: #991b1b; font-size: 14px; line-height: 1.5; margin: 0;">
+                                <strong>⚠️ Security Notice:</strong> If you didn't request this password reset, please ignore this email or contact our support team immediately. Your password will remain unchanged.
+                              </p>
+                            </div>
+                            
+                            <!-- Help Text -->
+                            <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0;">
+                              Need help? Contact us at <a href="mailto:support@agrilink.com" style="color: #10b981; text-decoration: none; font-weight: 600;">support@agrilink.com</a>
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Divider -->
+                  <tr>
+                    <td style="padding: 0 30px;">
+                      <div style="border-top: 2px solid #e5e7eb;"></div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="padding: 30px; background-color: #f9fafb; text-align: center;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                        <tr>
+                          <td align="center">
+                            <p style="color: #10b981; font-size: 20px; font-weight: 700; margin: 0 0 15px; letter-spacing: 0.5px;">
+                              🌱 AgriLink
+                            </p>
+                            <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 0 0 15px;">
+                              Connecting farms to communities<br>
+                              Fresh. Local. Sustainable.
+                            </p>
+                            <p style="color: #9ca3af; font-size: 12px; line-height: 1.5; margin: 0;">
+                              © 2025 AgriLink. All rights reserved.<br>
+                              This is an automated message, please do not reply to this email.
+                            </p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `,
-      text: `You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\nPlease click on the following link, or paste this into your browser to complete the process within ten minutes of receiving it:\n\n${resetURL}\n\nIf you did not request this, please ignore this email and your password will remain unchanged.\n`,
+      text: `Password Reset Request - AgriLink\n\nHello,\n\nWe received a request to reset the password for your AgriLink account.\n\nPlease click on the following link, or paste it into your browser to complete the process within 10 minutes:\n\n${resetURL}\n\n⏱️ TIME SENSITIVE: This link will expire in 10 minutes for security reasons.\n\n⚠️ SECURITY NOTICE: If you did not request this password reset, please ignore this email or contact our support team. Your password will remain unchanged.\n\nNeed help? Contact us at support@agrilink.com\n\n---\n🌱 AgriLink\nConnecting farms to communities\nFresh. Local. Sustainable.\n\n© 2025 AgriLink. All rights reserved.\nThis is an automated message, please do not reply to this email.`,
     };
 
     await transporter.sendMail(mailOptions);
