@@ -21,7 +21,6 @@ function Navbar() {
   // --- Get the avatar from the user object ---
   const userAvatar = user?.avatarUrl || avatarPlaceholder;
 
-
   // --- 1. CONFIGURATION: Navigation Links ---
   const navLinks = [
     { name: "Home", path: "/" },
@@ -93,30 +92,35 @@ function Navbar() {
 
   return (
     <header className="sticky top-0 z-[100] rounded-b-3xl border-b border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 font-['Inter'] shadow-[0_-4px_16px_rgba(6,78,59,0.7)] backdrop-blur-lg">
-      <div className="mx-auto flex w-full items-center justify-between px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
+      <div className="relative mx-auto flex w-full items-center justify-between px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
         {/* Responsive Logo */}
         <div className="flex-shrink-0">
           <Logo className="hidden lg:flex" />
-          <Logo iconOnly={true} iconContainerClass="w-12 h-12" className="lg:hidden rounded-full overflow-hidden" />
+          <Logo
+            iconOnly={true}
+            iconContainerClass="w-12 h-12"
+            className="overflow-hidden rounded-full lg:hidden"
+          />
         </div>
 
-        <nav className="hidden lg:flex items-center gap-8">
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               to={link.path}
               onClick={(e) => handleNavClick(e, link)}
-              className={`text-lg font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:text-emerald-600 ${location.pathname === link.path && !link.isScroll
-                ? "text-emerald-600 font-bold"
-                : "text-slate-600"
-                }`}
+              className={`text-lg font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:text-emerald-600 ${
+                location.pathname === link.path && !link.isScroll
+                  ? "font-bold text-emerald-600"
+                  : "text-slate-600"
+              }`}
             >
               {link.name}
             </Link>
           ))}
         </nav>
 
-        <div className="hidden items-center gap-4 lg:flex">
+        <div className="hidden items-center justify-end gap-4 lg:flex">
           {user?.role === "customer" && (
             <Link
               to="/cart"
@@ -348,8 +352,9 @@ function Navbar() {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className={`stroke-white transition-transform duration-300 ${isMobileMenuOpen ? "rotate-90" : ""
-              }`}
+            className={`stroke-white transition-transform duration-300 ${
+              isMobileMenuOpen ? "rotate-90" : ""
+            }`}
           >
             {isMobileMenuOpen ? (
               <>
@@ -373,17 +378,17 @@ function Navbar() {
           className="bg-white/98 max-h-[calc(100vh-60px)] overflow-y-auto border-t border-emerald-100/50 shadow-lg backdrop-blur-md lg:hidden"
         >
           <div className="space-y-2.5 px-4 py-5">
-
             <div className="mb-4 space-y-2 border-b border-gray-100 pb-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   to={link.path}
                   onClick={(e) => handleNavClick(e, link)}
-                  className={`block rounded-lg px-4 py-3 text-base font-semibold transition-colors ${location.pathname === link.path && !link.isScroll
-                    ? "bg-emerald-50 text-emerald-600"
-                    : "text-gray-700 hover:bg-gray-50 hover:text-emerald-600"
-                    }`}
+                  className={`block rounded-lg px-4 py-3 text-base font-semibold transition-colors ${
+                    location.pathname === link.path && !link.isScroll
+                      ? "bg-emerald-50 text-emerald-600"
+                      : "text-gray-700 hover:bg-gray-50 hover:text-emerald-600"
+                  }`}
                 >
                   {link.name}
                 </Link>
