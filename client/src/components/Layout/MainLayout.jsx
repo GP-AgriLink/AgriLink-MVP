@@ -2,12 +2,16 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
+import ScrollToTopOnMount from "../common/ScrollToTopOnMount";
 
 const MainLayout = ({ children }) => {
   return (
-    <div className="app flex flex-col bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50" style={{ zoom: "0.8", minHeight: "125vh" }}>
+    <div
+      className="app flex flex-col bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50"
+      style={{ zoom: "0.8", minHeight: "125vh" }}
+    >
+      <ScrollToTopOnMount />
       <Navbar />
-      {/* Toaster is now positioned relative to the main layout */}
       <ToastContainer
         position="top-right"
         autoClose={3000}
