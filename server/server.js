@@ -16,6 +16,7 @@ import orderRoutes from './src/routes/orderRoutes.js';
 import { notFound, errorHandler } from './src/middleware/errorMiddleware.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
 import cartRoutes from './src/routes/cartRoutes.js';
+import aiRoutes from './src/routes/aiRoutes.js';
 import cors from 'cors';
 
 // --- Configuration ---
@@ -72,6 +73,7 @@ app.use('/api/orders', orderRoutes);
 
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/ai', aiRoutes);
 // --- Error Handling Middleware ---
 // Custom middleware to handle 404 Not Found errors.
 app.use(notFound);
