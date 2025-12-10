@@ -100,17 +100,22 @@ export const sanitizeProductName = (productName) => {
 };
 
 /**
- * Sanitizes textarea content while preserving formatting
+ * Sanitizes textarea input by HTML-encoding dangerous characters
+ * Allows users to include code examples while preventing XSS injection
  * @param {string} text - Raw textarea input
- * @returns {string} Sanitized text
+ * @returns {string} HTML-encoded safe text
  */
 export const sanitizeTextArea = (text) => {
   if (!text || typeof text !== "string") return "";
 
+  // HTML-encode dangerous characters to prevent XSS while preserving content
   return text
-    .replace(/[<>]/g, "")
-    .replace(/javascript:/gi, "")
-    .replace(/on\w+=/gi, "")
+    .replace(/&/g, "&amp;") // Must be first
+    .replace(/</g, "&lt;") // Encode < to prevent tag injection
+    .replace(/>/g, "&gt;") // Encode > to prevent tag injection
+    .replace(/"/g, "&quot;") // Encode quotes
+    .replace(/'/g, "&#x27;") // Encode single quotes
+    .replace(/\//g, "&#x2F;") // Encode forward slash
     .trim();
 };
 
