@@ -89,40 +89,40 @@ const OrdersPage = () => {
     setStatusFilter(statusValue);
   }, [activeFilter, getStatusFromFilter, setStatusFilter]);
 
-  // Transform orders from context to UI format
   const orders = useMemo(() => {
     if (!ordersData || !Array.isArray(ordersData)) return [];
+    const targetStatus = getStatusFromFilter(activeFilter);
+    return ordersData
+      .filter((o) => o.status === targetStatus)
+      .map((o) => {
+        const displayName = isCustomer(user)
+          ? o.farm?.farmName || "Unknown Farm"
+          : o.user?.firstName
+            ? `${o.user.firstName} ${o.user.lastName}`
+            : "Unknown Customer";
 
-    return ordersData.map((o) => {
-      // Role-based data extraction
-      const displayName = isCustomer(user)
-        ? o.farm?.farmName || "Unknown Farm"
-        : o.user?.firstName
-          ? `${o.user.firstName} ${o.user.lastName}`
-          : "Unknown Customer";
+        const contactInfo = isCustomer(user) ? o.user?.phone || "N/A" : o.user?.phone || "N/A";
 
-      const contactInfo = isCustomer(user) ? o.user?.phone || "N/A" : o.user?.phone || "N/A";
-
-      return {
-        id: o._id,
-        displayName,
-        contactInfo,
-        avatarUrl: o.farm?.avatarUrl || o.farm?.user?.avatarUrl || null,
-        farmLocation: o.farm?.location?.coordinates || null,
-        email: o.user?.email,
-        total: o.totalAmount,
-        items:
-          o.orderItems?.map((i) => ({
-            name: i.name,
-            qty: i.quantity,
-            price: i.unitPrice,
-          })) || [],
-        status: o.status,
-        date:
-          activeFilter === "completed" || activeFilter === "cancelled" ? o.updatedAt : o.createdAt,
-      };
-    });
-  }, [ordersData, user, activeFilter]);
+        return {
+          id: o._id,
+          displayName,
+          contactInfo,
+          avatarUrl: o.farm?.avatarUrl || o.farm?.user?.avatarUrl || null,
+          farmLocation: o.farm?.location?.coordinates || null,
+          email: o.user?.email,
+          total: o.totalAmount,
+          items:
+            o.orderItems?.map((i) => ({
+              name: i.name,
+              qty: i.quantity,
+              price: i.unitPrice,
+            })) || [],
+          status: o.status,
+          date:
+            activeFilter === "completed" || activeFilter === "cancelled" ? o.updatedAt : o.createdAt,
+        };
+      });
+  }, [ordersData, user, activeFilter, getStatusFromFilter]);
 
   const handleOrderUpdate = useCallback(
     async (id, newStatus) => {
@@ -186,7 +186,6 @@ const OrdersPage = () => {
         <div className="relative min-h-screen">
           <LogoSpinner message="Loading cart..." />
         </div>
-        ;
       </>
     );
   }
@@ -238,11 +237,10 @@ const OrdersPage = () => {
                     <button
                       key={idx}
                       onClick={() => goToPage(idx + 1)}
-                      className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition-all active:scale-95 ${
-                        page === idx + 1
-                          ? "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md ring-2 ring-emerald-200"
-                          : "border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-emerald-300 hover:bg-gray-50"
-                      }`}
+                      className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition-all active:scale-95 ${page === idx + 1
+                        ? "bg-gradient-to-r from-emerald-600 to-emerald-700 text-white shadow-md ring-2 ring-emerald-200"
+                        : "border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-emerald-300 hover:bg-gray-50"
+                        }`}
                       aria-label={`Go to page ${idx + 1}`}
                       aria-current={page === idx + 1 ? "page" : undefined}
                     >
