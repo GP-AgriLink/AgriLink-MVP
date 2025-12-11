@@ -32,33 +32,42 @@ function SubscribeSection() {
                 <div className="text-center max-w-2xl mx-auto">
 
                     <h2 className="text-3xl font-bold text-gray-800 mb-3">
-                        Stay Updated with Seasonal Releases
+                        Can't find what you need?
                     </h2>
 
                     <p className="text-lg text-green-800 mb-6">
-                        Subscribe to our harvest bulletin to get notified about new farms, seasonal produce, and exclusive farm stories.
+                        Tell us what produce you are looking for and leave your email. We will notify you when it arrives.
                     </p>
 
                     <form
                         ref={form}
                         onSubmit={sendEmail}
-                        className="mt-12 text-center flex flex-col sm:flex-row justify-center items-center gap-3 max-w-lg mx-auto"
+                        className="mt-12 text-center flex flex-col gap-4 max-w-lg mx-auto"
                     >
                         <input
-                            type="email"
-                            name="email"
-                            placeholder="your@email.com"
+                            type="text"
+                            name="name"
+                            placeholder="What product are you looking for?"
                             required
-                            className="w-full sm:w-auto flex-grow px-4 py-3 rounded-full border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-200"
-                            aria-label="Email for newsletter"
+                            className="w-full px-4 py-3 rounded-full border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-200"
                         />
-                        <button type="submit" disabled={status === 'sending'} className="rounded-full bg-green-100 px-8 py-3 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200">
-                            {status === 'sending' ? 'Sending...' : 'Subscribe'}
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="Your email address"
+                                required
+                                className="w-full flex-grow px-4 py-3 rounded-full border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-200"
+                            />
+
+                            <button type="submit" disabled={status === 'sending'} className="w-full sm:w-auto rounded-full bg-green-100 px-8 py-3 text-lg font-semibold text-green-800 transition-colors hover:bg-green-200 whitespace-nowrap">
+                                {status === 'sending' ? 'Sending...' : 'Request Product'}
+                            </button>
+                        </div>
                     </form>
 
                     {status === 'success' && (
-                        <p className="text-green-600 mt-4 font-medium">Thank you for subscribing!</p>
+                        <p className="text-green-600 mt-4 font-medium">Request received! We'll email you when it's in stock.</p>
                     )}
                     {status === 'error' && (
                         <p className="text-red-500 mt-4 font-medium">Something went wrong. Please try again.</p>
