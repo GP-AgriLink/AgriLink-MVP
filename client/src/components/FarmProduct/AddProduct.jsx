@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from "react";
 import LogoSpinner from "../common/LogoSpinner";
 import { getAllCategories } from "../../services/farmProductApi";
-import { X, Upload, Image as ImageIcon, CheckCircle } from "lucide-react";
-import { sanitizeProductData, sanitizeString } from "../../utils/sanitizers";
+import { X, Upload, Image as ImageIcon, CheckCircle, Sparkles } from "lucide-react";
+import { sanitizeProductData, sanitizeString, sanitizeProductName } from "../../utils/sanitizers";
 import { toast } from "react-toastify";
+import {
+  generateProductDescription,
+  standardizeCategory,
+  isAIConfigured,
+} from "../../services/aiService";
 
 /**
  * Supported product units matching server model validation
@@ -26,6 +31,7 @@ const getDefaultFormData = () => ({
   imageUrl: "",
   category: "",
   customCategory: "",
+  description: "",
 });
 
 /**
@@ -50,6 +56,8 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
   const [imageInputMode, setImageInputMode] = useState("url");
   const fileInputRef = useRef(null);
   const localPreviewRef = useRef(null);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiOperation, setAIOperation] = useState(""); // Track which AI operation is running
 
   // Fetch categories on mount
   useEffect(() => {
@@ -168,15 +176,89 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
     setUploadProgress(0);
   }, []);
 
+  // AI Handlers
+  const handleGenerateDescription = useCallback(async () => {
+    if (!formData.name.trim()) {
+      toast.warning("Please enter a product name first");
+      return;
+    }
+
+    if (!isAIConfigured()) {
+      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
+      return;
+    }
+
+    setIsAIGenerating(true);
+    setAIOperation("description");
+    try {
+      const description = await generateProductDescription(formData.name, formData.imageUrl);
+      setFormData((prev) => ({ ...prev, description }));
+      toast.success("Description generated!");
+    } catch (error) {
+      console.error("AI Error:", error);
+      toast.error(error.message || "Failed to generate description");
+    } finally {
+      setIsAIGenerating(false);
+      setAIOperation("");
+    }
+  }, [formData.name, formData.imageUrl]);
+
+  const handleStandardizeCategory = useCallback(async () => {
+    if (!formData.name.trim()) {
+      toast.warning("Please enter a product name first");
+      return;
+    }
+
+    if (!isAIConfigured()) {
+      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
+      return;
+    }
+
+    setIsAIGenerating(true);
+    setAIOperation("category");
+    try {
+      const category = await standardizeCategory(formData.name, formData.imageUrl);
+
+      // Check if it's one of the standard categories
+      if (CATEGORY_OPTIONS.includes(category)) {
+        setFormData((prev) => ({ ...prev, category, customCategory: "" }));
+        setShowCustomInput(false);
+      } else {
+        // It's a custom category
+        setFormData((prev) => ({ ...prev, category: "Other", customCategory: category }));
+        setShowCustomInput(true);
+      }
+
+      toast.success(`Category set to: ${category}`);
+    } catch (error) {
+      console.error("AI Error:", error);
+      toast.error(error.message || "Failed to standardize category");
+    } finally {
+      setIsAIGenerating(false);
+      setAIOperation("");
+    }
+  }, [formData.name, formData.imageUrl]);
+
   const validateForm = useCallback(() => {
     const newErrors = {};
     const name = formData.name.trim();
     const price = parseFloat(formData.price);
     const stock = parseInt(formData.stock);
 
-    if (!name) newErrors.name = "Product name is required";
-    else if (name.length < 2) newErrors.name = "Must be at least 2 characters";
-    else if (name.length > 100) newErrors.name = "Cannot exceed 100 characters";
+    // Strict product name validation: only letters, hyphens, spaces
+    if (!name) {
+      newErrors.name = "Product name is required";
+    } else if (!/^[A-Za-z\u0621-\u064A\s\-]+$/.test(name)) {
+      newErrors.name = "Product name can only contain letters, hyphens, and spaces";
+    } else if ((name.match(/[a-zA-Z\u0621-\u064A]/g) || []).length < 3) {
+      newErrors.name = "Product name must contain at least 3 letters";
+    } else if (name.length < 2) {
+      newErrors.name = "Must be at least 2 characters";
+    } else if (name.length > 100) {
+      newErrors.name = "Cannot exceed 100 characters";
+    } else if (/\s{2,}/.test(name)) {
+      newErrors.name = "Product name cannot have consecutive spaces";
+    }
 
     if (!formData.price || isNaN(price) || price < 0.01)
       newErrors.price = "Price must be at least 0.01";
@@ -225,6 +307,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
           stock: formData.stock,
           category: finalCategory,
           imageUrl: formData.imageUrl,
+          description: formData.description, // Add description
           status: parseInt(formData.stock, 10) === 0 ? "inactive" : "active",
         };
 
@@ -376,8 +459,22 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                 )}
               </div>
               <div className="col-span-2">
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Category <span className="text-red-500">*</span>
+                <label className="mb-1.5 flex items-center justify-between text-sm font-semibold text-gray-700">
+                  <span>
+                    Category <span className="text-red-500">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStandardizeCategory}
+                    disabled={isAIGenerating || !formData.name.trim()}
+                    className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                    title="AI Category Suggestion"
+                  >
+                    <Sparkles
+                      className={`h-3.5 w-3.5 ${isAIGenerating && aiOperation === "category" ? "animate-spin" : "group-hover:animate-pulse"}`}
+                    />
+                    AI
+                  </button>
                 </label>
                 {showCustomInput ? (
                   <input
@@ -501,6 +598,35 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.stock}</p>
                 )}
               </div>
+            </div>
+
+            {/* Description Field with AI */}
+            <div>
+              <label className="mb-1.5 flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>
+                  Description <span className="text-xs text-gray-400">(Optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateDescription}
+                  disabled={isAIGenerating || !formData.name.trim()}
+                  className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                  title="AI Generate Description"
+                >
+                  <Sparkles
+                    className={`h-3.5 w-3.5 ${isAIGenerating && aiOperation === "description" ? "animate-spin" : "group-hover:animate-pulse"}`}
+                  />
+                  AI
+                </button>
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Tell customers about this product..."
+                rows="3"
+                className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
             </div>
 
             {/* Image Upload Section */}

@@ -76,12 +76,26 @@ export const updateUserInStorage = (updatedUser) => {
 
 /**
  * Clear all authentication data and related application storage
+ * Also clears location cache to prevent information leaks
  */
 export const clearAuthData = () => {
+  // Clear auth data
   localStorage.removeItem(USER_STORAGE_KEY);
   localStorage.removeItem(TOKEN_STORAGE_KEY);
   localStorage.removeItem("dashboardActiveView");
   localStorage.removeItem("avatarUrl");
+
+  // Clear all location cache entries (prefix: "location_")
+  try {
+    const keys = Object.keys(localStorage);
+    keys.forEach((key) => {
+      if (key.startsWith("location_")) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (error) {
+    console.error("Error clearing location cache:", error);
+  }
 };
 
 /**

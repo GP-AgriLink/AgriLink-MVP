@@ -3,10 +3,11 @@ import { updateMyFarmProfile } from "../../services/farmApi";
 import { sanitizeName, sanitizeTextArea, sanitizeArray } from "../../utils/sanitizers";
 import { validateCoordinates } from "../../utils/validators";
 import { toast } from "react-toastify";
-import { X } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { generateFarmBio, isAIConfigured } from "../../services/aiService";
 
 // Map components
 delete L.Icon.Default.prototype._getIconUrl;
@@ -83,8 +84,39 @@ export const FarmProfileForm = ({ initialData }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const locationInputRef = useRef(null);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
 
   const allSpecialties = ["Organic", "Vegetables", "Fruits", "Herbs", "Dairy", "Grains"];
+
+  // AI Handler for Farm Bio
+  const handleGenerateFarmBio = useCallback(async () => {
+    if (!formData.farmName.trim()) {
+      toast.warning("Please enter a farm name first");
+      return;
+    }
+
+    if (!isAIConfigured()) {
+      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
+      return;
+    }
+
+    setIsAIGenerating(true);
+    try {
+      const bio = await generateFarmBio(
+        formData.farmName,
+        formData.location?.coordinates,
+        formData.specialties,
+        formData.farmBio // Pass existing bio if any
+      );
+      setFormData((prev) => ({ ...prev, farmBio: bio }));
+      toast.success("Farm bio generated!");
+    } catch (error) {
+      console.error("AI Error:", error);
+      toast.error(error.message || "Failed to generate farm bio");
+    } finally {
+      setIsAIGenerating(false);
+    }
+  }, [formData.farmName, formData.location, formData.specialties, formData.farmBio]);
 
   useEffect(() => {
     if (initialData) {
@@ -153,7 +185,8 @@ export const FarmProfileForm = ({ initialData }) => {
   const isFormValid = () => {
     const hasErrors = Object.values(formErrors).some((error) => error.length > 0);
     const isFarmNameEmpty = !formData.farmName?.trim();
-    const isLocationMissing = !formData.location?.coordinates || formData.location.coordinates.length !== 2;
+    const isLocationMissing =
+      !formData.location?.coordinates || formData.location.coordinates.length !== 2;
     return !hasErrors && !isFarmNameEmpty && !isLocationMissing;
   };
 
@@ -341,7 +374,21 @@ export const FarmProfileForm = ({ initialData }) => {
 
       {/* Bio Section */}
       <div>
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">Farm Bio</label>
+        <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-600">
+          <span>Farm Bio</span>
+          <button
+            type="button"
+            onClick={handleGenerateFarmBio}
+            disabled={isAIGenerating || !formData.farmName.trim()}
+            className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium normal-case text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+            title={formData.farmBio ? "Polish Farm Bio with AI" : "Generate Farm Bio with AI"}
+          >
+            <Sparkles
+              className={`h-3.5 w-3.5 ${isAIGenerating ? "animate-spin" : "group-hover:animate-pulse"}`}
+            />
+            AI {formData.farmBio ? "Polish" : "Generate"}
+          </button>
+        </label>
         <textarea
           name="farmBio"
           value={formData.farmBio || ""}
@@ -376,7 +423,9 @@ export const FarmProfileForm = ({ initialData }) => {
           }`}
         />
         {formErrors.location ? (
-          <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{formErrors.location}</p>
+          <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">
+            {formErrors.location}
+          </p>
         ) : (
           <p className="mt-1 text-xs text-gray-500">
             Click the input to select your farm location on the map
@@ -395,11 +444,9 @@ export const FarmProfileForm = ({ initialData }) => {
             scrollWheelZoom={true}
             className="relative z-10 h-80 w-full rounded-lg"
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <LocationPicker 
-              setFormData={setFormData} 
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <LocationPicker
+              setFormData={setFormData}
               setFormErrors={setFormErrors}
               validateLocationField={validateLocationField}
             />

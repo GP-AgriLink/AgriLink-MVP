@@ -78,6 +78,28 @@ export const sanitizeFarmName = (farmName) => {
 };
 
 /**
+ * Sanitizes product name fields - only letters, hyphens, and spaces allowed
+ * Enforces strict naming: English/Arabic letters, hyphen (-), and space only
+ * @param {string} productName - Raw product name input
+ * @returns {string} Sanitized product name
+ */
+export const sanitizeProductName = (productName) => {
+  if (!productName || typeof productName !== "string") return "";
+
+  return (
+    productName
+      .replace(/[<>]/g, "")
+      .replace(/javascript:/gi, "")
+      .replace(/on\w+=/gi, "")
+      // Allow ONLY: English letters, Arabic letters, space, and hyphen
+      .replace(/[^A-Za-z\u0621-\u064A\s\-]/g, "")
+      // Remove consecutive spaces
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+};
+
+/**
  * Sanitizes textarea content while preserving formatting
  * @param {string} text - Raw textarea input
  * @returns {string} Sanitized text
@@ -155,11 +177,6 @@ export const sanitizeFormData = (data) => {
   return sanitized;
 };
 
-/**
- * Sanitizes product data, only including provided fields
- * @param {Object} productData - Product fields to sanitize
- * @returns {Object} Sanitized product data with only provided fields
- */
 export const sanitizeProductData = (productData) => {
   if (!productData || typeof productData !== "object") {
     return {};
@@ -168,7 +185,7 @@ export const sanitizeProductData = (productData) => {
   const sanitized = {};
 
   if (productData.name !== undefined) {
-    sanitized.name = sanitizeString(productData.name || "");
+    sanitized.name = sanitizeProductName(productData.name || "");
   }
 
   if (productData.price !== undefined) {
