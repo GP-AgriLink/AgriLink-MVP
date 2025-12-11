@@ -5,7 +5,7 @@
  */
 
 const AI_API_KEY = process.env.AI_API_KEY;
-const AI_MODEL_ID = process.env.AI_MODEL_ID || 'gemini-2.5-flash-live';
+const AI_MODEL_ID = process.env.AI_MODEL_ID || 'gemini-2.5-flash';
 const AI_API_BASE_URL = process.env.AI_API_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta/models';
 const AI_API_URL = `${AI_API_BASE_URL}/${AI_MODEL_ID}:generateContent`;
 const AI_FILES_UPLOAD_URL = process.env.AI_FILES_UPLOAD_URL || 'https://generativelanguage.googleapis.com/upload/v1beta/files';
@@ -140,6 +140,93 @@ export const uploadImageToAI = async (imageUrl, displayName = 'product-image') =
     return null; // Return null on error - caller should handle this
   }
 };
+
+/**
+ * Upload a text file (e.g., markdown) to AI File API
+ * @param {string} textContent - The text content to upload
+ * @param {string} displayName - Display name for the file
+ * @param {string} mimeType - MIME type of the content (default: text/plain)
+ * @returns {Promise<{uri: string, mimeType: string, name: string, displayName: string} | null>}
+ */
+export const uploadTextFile = async (textContent, displayName = 'text-file', mimeType = 'text/plain') => {
+  if (!textContent) return null;
+  if (!AI_API_KEY || AI_API_KEY === 'your_api_key_here') {
+    throw new Error('AI API key is not configured');
+  }
+
+  try {
+    const textBuffer = Buffer.from(textContent, 'utf-8');
+    const numBytes = textBuffer.length;
+
+    // Step 1: Start resumable upload session
+    const startResponse = await fetch(AI_FILES_UPLOAD_URL, {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': AI_API_KEY,
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': numBytes.toString(),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        file: {
+          display_name: displayName,
+        },
+      }),
+    });
+
+    if (!startResponse.ok) {
+      const errorData = await startResponse.json().catch(() => ({}));
+      throw new Error(
+        errorData.error?.message ||
+          `Upload start failed: ${startResponse.status}`
+      );
+    }
+
+    const uploadUrl = startResponse.headers.get('x-goog-upload-url');
+    if (!uploadUrl) {
+      throw new Error('No upload URL received from AI');
+    }
+
+    // Step 2: Upload the actual text content
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Length': numBytes.toString(),
+        'X-Goog-Upload-Offset': '0',
+        'X-Goog-Upload-Command': 'upload, finalize',
+      },
+      body: textBuffer,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorData = await uploadResponse.json().catch(() => ({}));
+      throw new Error(
+        errorData.error?.message || `Upload failed: ${uploadResponse.status}`
+      );
+    }
+
+    const fileInfo = await uploadResponse.json();
+    const fileUri = fileInfo.file?.uri;
+    const fileName = fileInfo.file?.name;
+
+    if (!fileUri || !fileName) {
+      throw new Error('File upload succeeded but no URI/name returned');
+    }
+
+    return {
+      uri: fileUri,
+      mimeType: fileInfo.file.mimeType || mimeType,
+      name: fileName,
+      displayName: fileInfo.file.displayName || displayName,
+    };
+  } catch (error) {
+    console.error('[AI] Text file upload error:', error);
+    return null;
+  }
+};
+
 
 /**
  * Delete a file from AI File API
