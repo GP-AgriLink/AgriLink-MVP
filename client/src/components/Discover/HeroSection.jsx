@@ -1,14 +1,60 @@
 import React, { useState, useEffect } from 'react';
 
-function StatItem({ value, label }) {
-    const formattedValue = new Intl.NumberFormat('en-US').format(value);
+const animationStyles = `
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 40px, 0);
+        }
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.8s ease-out forwards;
+        opacity: 0;
+    }
+
+    .delay-100 { animation-delay: 0.1s; }
+    .delay-200 { animation-delay: 0.2s; }
+    .delay-300 { animation-delay: 0.3s; }
+    .delay-500 { animation-delay: 0.5s; }
+    .delay-700 { animation-delay: 0.8s; }
+`;
+
+function StatItem({ value, label, delay }) {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        const end = parseInt(String(value).replace(/,/g, ''), 10) || 0;
+        let start = 0;
+        const duration = 2000;
+        const incrementTime = 20;
+        const step = Math.ceil(end / (duration / incrementTime));
+
+        const timer = setInterval(() => {
+            start += step;
+            if (start >= end) {
+                setCount(end);
+                clearInterval(timer);
+            } else {
+                setCount(start);
+            }
+        }, incrementTime);
+
+        return () => clearInterval(timer);
+    }, [value]);
+
+    const formattedValue = new Intl.NumberFormat('en-US').format(count);
 
     return (
-        <div className="text-center p-1">
-            <span className="block text-4xl font-extrabold text-emerald-700">
+        <div className={`text-center p-2 animate-fade-in-up ${delay}`}>
+            <span className="block text-4xl md:text-5xl font-extrabold text-emerald-700 transition-all">
                 {formattedValue}+
             </span>
-            <span className="block mt-5 text-lg font-medium text-emerald-900">
+            <span className="block mt-2 text-lg font-medium text-emerald-900 uppercase tracking-wide">
                 {label}
             </span>
         </div>
@@ -18,8 +64,8 @@ function StatItem({ value, label }) {
 function StatSkeleton() {
     return (
         <div className="text-center p-4 animate-pulse">
-            <div className="h-12 bg-gray-300 rounded-md w-2/4 mx-auto"></div>
-            <div className="h-6 bg-gray-300 rounded-md w-3/4 mx-auto mt-3"></div>
+            <div className="h-12 bg-gray-300 rounded-md w-2/3 mx-auto"></div>
+            <div className="h-6 bg-gray-300 rounded-md w-1/2 mx-auto mt-3"></div>
         </div>
     );
 }
@@ -56,7 +102,7 @@ const HeroSection = () => {
         return (
             <section className="py-16 bg-gray-50">
                 <div className="container mx-auto max-w-7xl px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
                         <StatSkeleton />
                         <StatSkeleton />
                         <StatSkeleton />
@@ -70,7 +116,7 @@ const HeroSection = () => {
     if (error) {
         return (
             <section className="py-16 bg-red-50">
-                <div className="container mx-auto max-w-7xl px-6 lg:px-8 text-center">
+                <div className="container mx-auto max-w-7xl px-6 lg:px-8 text-center rounded-lg animate-fade-in-up delay-300">
                     <p className="text-red-700 font-medium">
                         Error loading statistics: {error}
                     </p>
@@ -79,67 +125,73 @@ const HeroSection = () => {
         );
     }
 
+    const sectionClasses = "relative min-h-[85vh] w-full flex items-center justify-center overflow-hidden";
+
     return (
-        <section className="relative h-[75vh] w-full">
+        <section className={sectionClasses}>
+            <style>{animationStyles}</style>
+
             <img
                 src="../../../hero.jpg"
                 alt="A vibrant farm field"
                 className="absolute inset-0 h-full w-full object-cover"
             />
 
-            <div className="absolute inset-0 bg-white/80" aria-hidden="true"></div>
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" aria-hidden="true"></div>
 
-            <div className="relative z-10 flex h-full flex-col p-8 text-white">
-                <div className="flex flex-1 flex-col items-center justify-center text-center">
-                    <h1 className="mb-4 text-4xl font-bold md:text-6xl text-emerald-900">
+            <div className="relative z-10 container mx-auto px-6 py-12 flex flex-col text-white items-center text-center">
+                <div className="max-w-4xl mx-auto mt-10">
+                    <h1 className="mb-4 text-4xl font-bold md:text-6xl text-emerald-900 animate-fade-in-up leading-tight">
                         Freshness from the farm.
                     </h1>
-                    <p className="max-w-2xl text-lg md:text-xl text-emerald-700 mt-5">
+                    <p className="max-w-2xl text-lg md:text-xl text-emerald-700 mt-5 animate-fade-in-up delay-100 mx-auto leading-relaxed">
                         Discover and shop from the best local farms across Egypt. Connect directly with farmers who care about quality and sustainability.
                     </p>
 
-                    <a
-                        href="#DiscoverSection"
-                        className="mt-8 flex items-center gap-2 py-2 px-7 rounded-full bg-emerald-700 text-lg font-medium transition-transform hover:scale-105"
-                    >
-                        Find Farms Near Me
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={2}
-                            stroke="currentColor"
-                            className="h-5 w-5"
+                    <div className="mt-10 animate-fade-in-up delay-200">
+                        <a
+                            href="#DiscoverSection"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                const section = document.getElementById("DiscoverSection");
+                                if (section) {
+                                    section.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }
+                            }}
+                            className="inline-flex items-center gap-2 py-3 px-8 rounded-full bg-emerald-700 text-white text-lg font-semibold shadow-lg shadow-emerald-700/30 transition-all duration-300 hover:scale-105 hover:bg-emerald-800 hover:shadow-xl group cursor-pointer"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M19 9l-7 7-7-7"
-                            />
-                        </svg>
-                    </a>
+                            Find Farms Near Me
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2.5}
+                                stroke="currentColor"
+                                className="h-5 w-5 animate-bounce group-hover:animate-none"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </a>
+                    </div>
 
-                    <div className="flex flex-wrap justify-center gap-8 md:gap-16 mt-16">
-                        {/* {stats.map((stat) => (
-                            <div key={stat.id} className="flex flex-col items-center"> */}
-                        {/* <span className="text-3xl font-bold text-emerald-600">{stat.value}</span>
-                                <span className="text-sm uppercase tracking-wider mt-3 text-emerald-900">{stat.name}</span> */}
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 uppercase tracking-wider">
-
+                    <div className="w-full max-w-5xl flex flex-wrap justify-center gap-8 md:gap-16 mt-16">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 uppercase tracking-wider w-full">
                             <StatItem
                                 value={stats.farmsRegistered}
                                 label="Farms"
+                            // delay="delay-300"
                             />
 
                             <StatItem
                                 value={stats.customersJoined}
                                 label="Customers"
+                            // delay="delay-500"
                             />
 
                             <StatItem
                                 value={stats.productsListed}
                                 label="Products"
+                            // delay="delay-700"
                             />
                         </div>
                     </div>

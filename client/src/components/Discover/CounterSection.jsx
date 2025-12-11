@@ -9,7 +9,11 @@ const useCountUp = (end, duration = 2000, start = false) => {
     const frameRef = useRef(null);
 
     useEffect(() => {
-        if (!start) return;
+        if (!start) {
+            setCount(0);
+            return;
+        }
+
         let currentFrame = 0;
         const animate = () => {
             currentFrame++;
@@ -69,17 +73,17 @@ const SalesIcon = () => (
     </svg>
 );
 const OrderIcon = () => (
-    <svg className="h-8 w-8 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-8 w-8 text-emerald-800/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
     </svg>
 );
 const ClockIcon = () => (
-    <svg className="h-8 w-8 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-8 w-8 text-emerald-800/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
 const NewIcon = () => (
-    <svg className="h-8 w-8 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-8 w-8 text-emerald-800/90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.044a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
 );
@@ -93,17 +97,26 @@ function HorizontalStatCard({ endValue, label, description, icon, startAnimation
 
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-900 to-emerald-200 p-6 text-white shadow-lg transition-all duration-700 transform hover:scale-105 ${startAnimation ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}`}
+            className={`
+                relative overflow-hidden rounded-2xl p-6 shadow-md transition-all duration-700 transform hover:scale-105
+                bg-gradient-to-br from-emerald-50 to-teal-100 
+                border border-emerald-100
+                ${startAnimation ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'}
+            `}
             style={{ transitionDelay: `${delay}ms`, transformOrigin: 'left center' }}
         >
             <div className="flex items-center gap-4">
-                <div className="flex-shrink-0">{icon}</div>
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-emerald-200/50 text-emerald-700">
+                    {icon}
+                </div>
+
                 <div>
-                    <dt className="text-4xl font-extrabold">{formattedValue}</dt>
-                    <dd className="text-sm font-semibold text-green-100">{label}</dd>
+                    <dt className="text-4xl font-extrabold text-emerald-900">{formattedValue}</dt>
+                    <dd className="text-sm font-bold uppercase tracking-wide text-emerald-600">{label}</dd>
                 </div>
             </div>
-            <p className="mt-3 text-lg text-green-900">{description}</p>
+
+            <p className="mt-3 text-lg font-medium text-emerald-800/90">{description}</p>
         </div>
     );
 }
@@ -170,8 +183,8 @@ function CounterSection() {
     const [error, setError] = useState(null);
 
     const { ref, inView } = useInView({
-        triggerOnce: true,
-        threshold: 0.1,
+        triggerOnce: false,
+        threshold: 0.2,
     });
 
     useEffect(() => {
