@@ -196,9 +196,7 @@ export const productValidationSchema = Yup.object({
     .min(0, "Stock cannot be negative")
     .max(999999, "Stock exceeds maximum value")
     .required("Stock quantity is required"),
-  category: Yup.string()
-    .transform(sanitizeString)
-    .required("Category is required"),
+  category: Yup.string().transform(sanitizeString).required("Category is required"),
   description: Yup.string()
     .transform(sanitizeTextArea)
     .max(1000, "Description exceeds maximum length (1000 characters)")
@@ -208,4 +206,23 @@ export const productValidationSchema = Yup.object({
     .url("Must be a valid URL")
     .max(500, "Image URL exceeds maximum length")
     .nullable(),
+});
+
+/**
+ * Contact Us validation schema
+ */
+export const contactUsValidationSchema = Yup.object({
+  name: Yup.string()
+    .matches(nameRegex, nameInvalidCharsMessage)
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name exceeds maximum length")
+    .required("Name is required"),
+  email: Yup.string()
+    .matches(emailRegex, "Please enter a valid email address with @ symbol")
+    .max(255, "Email exceeds maximum length")
+    .required("Email is required"),
+  message: Yup.string()
+    .min(10, "Message must be at least 10 characters")
+    .max(1000, "Message exceeds maximum length")
+    .required("Message is required"),
 });
