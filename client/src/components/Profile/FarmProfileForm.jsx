@@ -7,7 +7,7 @@ import { X, Sparkles } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { generateFarmBio, isAIConfigured } from "../../services/aiService";
+import { generateFarmBio } from "../../services/aiService";
 
 // Map components
 delete L.Icon.Default.prototype._getIconUrl;
@@ -92,11 +92,6 @@ export const FarmProfileForm = ({ initialData }) => {
   const handleGenerateFarmBio = useCallback(async () => {
     if (!formData.farmName.trim()) {
       toast.warning("Please enter a farm name first");
-      return;
-    }
-
-    if (!isAIConfigured()) {
-      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
       return;
     }
 

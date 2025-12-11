@@ -4,11 +4,7 @@ import { toast } from "react-toastify";
 import LogoSpinner from "../common/LogoSpinner";
 import { sanitizeProductData, sanitizeString, sanitizeProductName } from "../../utils/sanitizers";
 import { X, Upload, Image as ImageIcon, Edit2, CheckCircle, Sparkles } from "lucide-react";
-import {
-  generateProductDescription,
-  standardizeCategory,
-  isAIConfigured,
-} from "../../services/aiService";
+import { generateProductDescription, standardizeCategory } from "../../services/aiService";
 
 /**
  * Supported product units matching server model validation
@@ -360,8 +356,8 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File is too large (Max 5MB)");
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File is too large (Max 10MB)");
         return;
       }
 
@@ -395,15 +391,16 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       return;
     }
 
-    if (!isAIConfigured()) {
-      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
-      return;
-    }
-
     setIsAIGenerating(true);
     setAIOperation("description");
     try {
-      const description = await generateProductDescription(formData.name, formData.imageUrl);
+      // Server handles file upload internally
+      const description = await generateProductDescription(
+        formData.name,
+        formData.imageUrl,
+        '',
+        product?._id // Server uses this for smart caching
+      );
       const newFormData = { ...formData, description };
       setFormData(newFormData);
       validateForm(newFormData);
@@ -415,7 +412,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       setIsAIGenerating(false);
       setAIOperation("");
     }
-  }, [formData, validateForm]);
+  }, [formData, validateForm, product]);
 
   const handleStandardizeCategory = useCallback(async () => {
     if (!formData.name.trim()) {
@@ -423,15 +420,16 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       return;
     }
 
-    if (!isAIConfigured()) {
-      toast.error("AI is not configured. Please add your Gemini API key to the .env file.");
-      return;
-    }
-
     setIsAIGenerating(true);
     setAIOperation("category");
     try {
-      const category = await standardizeCategory(formData.name, formData.imageUrl);
+      // Server handles file upload internally
+      const category = await standardizeCategory(
+        formData.name,
+        formData.imageUrl,
+        '',
+        product?._id // Server uses this for smart caching
+      );
 
       let newFormData;
       // Check if it's one of the standard categories
@@ -454,7 +452,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       setIsAIGenerating(false);
       setAIOperation("");
     }
-  }, [formData, validateForm]);
+  }, [formData, validateForm, product]);
 
   // Memoized values
   const displayImageUrl = useMemo(() => imagePreview, [imagePreview]);
@@ -902,7 +900,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
                           <p className="text-sm font-semibold text-gray-700">
                             Click to upload image
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP (Max 5MB)</p>
+                          <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP (Max 10MB)</p>
                           <p className="mt-1 text-xs font-medium text-emerald-600">
                             Original quality preserved
                           </p>

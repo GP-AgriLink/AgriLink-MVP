@@ -1,247 +1,123 @@
 /**
- * AI Service for Gemini Flash Lite Integration
- * Uses Google's Gemini API via REST (no additional packages)
+ * AI Service Client
+ * Client-side service for making AI-powered content generation requests to the server
+ *
+ * SECURITY: API calls are made to server endpoints, keeping the API key secure
  */
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_API_URL =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
-
-// OpenStreetMap Nominatim API for reverse geocoding (free, no key needed)
-const NOMINATIM_API_URL = "https://nominatim.openstreetmap.org/reverse";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 /**
- * Fetch image from URL and convert to base64
- * @param {string} imageUrl - URL of the image
- * @returns {Promise<{base64: string, mimeType: string} | null>}
+ * Get authentication token from localStorage
+ * @returns {string|null} - JWT token or null if not authenticated
  */
-const fetchImageAsBase64 = async (imageUrl) => {
-  if (!imageUrl) return null;
-
+const getAuthToken = () => {
   try {
-    const response = await fetch(imageUrl);
-    if (!response.ok) return null;
-
-    const blob = await response.blob();
-    const mimeType = blob.type || "image/jpeg";
-
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result.split(",")[1];
-        resolve({ base64, mimeType });
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
+    const token = localStorage.getItem("token");
+    return token;
   } catch (error) {
-    console.error("Error fetching image:", error);
+    console.error('[AI Service] Error retrieving token:', error);
     return null;
   }
 };
 
 /**
- * Make a request to Gemini API with optional image support
- * @param {string} prompt - The prompt to send
- * @param {number} maxTokens - Maximum tokens to generate
- * @param {object|null} imageData - Optional image data {base64, mimeType}
- * @returns {Promise<string>} - Generated text
+ * Make authenticated API request
+ * @param {string} endpoint - API endpoint
+ * @param {object} data - Request body data
+ * @returns {Promise<any>} - Response data
  */
-const callGeminiAPI = async (prompt, maxTokens = 500, imageData = null) => {
-  if (!GEMINI_API_KEY || GEMINI_API_KEY === "your_api_key_here") {
-    throw new Error(
-      "Gemini API key is not configured. Please add VITE_GEMINI_API_KEY to your .env file."
-    );
+const makeAuthenticatedRequest = async (endpoint, data) => {
+  const token = getAuthToken();
+
+  if (!token) {
+    throw new Error("Authentication required. Please log in.");
   }
 
-  try {
-    // Build parts array for multimodal support
-    const parts = [];
+  const response = await fetch(`${API_BASE_URL}/api/ai${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
 
-    // Add image first (higher priority for AI analysis)
-    if (imageData) {
-      parts.push({
-        inline_data: {
-          mime_type: imageData.mimeType,
-          data: imageData.base64,
-        },
-      });
-    }
-
-    // Add text prompt
-    parts.push({ text: prompt });
-
-    const response = await fetch(GEMINI_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": GEMINI_API_KEY,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: parts,
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: maxTokens,
-          topP: 0.8,
-          topK: 40,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!generatedText) {
-      throw new Error("No content generated from AI");
-    }
-
-    return generatedText.trim();
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Request failed: ${response.status}`);
   }
+
+  return await response.json();
 };
 
 /**
- * Get location details from coordinates using OpenStreetMap
- * @param {number[]} coordinates - [longitude, latitude]
- * @returns {Promise<object>} - Location details
- */
-const getLocationDetails = async (coordinates) => {
-  if (!coordinates || coordinates.length !== 2) {
-    return null;
-  }
-
-  const [lng, lat] = coordinates;
-
-  try {
-    const response = await fetch(
-      `${NOMINATIM_API_URL}?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`,
-      {
-        headers: {
-          "User-Agent": "AgriLink-MVP/1.0",
-        },
-      }
-    );
-
-    if (!response.ok) {
-      console.warn("Failed to fetch location details from OpenStreetMap");
-      return null;
-    }
-
-    const data = await response.json();
-    return {
-      city: data.address?.city || data.address?.town || data.address?.village || "Unknown",
-      region: data.address?.state || data.address?.region || "",
-      country: data.address?.country || "",
-    };
-  } catch (error) {
-    console.error("Location lookup error:", error);
-    return null;
-  }
-};
-
-/**
- * Generate product description based on product name and optional image
- * @param {string} productName - Name of the product
+ * Generate product description using AI
+ * @param {string} name - Product name
  * @param {string} imageUrl - Optional image URL
- * @param {string} existingDescription - Optional existing description for context
+ * @param {string} existingDescription - Optional existing description
+ * @param {string|null} productId - Optional product ID for smart caching (EditProduct)
  * @returns {Promise<string>} - Generated description
  */
 export const generateProductDescription = async (
-  productName,
+  name,
   imageUrl = "",
-  existingDescription = ""
+  existingDescription = "",
+  productId = null
 ) => {
-  if (!productName || !productName.trim()) {
+  if (!name || !name.trim()) {
     throw new Error("Product name is required");
   }
 
-  // Fetch and convert image to base64 for visual analysis
-  const imageData = imageUrl ? await fetchImageAsBase64(imageUrl) : null;
+  const data = await makeAuthenticatedRequest("/product-description", {
+    name,
+    imageUrl,
+    existingDescription,
+    productId, // Server uses this for smart file caching
+  });
 
-  const prompt = `Create a short product description (1-2 sentences max).
-
-Product: ${productName}
-${imageData ? "Describe what you see in the image." : ""}
-
-Make it professional, highlight quality and freshness. Be concise and natural.`;
-
-  return await callGeminiAPI(prompt, 80, imageData);
+  return data.description;
 };
 
 /**
- * Standardize product category to ensure consistency with visual analysis
- * @param {string} productName - Name of the product
- * @param {string} imageUrl - Optional image URL for visual analysis
- * @param {string} existingCategory - Optional existing category for context
+ * Standardize product category using AI
+ * @param {string} name - Product name
+ * @param {string} imageUrl - Optional image URL
+ * @param {string} existingCategory - Optional existing category
+ * @param {string|null} productId - Optional product ID for smart caching (EditProduct)
  * @returns {Promise<string>} - Standardized category
  */
-export const standardizeCategory = async (productName, imageUrl = "", existingCategory = "") => {
-  if (!productName || !productName.trim()) {
+export const standardizeCategory = async (
+  name,
+  imageUrl = "",
+  existingCategory = "",
+  productId = null
+) => {
+  if (!name || !name.trim()) {
     throw new Error("Product name is required");
   }
 
-  // Fetch and convert image to base64 for visual analysis
-  const imageData = imageUrl ? await fetchImageAsBase64(imageUrl) : null;
+  const data = await makeAuthenticatedRequest("/standardize-category", {
+    name,
+    imageUrl,
+    existingCategory,
+    productId, // Server uses this for smart file caching
+  });
 
-  const prompt = `You are a product categorization system. Your task is to assign products to ONE standardized category.
-
-CRITICAL: You MUST return EXACTLY ONE of these category names (case-sensitive):
-- Vegetables
-- Fruits
-- Grains
-- Herbs
-- Dairy
-- Organic
-
-Product Name: ${productName}
-${existingCategory ? `Current Category: ${existingCategory}` : ""}
-${imageData ? "Visual Context: Analyze the provided image to accurately identify the product category based on visual features." : ""}
-
-Rules:
-1. ${imageData ? "PRIORITIZE visual analysis - the image is the most reliable source for categorization" : "Use the product name primarily"}
-2. Return ONLY the category name, nothing else
-3. Use the EXACT spelling and capitalization shown above
-4. Be consistent - the same product should ALWAYS get the same category
-5. "Organic" should ONLY be used if explicitly stated or clearly visible organic certification in the image
-
-Return ONLY the category name:`;
-
-  const category = await callGeminiAPI(prompt, 50, imageData);
-
-  // Validate and clean the response
-  const validCategories = ["Vegetables", "Fruits", "Grains", "Herbs", "Dairy", "Organic"];
-  const trimmedCategory = category.trim();
-
-  // Find exact match or case-insensitive match
-  const matchedCategory = validCategories.find(
-    (valid) => valid.toLowerCase() === trimmedCategory.toLowerCase()
-  );
-
-  return matchedCategory || "Vegetables"; // Default to Vegetables if invalid
+  return data.category;
 };
 
 /**
- * Generate or polish farm bio based on farm details
- * @param {string} farmName - Name of the farm
+ * Generate farm bio using AI
+ * @param {string} farmName - Farm name
  * @param {number[]} coordinates - [longitude, latitude]
- * @param {string[]} specialties - Array of farm specialties
- * @param {string} existingBio - Optional existing bio to polish
- * @returns {Promise<string>} - Generated or polished bio
+ * @param {string[]} specialties - Farm specialties
+ * @param {string} existingBio - Optional existing bio
+ * @returns {Promise<string>} - Generated bio
  */
 export const generateFarmBio = async (
   farmName,
-  coordinates,
+  coordinates = null,
   specialties = [],
   existingBio = ""
 ) => {
@@ -249,103 +125,84 @@ export const generateFarmBio = async (
     throw new Error("Farm name is required");
   }
 
-  // Get location details
-  const location = coordinates ? await getLocationDetails(coordinates) : null;
-  const hasLocation = !!location;
-  const hasSpecialties = specialties && specialties.length > 0;
-  const hasExistingBio = existingBio && existingBio.trim();
+  const data = await makeAuthenticatedRequest("/farm-bio", {
+    farmName,
+    coordinates,
+    specialties,
+    existingBio,
+  });
 
-  // Check if this is a brand new farm with minimal data
-  const isNewFarm = !hasExistingBio && !hasLocation && !hasSpecialties;
-
-  const locationInfo = location
-    ? `Located in ${location.city}${location.region ? `, ${location.region}` : ""}${location.country ? `, ${location.country}` : ""}`
-    : "";
-
-  const specialtiesInfo = hasSpecialties ? `Farm specialties: ${specialties.join(", ")}` : "";
-
-  let prompt;
-
-  if (hasExistingBio) {
-    // Polish existing bio
-    prompt = `You are an agricultural content writer. Polish and enhance this farm bio while keeping its core message.
-
-Farm Name: ${farmName}
-${locationInfo}
-${specialtiesInfo}
-
-Current Bio:
-${existingBio}
-
-Task:
-- Enhance the bio while keeping it authentic and professional
-- Maintain the core message and personality
-- Fix any grammar or clarity issues
-- Write a detailed, engaging bio (5-7 sentences, 250-400 words)
-- Incorporate location and specialties naturally if they're missing
-- Make it warm and inviting
-- Tell a compelling story about the farm
-
-Return ONLY the polished bio text:`;
-  } else if (isNewFarm) {
-    // Generate a helpful starter bio for brand new farms
-    prompt = `You are an agricultural content writer. Create a welcoming starter bio for a new farm profile.
-
-Farm Name: ${farmName}
-
-Task:
-- Write a professional, friendly starter bio (4-5 sentences, 150-250 words)
-- Create a warm welcome message that introduces the farm
-- Emphasize commitment to quality, freshness, and sustainability
-- Include generic but authentic statements about farm-to-table values
-- Make it easy for the farmer to personalize later by adding placeholders for specific details
-- Use an inviting, community-focused tone
-- Keep it genuine and professional, not overly promotional
-
-Example structure:
-- Welcome introduction
-- Commitment to quality and sustainable practices
-- Connection to community and customers
-- Invitation to explore products
-
-Return ONLY the bio text:`;
-  } else {
-    // Generate new bio with available data
-    const contextInfo = [];
-    if (locationInfo) contextInfo.push(locationInfo);
-    if (specialtiesInfo) contextInfo.push(specialtiesInfo);
-
-    const availableContext =
-      contextInfo.length > 0
-        ? contextInfo.join("\n")
-        : "Limited information available - generate a welcoming, general farm bio";
-
-    prompt = `You are an agricultural content writer. Create a compelling farm bio that tells the farm's story.
-
-Farm Name: ${farmName}
-${availableContext}
-
-Requirements:
-- Write a warm, authentic bio (5-7 sentences, 250-400 words)
-- Highlight what makes this farm special and its unique story
-- ${locationInfo ? "Incorporate the location naturally" : "Focus on farming values and quality"}
-- ${hasSpecialties ? "Emphasize the farm specialties" : "Discuss diverse agricultural offerings"}
-- Use a friendly, professional tone
-- Focus on quality, freshness, sustainability, and community
-- Make customers feel connected to the farm
-- Include details about farming practices, products, or the farm's values
-- Create an engaging narrative that draws readers in
-
-Return ONLY the bio text, no titles or labels:`;
-  }
-
-  return await callGeminiAPI(prompt, 600);
+  return data.bio;
 };
 
 /**
- * Check if AI service is properly configured
- * @returns {boolean} - True if API key is configured
+ * Upload image to AI File API
+ * @param {string} imageUrl - URL of the image to upload
+ * @returns {Promise<{uri: string, mimeType: string, name: string}>} - Uploaded file data
  */
-export const isAIConfigured = () => {
-  return !!GEMINI_API_KEY && GEMINI_API_KEY !== "your_api_key_here";
+export const uploadImageToAI = async (imageUrl) => {
+  if (!imageUrl || !imageUrl.trim()) {
+    throw new Error("Image URL is required");
+  }
+
+  const data = await makeAuthenticatedRequest("/upload-image", {
+    imageUrl,
+  });
+
+  return data.fileData;
+};
+
+/**
+ * Delete file from File API
+ * @param {string} fileName - Name of the file to delete (e.g., 'files/abc123')
+ * @returns {Promise<void>}
+ */
+export const deleteFile = async (fileName) => {
+  if (!fileName) {
+    throw new Error("File name is required");
+  }
+
+  const token = localStorage.getItem("token");
+
+  if (!token) {
+    throw new Error("Authentication required. Please log in.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/ai/files/${fileName}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || `Delete failed: ${response.status}`);
+  }
+
+  return await response.json();
+};
+
+/**
+ * Cache product image with smart file reuse
+ * Checks if file already exists for product ID, reuses if found (48h cache)
+ * @param {string} imageUrl - URL of the image to upload
+ * @param {string} productId - Product ID for caching
+ * @returns {Promise<{uri: string, mimeType: string, name: string, displayName: string}>} - File data
+ */
+export const cacheProductImage = async (imageUrl, productId) => {
+  if (!imageUrl || !imageUrl.trim()) {
+    throw new Error("Image URL is required");
+  }
+
+  if (!productId || !productId.trim()) {
+    throw new Error("Product ID is required");
+  }
+
+  const data = await makeAuthenticatedRequest("/img", {
+    imageUrl,
+    productId,
+  });
+
+  return data.fileData;
 };
