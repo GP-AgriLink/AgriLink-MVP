@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Mail, Lock, Sparkles, Shield } from "lucide-react";
 import { Formik, Form } from "formik";

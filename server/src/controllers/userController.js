@@ -255,7 +255,7 @@ const forgotPassword = async (req, res) => {
                                   </v:roundrect>
                                   <![endif]-->
                                   <!--[if !mso]><!-->
-                                  <a href="${resetURL}" style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); transition: all 0.3s ease;" target="_blank">
+                                  <a href="${resetURL}" style="background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);" target="_blank">
                                     🔓 Reset My Password
                                   </a>
                                   <!--<![endif]-->

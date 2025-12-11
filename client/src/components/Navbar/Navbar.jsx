@@ -92,7 +92,7 @@ function Navbar() {
 
   return (
     <header className="sticky top-0 z-[100] rounded-b-3xl border-b border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 font-['Inter'] shadow-[0_-4px_16px_rgba(6,78,59,0.7)] backdrop-blur-lg">
-      <div className="relative mx-auto flex w-full items-center justify-between px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
+      <div className="relative mx-auto flex w-full items-center justify-between gap-4 px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
         {/* Responsive Logo */}
         <div className="flex-shrink-0">
           <Logo className="hidden lg:flex" />
@@ -103,7 +103,7 @@ function Navbar() {
           />
         </div>
 
-        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-8 lg:flex">
+        <nav className="hidden flex-1 items-center justify-center gap-8 lg:flex">
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -120,7 +120,7 @@ function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden items-center justify-end gap-4 lg:flex">
+        <div className="flex flex-shrink-0 items-center justify-end gap-4 lg:flex">
           {user?.role === "customer" && (
             <Link
               to="/cart"

@@ -23,7 +23,6 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
   const [searchLocation, setSearchLocation] = useState("");
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [error, setError] = useState(null);
-  const [mapCenter, setMapCenter] = useState(FALLBACK_POSITION);
   const [locationName, setLocationName] = useState("Your Selected Location");
 
   useEffect(() => {
@@ -32,7 +31,12 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
 
       // 2. Call the API
       fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCoords.latitude}&lon=${userCoords.longitude}`
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCoords.latitude}&lon=${userCoords.longitude}`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        }
       )
         .then((res) => res.json())
         .then((data) => {
@@ -78,7 +82,11 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
         setError("Unable to retrieve your location.");
         setLoadingLocation(false);
       },
-      { enableHighAccuracy: false, timeout: 30000, maximumAge: 300000 }
+      { 
+        enableHighAccuracy: true,  // Use GPS for accurate farm locations
+        timeout: 15000,             // 15s balanced timeout
+        maximumAge: 60000           // Cache for 1 minute only
+      }
     );
   };
 
@@ -92,7 +100,12 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           searchLocation
-        )}`
+        )}`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0'
+          }
+        }
       );
       const data = await res.json();
       if (data && data.length > 0) {
@@ -133,7 +146,7 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
             <br />
             lovely grown near you.
           </h1>
-          <p className="mt-7 w-[600px] text-xl text-gray-600">
+          <p className="mt-7 max-w-[600px] text-xl text-gray-600">
             Explore AgriLink's interactive farm network map. Hover or click on a marker to learn
             more about each farm, their growing practices, and shop their seasonal offerings.
           </p>
@@ -176,7 +189,7 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
         {/* --- Map --- */}
         <div className="z-0 h-96 w-full rounded-2xl shadow-lg lg:h-[50vh]">
           <MapContainer
-            center={mapCenter}
+            center={FALLBACK_POSITION}
             zoom={10}
             scrollWheelZoom={true}
             className="h-full w-full rounded-2xl"
