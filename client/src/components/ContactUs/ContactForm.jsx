@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, User, MessageSquare, Check, AlertCircle, Loader2 } from "lucide-react";
 import emailjs from "@emailjs/browser";
 import { toast } from "react-toastify";
-import { contactUsValidationSchema } from "../utils/validationSchemas";
-import { sanitizeName, sanitizeEmail, sanitizeTextArea } from "../utils/sanitizers";
+import { contactUsValidationSchema } from "../../utils/validationSchemas";
+import { sanitizeName, sanitizeEmail, sanitizeTextArea } from "../../utils/sanitizers";
 
 const ContactForm = () => {
   const [submitLoading, setSubmitLoading] = useState(false);

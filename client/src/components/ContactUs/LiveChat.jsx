@@ -10,7 +10,7 @@ import {
   Sparkles,
   Plus,
 } from "lucide-react";
-import { sendChatMessage, getChatHistory, startNewConversation } from "../services/chatService";
+import { sendChatMessage, getChatHistory, startNewConversation } from "../../services/chatService";
 import { toast } from "react-toastify";
 
 const LiveChat = forwardRef(({ onClose }, ref) => {

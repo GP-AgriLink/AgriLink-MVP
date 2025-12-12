@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, MessageSquare, MapPin, X } from "lucide-react";
-import ContactForm from "../components/ContactForm";
-import ContactInfoCard from "../components/ContactInfoCard";
-import FAQAccordion from "../components/FAQAccordion";
-import LiveChat from "../components/LiveChat";
-import AuthPromptModal from "../components/AuthPromptModal";
+import ContactForm from "../components/ContactUs/ContactForm";
+import ContactInfoCard from "../components/ContactUs/ContactInfoCard";
+import FAQAccordion from "../components/ContactUs/FAQAccordion";
+import LiveChat from "../components/ContactUs/LiveChat";
+import AuthPromptModal from "../components/ContactUs/AuthPromptModal";
 import { useAuth } from "../context/AuthContext";
 
 const ContactUs = () => {
