@@ -136,7 +136,7 @@ function Navbar() {
       <div className="mx-auto flex w-full items-center justify-between px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
 
         {/* --- LEFT: Logo --- */}
-        <div className="flex-shrink-0">
+        <div className="flex flex-1 items-center justify-start">
           <Logo className="hidden lg:flex" />
           <Logo iconOnly={true} iconContainerClass="w-12 h-12" className="lg:hidden rounded-full overflow-hidden" />
         </div>
@@ -159,7 +159,7 @@ function Navbar() {
         </nav>
 
         {/* --- RIGHT: Actions --- */}
-        <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex flex-1 items-center justify-end gap-4">
 
           {/* ============================
               DESKTOP ACTIONS
