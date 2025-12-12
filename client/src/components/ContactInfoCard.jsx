@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 
-const ContactInfoCard = ({ icon: Icon, title, description, linkText, linkHref, delay = 0 }) => {
+const ContactInfoCard = ({ icon: Icon, title, description, linkText, linkHref, onClick, delay = 0 }) => {
+  const isClickable = onClick || (linkText && linkHref);
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -30,30 +31,58 @@ const ContactInfoCard = ({ icon: Icon, title, description, linkText, linkHref, d
           <p className="mb-4 text-base leading-relaxed text-emerald-700/80 transition-colors duration-300 group-hover:text-emerald-700">
             {description}
           </p>
-          {linkText && linkHref && (
-            <motion.a
-              href={linkHref}
-              whileHover={{ x: 5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-              className="inline-flex items-center gap-2 font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
-            >
-              <span>{linkText}</span>
-              <motion.svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                initial={{ x: 0 }}
-                whileHover={{ x: 3 }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </motion.svg>
-            </motion.a>
+          {isClickable && (
+            <>
+              {onClick ? (
+                <motion.button
+                  onClick={onClick}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                  className="inline-flex items-center gap-2 font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+                >
+                  <span>{linkText}</span>
+                  <motion.svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 3 }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </motion.svg>
+                </motion.button>
+              ) : (
+                <motion.a
+                  href={linkHref}
+                  whileHover={{ x: 5 }}
+                  transition={{ type: "spring", stiffness: 400 }}
+                  className="inline-flex items-center gap-2 font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
+                >
+                  <span>{linkText}</span>
+                  <motion.svg
+                    className="h-4 w-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 3 }}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </motion.svg>
+                </motion.a>
+              )}
+            </>
           )}
         </div>
       </div>

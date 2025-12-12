@@ -1,10 +1,46 @@
-import { motion } from "framer-motion";
-import { Mail, MessageSquare, MapPin } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Mail, MessageSquare, MapPin, X } from "lucide-react";
 import ContactForm from "../components/ContactForm";
 import ContactInfoCard from "../components/ContactInfoCard";
 import FAQAccordion from "../components/FAQAccordion";
+import LiveChat from "../components/LiveChat";
+import AuthPromptModal from "../components/AuthPromptModal";
+import { useAuth } from "../context/AuthContext";
 
 const ContactUs = () => {
+  const { user } = useAuth();
+  const [isChatActive, setIsChatActive] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const liveChatRef = useRef(null);
+  const chatContainerRef = useRef(null); // Container reference
+
+  // Scroll to chat container when chat opens (with navbar offset)
+  useEffect(() => {
+    if (isChatActive && chatContainerRef.current) {
+      const navbarHeight = 80; // Navbar height in pixels
+      const elementPosition = chatContainerRef.current.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - navbarHeight;
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  }, [isChatActive]);
+
+  const handleChatClick = () => {
+    if (user) {
+      setIsChatActive(true);
+    } else {
+      setShowAuthModal(true);
+    }
+  };
+
+  const handleCloseChat = () => {
+    setIsChatActive(false);
+  };
+
   const contactInfo = [
     {
       icon: Mail,
@@ -19,6 +55,7 @@ const ContactUs = () => {
       description: "Chat with our AI assistant for instant help",
       linkText: "Start a conversation",
       linkHref: "#",
+      onClick: handleChatClick,
     },
     {
       icon: MapPin,
@@ -96,9 +133,34 @@ const ContactUs = () => {
           </motion.p>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-start">
-          {/* Contact Form */}
-          <ContactForm />
+        <div 
+          ref={chatContainerRef} 
+          className="grid grid-cols-1 gap-12 lg:grid-cols-2 lg:items-start"
+        >
+          {/* Contact Form or Live Chat */}
+          <AnimatePresence mode="wait">
+            {isChatActive ? (
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                <LiveChat ref={liveChatRef} onClose={handleCloseChat} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="form"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+              >
+                <ContactForm />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Contact Information Section */}
           <div className="space-y-8">
@@ -111,6 +173,7 @@ const ContactUs = () => {
                 description={info.description}
                 linkText={info.linkText}
                 linkHref={info.linkHref}
+                onClick={info.onClick}
                 delay={0.3 + index * 0.1}
               />
             ))}
@@ -127,6 +190,12 @@ const ContactUs = () => {
           <FAQAccordion faqs={faqs} />
         </motion.div>
       </div>
+
+      {/* Auth Prompt Modal */}
+      <AuthPromptModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+      />
     </div>
   );
 };

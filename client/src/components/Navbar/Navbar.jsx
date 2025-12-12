@@ -94,7 +94,7 @@ function Navbar() {
     <header className="sticky top-0 z-[100] rounded-b-3xl border-b border-emerald-100/70 bg-gradient-to-br from-white via-emerald-50/40 to-teal-50/40 font-['Inter'] shadow-[0_-4px_16px_rgba(6,78,59,0.7)] backdrop-blur-lg">
       <div className="relative mx-auto flex w-full items-center justify-between gap-4 px-4 py-4 md:px-6 md:py-5 lg:w-5/6">
         {/* Responsive Logo */}
-        <div className="flex-shrink-0">
+        <div className="flex flex-1 items-center justify-start">
           <Logo className="hidden lg:flex" />
           <Logo
             iconOnly={true}
@@ -120,7 +120,7 @@ function Navbar() {
           ))}
         </nav>
 
-        <div className="flex flex-shrink-0 items-center justify-end gap-4 lg:flex">
+        <div className="flex flex-1 items-center justify-end gap-4">
           {user?.role === "customer" && (
             <Link
               to="/cart"
