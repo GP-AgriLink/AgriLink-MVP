@@ -142,8 +142,8 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
     return (
         <div className="relative w-full bg-emerald-50" id="DiscoverSection">
 
-            <div className="mx-auto max-w-2xl text-center">
-                <p className="text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
+            <div className="mx-auto max-w-2xl text-center px-4 pt-16 lg:pt-20">
+                <p className="text-xs sm:text-sm font-semibold text-green-700 uppercase tracking-wider mt-4 mb-2">
                     Discover
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -152,18 +152,19 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
                 <div className="mx-auto mt-5 w-20 h-1 bg-green-700"></div>
             </div>
 
-            <div className="container mx-auto grid min-h-[70vh] grid-cols-1 items-center gap-12 px-4 py-20 lg:grid-cols-2">
+            <div className="container mx-auto grid min-h-[60vh] lg:min-h-[70vh] grid-cols-1 items-center gap-12 px-4 py-12 lg:py-20 lg:grid-cols-2">
 
                 <div className="text-center lg:text-left">
-                    <h1 className="text-5xl font-bold text-gray-900 drop-shadow-sm">
-                        Discover fresh produce,<br />
-                        lovely grown near you.
+                    <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 drop-shadow-sm leading-tight">
+                        Discover fresh produce,<br className="hidden sm:block" />
+                        grown near you.
                     </h1>
-                    <p className="mt-7 text-xl text-gray-600 w-[600px]">
+
+                    <p className="mt-6 text-lg sm:text-xl text-gray-600 max-w-xl mx-auto lg:mx-0">
                         Explore AgriLink's interactive farm network map. Hover or click on a marker to learn more about each farm, their growing practices, and shop their seasonal offerings.
                     </p>
 
-                    <div className="mt-10 max-w-lg space-y-4 lg:mx-0">
+                    <div className="mt-8 sm:mt-10 max-w-lg mx-auto lg:mx-0 space-y-4">
                         <form
                             onSubmit={handleSearchSubmit}
                             className="relative w-full"
@@ -173,24 +174,24 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
                                 value={searchLocation}
                                 onChange={(e) => setSearchLocation(e.target.value)}
                                 placeholder="Enter your city or zip code"
-                                className="w-full rounded-full border border-gray-300 px-6 py-4 pr-16 text-lg shadow-lg
+                                className="w-full rounded-full border border-gray-300 px-6 py-4 pr-14 text-base sm:text-lg shadow-lg
                                 focus:outline-none focus:border-emerald-200 focus:ring-1 focus:ring-emerald-200 caret-emerald-200"
                             />
 
                             <button
                                 type="submit"
-                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-600 p-3 text-white shadow-md transition-colors hover:bg-emerald-700"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-600 p-2.5 sm:p-3 text-white shadow-md transition-colors hover:bg-emerald-700"
                                 disabled={loadingLocation}
                             >
-                                <Search className="h-6 w-6" />
+                                <Search className="h-5 w-5 sm:h-6 sm:w-6" />
                             </button>
                         </form>
 
-                        <div className="flex items-center justify-center gap-4 lg:justify-start">
-                            <span className="text-gray-500">or</span>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 lg:justify-start">
+                            <span className="text-gray-500 hidden sm:inline">or</span>
                             <button
                                 onClick={handleUseMyLocation}
-                                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-emerald-600 shadow-lg transition-all hover:shadow-xl"
+                                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-emerald-600 shadow-lg transition-all hover:shadow-xl w-full sm:w-auto justify-center"
                                 disabled={loadingLocation}
                             >
                                 <MapPin className="h-5 w-5" />
@@ -198,17 +199,17 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
                             </button>
                         </div>
 
-                        {error && <p className="mt-4 text-red-600">{error}</p>}
+                        {error && <p className="mt-4 text-red-600 text-sm font-medium">{error}</p>}
                     </div>
                 </div>
 
                 {/* --- Map --- */}
-                <div className="h-96 w-full rounded-2xl shadow-lg lg:h-[50vh] z-0">
+                <div className="h-[400px] w-full rounded-2xl shadow-lg lg:h-[50vh] z-0 overflow-hidden relative">
                     <MapContainer
                         center={mapCenter}
                         zoom={10}
-                        scrollWheelZoom={true}
-                        className="h-full w-full rounded-2xl"
+                        scrollWheelZoom={false}
+                        className="h-full w-full"
                     >
                         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
