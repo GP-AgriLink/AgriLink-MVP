@@ -2,13 +2,13 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { updateMyFarmProfile } from "../../services/farmApi";
 import { sanitizeName, sanitizeTextArea, sanitizeArray } from "../../utils/sanitizers";
 import { validateCoordinates } from "../../utils/validators";
+import { reverseGeocodeSmart } from "../../utils/geoCode";
 import { toast } from "react-toastify";
 import { X } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Map components
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
@@ -16,7 +16,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
-function LocationPicker({ setFormData, setFormErrors, validateLocationField }) {
+function LocationPicker({ setFormData, setFormErrors, validateLocationField, setLocationName }) {
   const [marker, setMarker] = useState(null);
   const [selectedPosition, setSelectedPosition] = useState(null);
 
@@ -43,15 +43,40 @@ function LocationPicker({ setFormData, setFormErrors, validateLocationField }) {
     if (selectedPosition) {
       const [lng, lat] = selectedPosition;
       const newLocation = { type: "Point", coordinates: [lng, lat] };
+
       setFormData((prev) => ({
         ...prev,
         location: newLocation,
       }));
-      // Validate the new location
+
+      try {
+        localStorage.setItem("agrillink_farm_location", JSON.stringify(newLocation));
+        localStorage.setItem("agrillink_farm_location_unsaved", "1");
+      } catch (err) {
+        console.error("localStorage write error:", err);
+      }
+
+      const fetchName = async () => {
+        try {
+          const name = await reverseGeocodeSmart([lng, lat]);
+          if (name && setLocationName) {
+            setLocationName(name);
+            try {
+              localStorage.setItem("agrillink_farm_location_name", name);
+            } catch (err) {
+              console.error("localStorage write error:", err);
+            }
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+      };
+      fetchName();
+
       const error = validateLocationField(newLocation);
       setFormErrors((prev) => ({ ...prev, location: error }));
     }
-  }, [selectedPosition, setFormData, setFormErrors, validateLocationField]);
+  }, [selectedPosition, setFormData, setFormErrors, validateLocationField, setLocationName]);
 
   return marker ? <Marker position={marker} /> : null;
 }
@@ -65,11 +90,9 @@ function FlyToLocation({ coordinates }) {
   }, [coordinates, map]);
   return null;
 }
-// End Map components
 
 const FARM_NAME_REGEX = /^[a-zA-Z\u0621-\u064A\s'-]{3,100}$/;
-const NAME_ERROR_MESSAGE =
-  "Name can only contain letters (English or Arabic), spaces, hyphens, and apostrophes";
+const NAME_ERROR_MESSAGE = "Name can only contain letters (English or Arabic), spaces, hyphens, and apostrophes";
 
 const getDefaultErrors = () => ({
   farmName: "",
@@ -80,6 +103,10 @@ const getDefaultErrors = () => ({
 export const FarmProfileForm = ({ initialData }) => {
   const [formData, setFormData] = useState(initialData);
   const [formErrors, setFormErrors] = useState(getDefaultErrors());
+  const [locationName, setLocationName] = useState(
+    initialData?.locationAddress || initialData?.locationName || initialData?.address || ""
+  );
+
   const [isLoading, setIsLoading] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const locationInputRef = useRef(null);
@@ -89,28 +116,93 @@ export const FarmProfileForm = ({ initialData }) => {
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+      const pickAddress =
+        initialData.locationAddress ||
+        initialData.locationName ||
+        initialData.address ||
+        initialData.location?.address ||
+        initialData.location?.displayName ||
+        "";
+
+      if (pickAddress) setLocationName(pickAddress);
       setFormErrors({
         farmName: validateField("farmName", initialData.farmName),
         farmBio: validateField("farmBio", initialData.farmBio),
         location: validateLocationField(initialData.location),
       });
+      let restoredFromLocal = false;
+      try {
+        const unsaved = localStorage.getItem("agrillink_farm_location_unsaved");
+        if (unsaved === "1") {
+          const stored = localStorage.getItem("agrillink_farm_location");
+          const storedName = localStorage.getItem("agrillink_farm_location_name") || "";
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed && parsed.coordinates && parsed.coordinates.length === 2) {
+              setFormData((prev) => ({ ...prev, location: parsed }));
+              if (storedName) setLocationName(storedName);
+              setFormErrors((prev) => ({ ...prev, location: validateLocationField(parsed) }));
+              restoredFromLocal = true;
+            }
+          }
+        }
+      } catch (err) {
+        console.error("localStorage read error:", err);
+      }
+
+      if (!restoredFromLocal && initialData.location && initialData.location.coordinates && initialData.location.coordinates.length === 2) {
+        if (pickAddress) {
+          setLocationName(pickAddress);
+        } else {
+          (async () => {
+            try {
+              const coords = initialData.location.coordinates;
+              const name = await reverseGeocodeSmart(coords);
+              if (name) setLocationName(name);
+            } catch (err) {
+              console.error("reverse geocode on mount failed:", err);
+            }
+          })();
+        }
+      }
     }
   }, [initialData]);
 
-  // --- Check if form is "dirty" ---
+  useEffect(() => {
+    const coords = formData?.location?.coordinates;
+    if (!coords || coords.length !== 2) return;
+    if (locationName && locationName.length > 0) return;
+
+    try {
+      const storedName = localStorage.getItem("agrillink_farm_location_name");
+      if (storedName) {
+        setLocationName(storedName);
+        return;
+      }
+    } catch (err) {
+    }
+
+    (async () => {
+      try {
+        const name = await reverseGeocodeSmart(coords);
+        if (name) setLocationName(name);
+      } catch (err) {
+        console.error("reverse geocode on location change failed:", err);
+      }
+    })();
+  }, [formData?.location]);
+
   const isDirty = useMemo(() => {
     if (!initialData) return false;
-
     if (formData.farmName !== initialData.farmName) return true;
     if (formData.farmBio !== initialData.farmBio) return true;
-
-    // Use JSON.stringify for simple, robust comparison of arrays/objects
-    if (JSON.stringify(formData.specialties) !== JSON.stringify(initialData.specialties))
-      return true;
+    if (JSON.stringify(formData.specialties) !== JSON.stringify(initialData.specialties)) return true;
     if (JSON.stringify(formData.location) !== JSON.stringify(initialData.location)) return true;
 
+    if (locationName !== initialData.locationAddress) return true;
+
     return false;
-  }, [formData, initialData]);
+  }, [formData, initialData, locationName]);
 
   const validateLocationField = useCallback((location) => {
     if (!location || !location.coordinates || location.coordinates.length !== 2) {
@@ -147,6 +239,11 @@ export const FarmProfileForm = ({ initialData }) => {
       default:
         break;
     }
+
+    if (name === "farmName") {
+      if (!trimmedValue) error = "Farm name is required";
+      else if (!FARM_NAME_REGEX.test(trimmedValue)) error = NAME_ERROR_MESSAGE;
+    }
     return error;
   };
 
@@ -182,38 +279,59 @@ export const FarmProfileForm = ({ initialData }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!isFormValid() || !isDirty) {
+    if (!isFormValid()) {
       toast.error("No changes to save or form is invalid.");
       return;
     }
 
     setIsLoading(true);
     try {
-      const farmData = {
+      const farmDataToSave = {
         farmName: sanitizeName(formData.farmName),
         farmBio: sanitizeTextArea(formData.farmBio),
         specialties: sanitizeArray(formData.specialties),
-        location: { type: "Point", coordinates: [31.2357, 30.0444] }, // Default
+        location: formData.location,
+        locationAddress: locationName
       };
 
       if (formData.location?.coordinates && formData.location.coordinates.length === 2) {
         const coordValidation = validateCoordinates(formData.location.coordinates);
         if (coordValidation.isValid) {
-          farmData.location = {
+          farmDataToSave.location = {
             type: "Point",
             coordinates: formData.location.coordinates,
           };
         }
       }
 
-      const updatedFarm = await updateMyFarmProfile(farmData);
+      const updatedFarm = await updateMyFarmProfile(farmDataToSave);
 
-      // Resync state and reset dirty check
       setFormData(updatedFarm);
+
+      try {
+        if (updatedFarm.locationAddress) {
+          setLocationName(updatedFarm.locationAddress);
+        } else if (updatedFarm.location && updatedFarm.location.coordinates && updatedFarm.location.coordinates.length === 2) {
+          const name = await reverseGeocodeSmart(updatedFarm.location.coordinates);
+          if (name) setLocationName(name);
+        }
+      } catch (err) {
+        console.error("reverse geocode after save failed:", err);
+      }
+
       initialData.farmName = updatedFarm.farmName;
       initialData.farmBio = updatedFarm.farmBio;
       initialData.specialties = updatedFarm.specialties;
       initialData.location = updatedFarm.location;
+      initialData.locationAddress = locationName;
+
+      try {
+        localStorage.removeItem("agrillink_farm_location");
+        localStorage.removeItem("agrillink_farm_location_name");
+        localStorage.removeItem("agrillink_farm_location_unsaved");
+      } catch (err) {
+        console.error("localStorage remove error:", err);
+      }
 
       toast.success("Farm profile updated successfully!");
     } catch (error) {
@@ -225,7 +343,6 @@ export const FarmProfileForm = ({ initialData }) => {
   };
 
   useEffect(() => {
-    // ... (map listener unchanged) ...
     const input = locationInputRef.current;
     if (input) {
       const focusHandler = () => setShowMap(true);
@@ -264,26 +381,18 @@ export const FarmProfileForm = ({ initialData }) => {
   };
 
   const ValidationStatus = ({ fieldName }) => {
-    // ... (function unchanged) ...
     const error = formErrors[fieldName];
     const value = formData[fieldName]?.trim();
     const isRequired = fieldName === "farmName";
-    if (error) {
-      return <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{error}</p>;
-    }
-    if (!value && isRequired) {
-      return <p className="mt-1 text-xs text-gray-500">Required field</p>;
-    }
+    if (error) return <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{error}</p>;
+    if (!value && isRequired) return <p className="mt-1 text-xs text-gray-500">Required field</p>;
     return null;
   };
 
-  if (!formData) {
-    return null; // Don't render if initial data hasn't loaded
-  }
+  if (!formData) return null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Farm Details Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -308,9 +417,7 @@ export const FarmProfileForm = ({ initialData }) => {
             className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
             value=""
           >
-            <option value="" disabled>
-              Select a specialty
-            </option>
+            <option value="" disabled>Select a specialty</option>
             {allSpecialties.map((spec) => (
               <option key={spec} value={spec} disabled={formData.specialties.includes(spec)}>
                 {spec}
@@ -339,21 +446,19 @@ export const FarmProfileForm = ({ initialData }) => {
         </div>
       </div>
 
-      {/* Bio Section */}
       <div>
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">Farm Bio</label>
         <textarea
           name="farmBio"
           value={formData.farmBio || ""}
           onChange={handleChange}
-          placeholder="Tell us about your farm (optional, max 1000 characters)..."
+          placeholder="Tell us about your farm..."
           rows={3}
           className={getInputClasses("farmBio") + " resize-none"}
         ></textarea>
         <ValidationStatus fieldName="farmBio" />
       </div>
 
-      {/* Location Section - Full Width */}
       <div className="relative">
         <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
           Farm Location <span className="text-red-500">*</span>
@@ -363,24 +468,23 @@ export const FarmProfileForm = ({ initialData }) => {
           type="text"
           readOnly
           value={
-            formData.location?.coordinates
-              ? `Lng: ${formData.location.coordinates[0].toFixed(4)}, Lat: ${formData.location.coordinates[1].toFixed(4)}`
-              : "Click to select location on map"
-          }
-          className={`w-full cursor-pointer rounded-lg border px-3.5 py-2.5 text-sm outline-none transition ${
-            formErrors.location
-              ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+            locationName && locationName.length > 0
+              ? locationName
               : formData.location?.coordinates
-                ? "border-emerald-400 bg-emerald-50/30 focus:ring-2 focus:ring-emerald-400"
-                : "border-gray-200 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
-          }`}
+                ? "Location Selected"
+                : "Click to select location on map"
+          }
+          className={`w-full cursor-pointer rounded-lg border px-3.5 py-2.5 text-sm outline-none transition ${formErrors.location
+            ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+            : formData.location?.coordinates
+              ? "border-emerald-400 bg-emerald-50/30 focus:ring-2 focus:ring-emerald-400"
+              : "border-gray-200 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
+            }`}
         />
         {formErrors.location ? (
           <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{formErrors.location}</p>
         ) : (
-          <p className="mt-1 text-xs text-gray-500">
-            Click the input to select your farm location on the map
-          </p>
+          <p className="mt-1 text-xs text-gray-500">Click the input to select your farm location on the map</p>
         )}
         <div
           className={`mt-3 overflow-hidden transition-all duration-500 ease-in-out ${showMap ? "max-h-[320px] scale-100 opacity-100" : "pointer-events-none max-h-0 scale-95 opacity-0"}`}
@@ -395,14 +499,15 @@ export const FarmProfileForm = ({ initialData }) => {
             scrollWheelZoom={true}
             className="relative z-10 h-80 w-full rounded-lg"
           >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <LocationPicker 
-              setFormData={setFormData} 
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+            <LocationPicker
+              setFormData={setFormData}
               setFormErrors={setFormErrors}
               validateLocationField={validateLocationField}
+              setLocationName={setLocationName}
             />
+
             <FlyToLocation
               coordinates={
                 formData.location.coordinates
@@ -414,10 +519,8 @@ export const FarmProfileForm = ({ initialData }) => {
               <Marker
                 position={[formData.location.coordinates[1], formData.location.coordinates[0]]}
                 icon={L.icon({
-                  iconUrl:
-                    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                  shadowUrl:
-                    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
                   iconSize: [25, 41],
                   iconAnchor: [12, 41],
                 })}
@@ -427,7 +530,6 @@ export const FarmProfileForm = ({ initialData }) => {
         </div>
       </div>
 
-      {/* Submit Button */}
       <div className="flex justify-end border-t border-gray-100 pt-4">
         <button
           type="submit"
