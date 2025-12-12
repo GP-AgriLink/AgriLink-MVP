@@ -206,3 +206,29 @@ export const cacheProductImage = async (imageUrl, productId) => {
 
   return data.fileData;
 };
+
+/**
+ * Generate AI-powered farm report analysis with predictions and suggestions
+ * @param {number} month - Month number (1-12)
+ * @param {number} year - Year (e.g., 2024)
+ * @returns {Promise<{summary: string, predictions: Array, suggestions: Array, insights: Array}>}
+ */
+export const generateFarmReportAnalysis = async (month, year, language = 'EN', isDetailed = false) => {
+  if (!month || !year) {
+    throw new Error("Month and year are required");
+  }
+
+  if (month < 1 || month > 12) {
+    throw new Error("Month must be between 1 and 12");
+  }
+
+  const data = await makeAuthenticatedRequest("/farm-report-analysis", {
+    month,
+    year,
+    language,
+    isDetailed,
+  });
+
+  return data;
+};
+

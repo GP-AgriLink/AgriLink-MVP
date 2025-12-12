@@ -2,8 +2,24 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthToken, clearAuthData, useAuth } from "../context/AuthContext";
 import { getMyFarmReport } from "../services/farmApi";
-import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Sparkles, ChevronDown } from "lucide-react";
+import { generateFarmReportAnalysis } from "../services/aiService";
+import {
+  DollarSign,
+  ShoppingBag,
+  TrendingUp,
+  Brain,
+  BarChart3,
+  Sparkles,
+  ChevronDown,
+  Globe,
+} from "lucide-react";
+import { toast } from "react-toastify";
 import LogoSpinner from "../components/common/LogoSpinner.jsx";
+import ReportHeader from "../components/Report/ReportHeader.jsx";
+import StatsCard from "../components/Report/StatsCard.jsx";
+import AIAnalysis from "../components/Report/AIAnalysis.jsx";
+import BestSellingProducts from "../components/Report/BestSellingProducts.jsx";
+import TopCustomers from "../components/Report/TopCustomers.jsx";
 
 const FarmerReportPage = () => {
   const navigate = useNavigate();
@@ -30,6 +46,18 @@ const FarmerReportPage = () => {
   const monthDropdownRef = useRef(null);
   const yearDropdownRef = useRef(null);
 
+  // AI Analysis state - Store multiple cached results
+  const [cachedAnalyses, setCachedAnalyses] = useState({}); // { 'EN-summary': { data, timestamp }, 'AR-detailed': { data, timestamp } }
+  const [currentAnalysis, setCurrentAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+  const [viewMode, setViewMode] = useState("report"); // 'report', 'ai-summary', or 'ai-detailed'
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState("EN");
+  const [currentCacheKey, setCurrentCacheKey] = useState("EN-summary");
+  const languageDropdownRef = useRef(null);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target)) {
@@ -37,6 +65,9 @@ const FarmerReportPage = () => {
       }
       if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target)) {
         setIsYearDropdownOpen(false);
+      }
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target)) {
+        setIsLanguageDropdownOpen(false);
       }
     };
 
@@ -82,6 +113,101 @@ const FarmerReportPage = () => {
 
     fetchReport();
   }, [navigate, user, month, year]);
+
+  const handleGenerateAIAnalysis = async (isDetailed = false, language = "EN") => {
+    // Close language dropdown if open
+    setIsLanguageDropdownOpen(false);
+
+    // Cache key includes language and detail level for separate caching
+    const cacheKey = `${language}-${isDetailed ? "detailed" : "summary"}`;
+    const now = Date.now();
+    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+    // Check if we have this specific report cached
+    const cached = cachedAnalyses[cacheKey];
+    if (cached && now - cached.timestamp < CACHE_DURATION) {
+      // Use cached analysis - instant load
+      setCurrentAnalysis(cached.data);
+      setCurrentCacheKey(cacheKey);
+      setShowAiAnalysis(true);
+      setViewMode(isDetailed ? "ai-detailed" : "ai-summary");
+      return;
+    }
+
+    // Show loading state with transition
+    setAiLoading(true);
+    setAiError(null);
+    const targetView = isDetailed ? "ai-detailed" : "ai-summary";
+    setViewMode(targetView); // Switch to AI view immediately to show loading
+
+    try {
+      const analysis = await generateFarmReportAnalysis(month, year, language, isDetailed);
+
+      // Cache the analysis with timestamp
+      setCachedAnalyses((prev) => ({
+        ...prev,
+        [cacheKey]: {
+          data: analysis,
+          timestamp: Date.now(),
+          language,
+          isDetailed,
+        },
+      }));
+
+      setCurrentAnalysis(analysis);
+      setCurrentCacheKey(cacheKey);
+      setShowAiAnalysis(true);
+      toast.success(`${isDetailed ? "Detailed" : "Summary"} AI analysis generated successfully!`, {
+        autoClose: 2000,
+      });
+    } catch (err) {
+      console.error("Error generating AI analysis:", err);
+      setAiError(err.message || "Failed to generate AI analysis");
+      toast.error(err.message || "Failed to generate AI analysis. Please try again.", {
+        autoClose: 4000,
+      });
+      // Keep the view mode - don't switch back to report
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleTabClick = (tab) => {
+    if (tab === "report") {
+      setViewMode("report");
+      setShowAiAnalysis(false);
+      setAiError(null);
+    } else if (tab === "ai-summary") {
+      // Switching to AI Summary
+      const summaryKey = `${selectedLanguage}-summary`;
+      const cached = cachedAnalyses[summaryKey];
+      const now = Date.now();
+      const CACHE_DURATION = 30 * 60 * 1000;
+
+      if (cached && now - cached.timestamp < CACHE_DURATION) {
+        // Use cached summary
+        setCurrentAnalysis(cached.data);
+        setCurrentCacheKey(summaryKey);
+        setViewMode("ai-summary");
+        setShowAiAnalysis(true);
+        setAiError(null);
+      } else {
+        // Generate new summary
+        handleGenerateAIAnalysis(false, selectedLanguage);
+      }
+    } else if (tab === "ai-detailed") {
+      // Toggle language selection dropdown for detailed report
+      setIsLanguageDropdownOpen(!isLanguageDropdownOpen);
+    }
+  };
+
+  // Clear cache when month/year changes
+  useEffect(() => {
+    setCachedAnalyses({}); // Clear all cached analyses
+    setCurrentAnalysis(null);
+    setShowAiAnalysis(false);
+    setViewMode("report");
+  }, [month, year]);
 
   if (loading) {
     return (
@@ -129,368 +255,264 @@ const FarmerReportPage = () => {
     }).format(amount || 0);
   };
 
-  const getRankBadge = (index) => {
-    const badges = [
-      { bg: "bg-yellow-100", text: "text-yellow-700", icon: "🥇" },
-      { bg: "bg-gray-100", text: "text-gray-700", icon: "🥈" },
-      { bg: "bg-orange-100", text: "text-orange-700", icon: "🥉" },
-    ];
-    return badges[index] || { bg: "bg-gray-100", text: "text-gray-700", icon: `#${index + 1}` };
-  };
-
-  const renderEmptyState = (icon, message) => (
-    <div
-      className="flex min-h-[200px] flex-col items-center justify-center p-4"
-      style={{ animation: "fadeInScale 0.5s ease-out" }}
-    >
-      <div className="group relative max-w-sm">
-        {/* Gradient border effect */}
-        <div className="absolute -inset-0.5 animate-pulse rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-500 opacity-20 blur-sm transition-opacity duration-300 group-hover:opacity-40" />
-
-        {/* Content */}
-        <div className="relative rounded-2xl bg-white p-6 text-center shadow-lg">
-          <div className="relative mb-4">
-            {React.createElement(icon, {
-              className:
-                "mx-auto h-16 w-16 text-gray-300 transition-transform duration-500 group-hover:scale-110",
-              style: { animation: "float 3s ease-in-out infinite" },
-            })}
-
-            {/* Sparkles */}
-            <Sparkles className="absolute left-1/4 top-2 h-4 w-4 animate-pulse text-emerald-400 opacity-60" />
-            <Sparkles
-              className="absolute right-1/4 top-4 h-3 w-3 animate-pulse text-teal-400 opacity-50"
-              style={{ animationDelay: "200ms" }}
-            />
-          </div>
-
-          <p className="bg-gradient-to-r from-gray-700 to-emerald-600 bg-clip-text text-lg font-semibold text-transparent">
-            {message}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6 px-4 py-8 sm:px-8">
       {/* Header Section */}
-      <div className="relative z-30 animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
-            Sales Report
-          </h1>
-          <p className="mt-2 text-sm font-medium text-gray-500">
-            {new Date(year, month - 1).toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-
-        {/* Month and Year Dropdown Selectors */}
-        <div className="relative flex items-center gap-3 rounded-2xl border border-emerald-100/50 bg-white shadow-lg">
-          {/* Month Dropdown */}
-          <div className="relative z-50" ref={monthDropdownRef}>
-            <button
-              onClick={() => {
-                setIsMonthDropdownOpen(!isMonthDropdownOpen);
-                setIsYearDropdownOpen(false);
-              }}
-              className="flex items-center gap-2 rounded-l-2xl px-4 py-3 font-medium text-gray-700 transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            >
-              <span>
-                {[
-                  "January",
-                  "February",
-                  "March",
-                  "April",
-                  "May",
-                  "June",
-                  "July",
-                  "August",
-                  "September",
-                  "October",
-                  "November",
-                  "December",
-                ][month - 1]}
-              </span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${isMonthDropdownOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isMonthDropdownOpen && (
-              <div className="absolute right-0 top-full z-[9999] mt-2 w-48 rounded-2xl border border-emerald-100/50 bg-white shadow-2xl">
-                <div className="max-h-60 overflow-y-auto py-2">
-                  {[
-                    "January",
-                    "February",
-                    "March",
-                    "April",
-                    "May",
-                    "June",
-                    "July",
-                    "August",
-                    "September",
-                    "October",
-                    "November",
-                    "December",
-                  ].map((m, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setMonth(idx + 1);
-                        setIsMonthDropdownOpen(false);
-                      }}
-                      className={`group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium transition-all ${month === idx + 1
-                        ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700"
-                        : "text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
-                        }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Divider */}
-          <div className="h-6 w-px bg-gray-200" />
-
-          {/* Year Dropdown */}
-          <div className="relative z-50" ref={yearDropdownRef}>
-            <button
-              onClick={() => {
-                setIsYearDropdownOpen(!isYearDropdownOpen);
-                setIsMonthDropdownOpen(false);
-              }}
-              className="flex items-center gap-2 rounded-r-2xl px-4 py-3 font-medium text-gray-700 transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-            >
-              <span>{year}</span>
-              <ChevronDown
-                className={`h-4 w-4 transition-transform ${isYearDropdownOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isYearDropdownOpen && (
-              <div className="absolute right-0 top-full z-[9999] mt-2 w-32 rounded-2xl border border-emerald-100/50 bg-white shadow-2xl">
-                <div className="max-h-60 overflow-y-auto py-2">
-                  {(() => {
-                    const currentYear = new Date().getFullYear();
-                    const years = [];
-                    for (let y = currentYear + 1; y >= 2018; y--) years.push(y);
-                    return years.map((y) => (
-                      <button
-                        key={y}
-                        onClick={() => {
-                          setYear(y);
-                          setIsYearDropdownOpen(false);
-                        }}
-                        className={`group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium transition-all ${year === y
-                          ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700"
-                          : "text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
-                          }`}
-                      >
-                        {y}
-                      </button>
-                    ));
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <ReportHeader
+        title="Sales Report"
+        month={month}
+        year={year}
+        onMonthChange={setMonth}
+        onYearChange={setYear}
+        isMonthDropdownOpen={isMonthDropdownOpen}
+        isYearDropdownOpen={isYearDropdownOpen}
+        setIsMonthDropdownOpen={setIsMonthDropdownOpen}
+        setIsYearDropdownOpen={setIsYearDropdownOpen}
+        monthDropdownRef={monthDropdownRef}
+        yearDropdownRef={yearDropdownRef}
+      />
 
       {/* Stats Overview Cards */}
       <div className="relative z-0 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Total Revenue */}
-        <div
-          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
-          style={{ animation: "fadeInScale 0.4s ease-out" }}
-        >
-          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3 transition-transform group-hover:scale-110">
-            <DollarSign className="h-6 w-6 text-emerald-600" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
-              Total Revenue
-            </p>
-            <p className="text-3xl font-bold text-emerald-700">
-              ${formatCurrency(reportData?.salesOverview?.totalRevenue)}
-            </p>
-          </div>
-        </div>
-
-        {/* Orders Completed */}
-        <div
-          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-teal-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
-          style={{ animation: "fadeInScale 0.5s ease-out" }}
-        >
-          <div className="absolute right-4 top-4 rounded-full bg-teal-100 p-3 transition-transform group-hover:scale-110">
-            <ShoppingBag className="h-6 w-6 text-teal-600" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
-              Orders Completed
-            </p>
-            <p className="text-3xl font-bold text-teal-700">
-              {reportData?.salesOverview?.totalOrdersCompleted ?? 0}
-            </p>
-          </div>
-        </div>
-
-        {/* Average Order Value */}
-        <div
-          className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl sm:col-span-2 lg:col-span-1"
-          style={{ animation: "fadeInScale 0.6s ease-out" }}
-        >
-          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 p-3 transition-transform group-hover:scale-110">
-            <TrendingUp className="h-6 w-6 text-emerald-600" />
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium uppercase tracking-wide text-gray-500">
-              Average Order
-            </p>
-            <p className="text-3xl font-bold text-emerald-700">
-              ${formatCurrency(reportData?.salesOverview?.averageOrderValue)}
-            </p>
-          </div>
-        </div>
+        <StatsCard
+          icon={DollarSign}
+          title="Total Revenue"
+          value={`$${formatCurrency(reportData?.salesOverview?.totalRevenue)}`}
+          gradient="bg-gradient-to-br from-emerald-50 via-white to-teal-50"
+          iconGradient="bg-emerald-100"
+          delay={0.4}
+        />
+        <StatsCard
+          icon={ShoppingBag}
+          title="Orders Completed"
+          value={reportData?.salesOverview?.totalOrdersCompleted ?? 0}
+          gradient="bg-gradient-to-br from-teal-50 via-white to-emerald-50"
+          iconGradient="bg-teal-100"
+          delay={0.5}
+        />
+        <StatsCard
+          icon={TrendingUp}
+          title="Average Order"
+          value={`$${formatCurrency(reportData?.salesOverview?.averageOrderValue)}`}
+          gradient="bg-gradient-to-br from-emerald-50 via-white to-emerald-50"
+          iconGradient="bg-emerald-100"
+          delay={0.6}
+        />
       </div>
 
-      {/* Best Selling Products & Top Customers */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Best Selling Products */}
-        <div className="animate-fade-in rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-lg bg-emerald-100 p-2">
-              <Package className="h-5 w-5 text-emerald-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Best Selling Products</h2>
-          </div>
+      {/* Premium Three-Tab Navigation */}
+      <div className="relative z-20">
+        <div className="flex flex-col gap-4 rounded-2xl border border-emerald-100/50 bg-white p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
+          {/* Tab Buttons - Three Tabs */}
+          <div className="flex flex-1 gap-2">
+            {/* Sales Report Tab */}
+            <button
+              onClick={() => handleTabClick("report")}
+              className={`group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all ${
+                viewMode === "report"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-emerald-50 hover:text-emerald-700"
+              }`}
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="hidden sm:inline">Sales Report</span>
+              <span className="sm:hidden">Sales</span>
+              {viewMode === "report" && (
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 opacity-0 transition-opacity group-hover:opacity-10" />
+              )}
+            </button>
 
-          {!reportData?.bestSellingProducts || reportData.bestSellingProducts.length === 0 ? (
-            renderEmptyState(Package, "No product sales for this period")
-          ) : (
-            <div className="space-y-3">
-              {reportData.bestSellingProducts.map((product, index) => {
-                const badge = getRankBadge(index);
-                return (
-                  <div
-                    key={product._id || index}
-                    className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:scale-[1.02] hover:border-emerald-200 hover:bg-emerald-50/50"
-                    style={{ animation: `fadeInScale ${0.3 + index * 0.1}s ease-out` }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${badge.bg} text-lg`}
-                      >
-                        {badge.icon}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{product.name}</p>
-                        <p className="text-xs text-gray-500">
-                          Product ID: {product._id?.slice(-8)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-emerald-700">
-                        {product.totalQuantitySold ?? 0}
-                      </p>
-                      <p className="text-xs text-gray-500">units sold</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+            {/* AI Summary Tab */}
+            <button
+              onClick={() => handleTabClick("ai-summary")}
+              className={`group relative flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all ${
+                viewMode === "ai-summary"
+                  ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
+                  : "text-gray-600 hover:bg-emerald-50 hover:text-emerald-700"
+              }`}
+            >
+              <Brain className="h-5 w-5" />
+              <span className="flex items-center gap-2">
+                <span className="hidden sm:inline">AI Insights</span>
+                <span className="sm:hidden">AI</span>
+                {(() => {
+                  const summaryKey = `${selectedLanguage}-summary`;
+                  const isCached =
+                    cachedAnalyses[summaryKey] &&
+                    Date.now() - cachedAnalyses[summaryKey].timestamp < 30 * 60 * 1000;
+                  return isCached && viewMode !== "ai-summary" ? (
+                    <span className="flex h-2 w-2">
+                      <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-600 opacity-75"></span>
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-600"></span>
+                    </span>
+                  ) : null;
+                })()}
+              </span>
+              {viewMode === "ai-summary" && (
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 opacity-0 transition-opacity group-hover:opacity-10" />
+              )}
+            </button>
 
-        {/* Top Customers */}
-        <div className="animate-fade-in rounded-2xl border border-gray-200 bg-white p-6 shadow-lg">
-          <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-lg bg-teal-100 p-2">
-              <Users className="h-5 w-5 text-teal-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Top Customers</h2>
-          </div>
+            {/* Detailed AI Report Tab with Language Dropdown */}
+            <div className="relative flex-1" ref={languageDropdownRef}>
+              <button
+                onClick={() => handleTabClick("ai-detailed")}
+                className={`group relative flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition-all ${
+                  viewMode === "ai-detailed"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md"
+                    : "text-gray-600 hover:bg-emerald-50 hover:text-emerald-700"
+                }`}
+              >
+                <Sparkles className="h-5 w-5" />
+                <span className="flex items-center gap-2">
+                  <span className="hidden sm:inline">Detailed Report</span>
+                  <span className="sm:hidden">Detailed</span>
+                  {(() => {
+                    const CACHE_DURATION = 30 * 60 * 1000;
+                    const now = Date.now();
+                    const cachedCount = Object.values(cachedAnalyses).filter(
+                      (cache) => cache.isDetailed && now - cache.timestamp < CACHE_DURATION
+                    ).length;
+                    return cachedCount > 0 && viewMode !== "ai-detailed" ? (
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-emerald-600">
+                        {cachedCount}
+                      </span>
+                    ) : null;
+                  })()}
+                </span>
+                <ChevronDown
+                  className={`h-4 w-4 transition-transform ${isLanguageDropdownOpen ? "rotate-180" : ""}`}
+                />
+                {viewMode === "ai-detailed" && (
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 opacity-0 transition-opacity group-hover:opacity-10" />
+                )}
+              </button>
 
-          {!reportData?.topCustomers || reportData.topCustomers.length === 0 ? (
-            renderEmptyState(Users, "No customer data for this period")
-          ) : (
-            <div className="space-y-3">
-              {reportData.topCustomers.map((customer, index) => {
-                const badge = getRankBadge(index);
-                const initials =
-                  customer.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase() || "?";
-                return (
-                  <div
-                    key={customer.userId || index}
-                    className="rounded-xl border border-gray-100 bg-gray-50 p-4 transition-all hover:scale-[1.02] hover:border-teal-200 hover:bg-teal-50/50"
-                    style={{ animation: `fadeInScale ${0.3 + index * 0.1}s ease-out` }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-lg font-bold text-white shadow-md">
-                          {initials}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-gray-900">{customer.name}</p>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.bg} ${badge.text}`}
-                            >
-                              {badge.icon}
+              {/* Language Dropdown */}
+              {isLanguageDropdownOpen && (
+                <div className="absolute right-0 top-full z-[9999] mt-2 w-32 rounded-2xl border border-emerald-100/50 bg-white shadow-2xl">
+                  <div className="max-h-60 overflow-y-auto py-2">
+                    {[
+                      { code: "AR", label: "AR", flag: "🇪🇬" },
+                      { code: "EN", label: "EN", flag: "🇬🇧" },
+                    ].map((lang) => {
+                      const detailedKey = `${lang.code}-detailed`;
+                      const isCached =
+                        cachedAnalyses[detailedKey] &&
+                        Date.now() - cachedAnalyses[detailedKey].timestamp < 30 * 60 * 1000;
+
+                      return (
+                        <button
+                          key={lang.code}
+                          onClick={() => {
+                            setSelectedLanguage(lang.code);
+                            setIsLanguageDropdownOpen(false);
+                            handleGenerateAIAnalysis(true, lang.code);
+                          }}
+                          className={`group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium transition-all ${
+                            selectedLanguage === lang.code
+                              ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700"
+                              : "text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
+                          }`}
+                        >
+                          <span className="text-base">{lang.flag}</span>
+                          <span>{lang.label}</span>
+                          {isCached && (
+                            <span className="ml-auto flex items-center gap-1">
+                              <svg
+                                className="h-3 w-3 text-emerald-600"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
+                              >
+                                <path
+                                  fillRule="evenodd"
+                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                  clipRule="evenodd"
+                                />
+                              </svg>
                             </span>
-                          </div>
-                          <p className="text-xs text-gray-500">{customer.phone}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-teal-700">
-                          ${formatCurrency(customer.totalSpent)}
-                        </p>
-                        <p className="text-xs text-gray-500">{customer.totalOrdersPlaced} orders</p>
-                      </div>
-                    </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      {/* Keyframe animations */}
-      <style>{`
-        @keyframes fadeInScale {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-8px);
-          }
-        }
-      `}</style>
+      {/* Content Area with Smooth Transitions */}
+      <div className="animate-fadeIn">
+        {viewMode === "ai-summary" || viewMode === "ai-detailed" ? (
+          aiLoading ? (
+            // Skeleton Loading for AI Analysis
+            <div className="animate-pulse space-y-6">
+              {/* Summary Skeleton */}
+              <div className="rounded-2xl border border-emerald-100/50 bg-white p-6 shadow-lg">
+                <div className="mb-4 h-6 w-32 rounded bg-emerald-100"></div>
+                <div className="space-y-3">
+                  <div className="h-4 w-full rounded bg-gray-200"></div>
+                  <div className="h-4 w-5/6 rounded bg-gray-200"></div>
+                  <div className="h-4 w-4/6 rounded bg-gray-200"></div>
+                </div>
+              </div>
+
+              {/* Predictions Skeleton */}
+              <div className="rounded-2xl border border-emerald-100/50 bg-white p-6 shadow-lg">
+                <div className="mb-4 h-6 w-40 rounded bg-emerald-100"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="h-6 w-6 flex-shrink-0 rounded-full bg-emerald-100"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-full rounded bg-gray-200"></div>
+                        <div className="h-4 w-4/5 rounded bg-gray-200"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Suggestions Skeleton */}
+              <div className="rounded-2xl border border-emerald-100/50 bg-white p-6 shadow-lg">
+                <div className="mb-4 h-6 w-36 rounded bg-emerald-100"></div>
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex gap-3">
+                      <div className="h-6 w-6 flex-shrink-0 rounded-full bg-teal-100"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 w-full rounded bg-gray-200"></div>
+                        <div className="h-4 w-3/4 rounded bg-gray-200"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="animate-fadeIn">
+              <AIAnalysis
+                aiAnalysis={currentAnalysis}
+                aiLoading={aiLoading}
+                aiError={aiError}
+                showAiAnalysis={showAiAnalysis}
+                onGenerate={handleGenerateAIAnalysis}
+                onToggle={() => handleTabClick("report")}
+              />
+            </div>
+          )
+        ) : (
+          <div className="grid animate-fadeIn gap-6 lg:grid-cols-2">
+            <BestSellingProducts
+              products={reportData?.bestSellingProducts}
+              formatCurrency={formatCurrency}
+            />
+            <TopCustomers customers={reportData?.topCustomers} formatCurrency={formatCurrency} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
