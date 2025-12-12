@@ -6,7 +6,17 @@ import EmptyState from "./EmptyState";
 import { useProducts } from "../../context/ProductsContext";
 
 const ProductList = memo(
-  ({ products, onEdit, onArchive, onRestore, onAddNew, stats, statsLoading, onStatsRefresh }) => {
+  ({
+    products,
+    onEdit,
+    onArchive,
+    onRestore,
+    onActivate,
+    onAddNew,
+    stats,
+    statsLoading,
+    onStatsRefresh,
+  }) => {
     const { activeFilter, setFilter, activeSearch, activeCategory } = useProducts();
 
     const handleStatClick = useCallback(
@@ -47,6 +57,8 @@ const ProductList = memo(
             onEdit={onEdit}
             onArchive={onArchive}
             onRestore={onRestore}
+            onActivate={onActivate}
+            activeFilter={activeFilter}
             emptyTitle={`No ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Products`}
             emptyMessage={
               activeFilter === "active"
@@ -63,6 +75,8 @@ const ProductList = memo(
             onEdit={onEdit}
             onArchive={onArchive}
             onRestore={onRestore}
+            onActivate={onActivate}
+            activeFilter={activeFilter}
             emptyTitle={`No ${activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1)} Products`}
             emptyMessage={
               activeFilter === "active"

@@ -193,7 +193,7 @@ export const sanitizeProductData = (productData) => {
     sanitized.description = sanitizeTextArea(productData.description);
   }
 
-  if (productData.imageUrl !== undefined) {
+  if (productData.imageUrl !== undefined && productData.imageUrl.trim()) {
     sanitized.imageUrl = sanitizeString(productData.imageUrl);
   }
 
@@ -205,8 +205,8 @@ export const sanitizeProductData = (productData) => {
     sanitized.isArchived = productData.isArchived;
   }
 
-  if (productData.categories !== undefined) {
-    sanitized.categories = sanitizeArray(productData.categories);
+  if (productData.category !== undefined) {
+    sanitized.category = sanitizeString(productData.category);
   }
 
   return sanitized;

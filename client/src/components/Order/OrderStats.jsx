@@ -1,11 +1,12 @@
 import { memo } from "react";
 import { ShoppingBag, Truck, CheckCircle2, XCircle } from "lucide-react";
+import { getFilterLabel } from "../../utils/orderStatusLabels";
 
 /**
  * OrderStats - Compact unified design
  * Displays premium stat cards with consistent sizing across all stats components
  */
-const OrderStats = memo(({ orderStats, activeFilter, onStatClick }) => {
+const OrderStats = memo(({ orderStats, activeFilter, onStatClick, userRole }) => {
   const stats = {
     incoming: orderStats?.Incoming || 0,
     delivery: orderStats?.["Ready for Delivery"] || 0,
@@ -16,7 +17,7 @@ const OrderStats = memo(({ orderStats, activeFilter, onStatClick }) => {
   const statItems = [
     {
       id: "incoming",
-      label: "Incoming",
+      label: getFilterLabel("incoming", userRole),
       count: stats.incoming,
       icon: ShoppingBag,
       gradient: "from-blue-500 to-indigo-600",
@@ -27,7 +28,7 @@ const OrderStats = memo(({ orderStats, activeFilter, onStatClick }) => {
     },
     {
       id: "delivery",
-      label: "Delivery",
+      label: getFilterLabel("delivery", userRole),
       count: stats.delivery,
       icon: Truck,
       gradient: "from-amber-500 to-orange-600",
@@ -38,7 +39,7 @@ const OrderStats = memo(({ orderStats, activeFilter, onStatClick }) => {
     },
     {
       id: "completed",
-      label: "Completed",
+      label: getFilterLabel("completed", userRole),
       count: stats.completed,
       icon: CheckCircle2,
       gradient: "from-emerald-500 to-teal-600",
@@ -49,7 +50,7 @@ const OrderStats = memo(({ orderStats, activeFilter, onStatClick }) => {
     },
     {
       id: "cancelled",
-      label: "Cancelled",
+      label: getFilterLabel("cancelled", userRole),
       count: stats.cancelled,
       icon: XCircle,
       gradient: "from-gray-500 to-slate-700",

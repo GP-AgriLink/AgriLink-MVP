@@ -138,7 +138,11 @@ function Navbar() {
         {/* --- LEFT: Logo --- */}
         <div className="flex flex-1 items-center justify-start">
           <Logo className="hidden lg:flex" />
-          <Logo iconOnly={true} iconContainerClass="w-12 h-12" className="lg:hidden rounded-full overflow-hidden" />
+          <Logo
+            iconOnly={true}
+            iconContainerClass="w-12 h-12"
+            className="overflow-hidden rounded-full lg:hidden"
+          />
         </div>
 
         {/* --- CENTER: Desktop Navigation --- */}
@@ -148,10 +152,11 @@ function Navbar() {
               key={link.name}
               to={link.path}
               onClick={(e) => handleNavClick(e, link)}
-              className={`text-lg font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:text-emerald-600 ${location.pathname === link.path && !link.isScroll
-                ? "text-emerald-600 font-bold"
-                : "text-slate-600"
-                }`}
+              className={`text-lg font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:text-emerald-600 ${
+                location.pathname === link.path && !link.isScroll
+                  ? "font-bold text-emerald-600"
+                  : "text-slate-600"
+              }`}
             >
               {link.name}
             </Link>

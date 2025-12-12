@@ -49,7 +49,7 @@ const ProductIcon = () => (
 );
 const CustomerIcon = () => (
     <svg className="h-8 w-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-2.87l-1.391 1.39A7.002 7.002 0 0113 15M3 20h5v-2a3 3 0 015.356-2.87l1.391 1.39A7.002 7.002 0 0011 15m0 0c-1.873 0-3.61-.76-4.95-2.05S3 9.873 3 8m0 0c0-1.873.76-3.61 2.05-4.95S8.127 1 10 1m6.95 2.05C18.24 4.39 19 6.127 19 8m0 0c0 1.873-.76 3.61-2.05 4.95S13.873 15 12 15m0 0a5.002 5.002 0 00-4.95 7.05l-1.391-1.39A3 3 0 015 20m0 0h5" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
     </svg>
 );
 const SalesIcon = () => (

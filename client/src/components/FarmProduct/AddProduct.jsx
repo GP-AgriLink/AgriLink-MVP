@@ -223,7 +223,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
           price: formData.price,
           unit: formData.unit,
           stock: formData.stock,
-          categories: [finalCategory],
+          category: finalCategory,
           imageUrl: formData.imageUrl,
           status: parseInt(formData.stock, 10) === 0 ? "inactive" : "active",
         };
