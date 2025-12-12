@@ -138,7 +138,7 @@ export const generateBio = async (req, res) => {
       });
     }
 
-    const { farmName, coordinates, specialties, existingBio } = req.body;
+    const { farmName, locationName, specialties, existingBio } = req.body;
 
     if (!farmName || !farmName.trim()) {
       return res.status(400).json({ message: 'Farm name is required' });
@@ -146,7 +146,7 @@ export const generateBio = async (req, res) => {
 
     const bio = await generateFarmBio(
       farmName,
-      coordinates || null,
+      locationName || null,
       specialties || [],
       existingBio || ''
     );

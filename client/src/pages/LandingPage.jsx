@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import HeroSection from "../components/Discover/HeroSection";
 import HowWorkingSection from "../components/Discover/HowWorkingSection";
 import DiscoverSection from "../components/Discover/DiscoverSection";
@@ -10,28 +10,86 @@ import FarmersSection from "../components/Discover/FarmersSection";
 import SubscribeSection from "../components/Discover/SubscribeSection";
 import ScrollToTop from "../components/Discover/ScrollToTop";
 
-const LandingPage = () => {
-  const [userCoords, setUserCoords] = useState(null);
+const FadeInUp = ({ children }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        setIsVisible(entry.isIntersecting);
+      });
+    }, {
+      threshold: 0,
+      rootMargin: "-50px 0px"
+    });
+
+    const { current } = domRef;
+    if (current) observer.observe(current);
+
+    return () => {
+      if (current) observer.unobserve(current);
+    };
+  }, []);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <HeroSection />
+    <div
+      ref={domRef}
+      className={`transform transition-all duration-1000 ease-out ${isVisible
+        ? 'opacity-100 translate-y-0'
+        : 'opacity-0 translate-y-16'
+        }`}
+    >
+      {children}
+    </div>
+  );
+};
 
-      <HowWorkingSection />
+const LandingPage = () => {
+  const [userCoords, setUserCoords] = useState(null);
+  const storedUser = localStorage.getItem('user');
+  const currentUser = storedUser ? JSON.parse(storedUser) : null;
 
-      <DiscoverSection onLocationSet={setUserCoords} userCoords={userCoords} />
+  return (
+    <div className="flex min-h-screen flex-col overflow-hidden">
 
-      {userCoords && <FarmsDisplay userCoords={userCoords} />}
+      <FadeInUp>
+        <HeroSection />
+      </FadeInUp>
 
-      <MissionSection />
+      <FadeInUp>
+        <HowWorkingSection />
+      </FadeInUp>
 
-      <CounterSection />
+      <FadeInUp>
+        <DiscoverSection onLocationSet={setUserCoords} userCoords={userCoords} />
+      </FadeInUp>
 
-      <CategoriesSection />
+      {userCoords && (
+        <FadeInUp>
+          <FarmsDisplay userCoords={userCoords} />
+        </FadeInUp>
+      )}
 
-      <FarmersSection />
+      <FadeInUp>
+        <MissionSection />
+      </FadeInUp>
 
-      <SubscribeSection />
+      <FadeInUp>
+        <CounterSection />
+      </FadeInUp>
+
+      <FadeInUp>
+        <CategoriesSection />
+      </FadeInUp>
+
+      <FadeInUp>
+        <FarmersSection userRole={currentUser?.role || 'guest'} />
+      </FadeInUp>
+
+      <FadeInUp>
+        <SubscribeSection />
+      </FadeInUp>
 
       <ScrollToTop />
     </div>

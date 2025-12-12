@@ -1,12 +1,38 @@
 import React, { useState, useEffect } from "react";
 
-function StatItem({ value, label }) {
-  const formattedValue = new Intl.NumberFormat("en-US").format(value);
+function StatItem({ value, label, delay }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const end = parseInt(String(value).replace(/,/g, ""), 10) || 0;
+    let start = 0;
+    const duration = 2000;
+    const incrementTime = 20;
+    const step = Math.ceil(end / (duration / incrementTime));
+
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= end) {
+        setCount(end);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, incrementTime);
+
+    return () => clearInterval(timer);
+  }, [value]);
+
+  const formattedValue = new Intl.NumberFormat("en-US").format(count);
 
   return (
-    <div className="p-1 text-center">
-      <span className="block text-4xl font-extrabold text-emerald-700">{formattedValue}+</span>
-      <span className="mt-5 block text-lg font-medium text-emerald-900">{label}</span>
+    <div className={`animate-slideInUp p-2 text-center ${delay}`}>
+      <span className="block text-4xl font-extrabold text-emerald-700 transition-all md:text-5xl">
+        {formattedValue}+
+      </span>
+      <span className="mt-2 block text-lg font-medium uppercase tracking-wide text-emerald-900">
+        {label}
+      </span>
     </div>
   );
 }
@@ -14,8 +40,8 @@ function StatItem({ value, label }) {
 function StatSkeleton() {
   return (
     <div className="animate-pulse p-4 text-center">
-      <div className="mx-auto h-12 w-2/4 rounded-md bg-gray-300"></div>
-      <div className="mx-auto mt-3 h-6 w-3/4 rounded-md bg-gray-300"></div>
+      <div className="mx-auto h-12 w-2/3 rounded-md bg-gray-300"></div>
+      <div className="mx-auto mt-3 h-6 w-1/2 rounded-md bg-gray-300"></div>
     </div>
   );
 }
@@ -50,7 +76,7 @@ const HeroSection = () => {
     return (
       <section className="bg-gray-50 py-16">
         <div className="container mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:grid-cols-4">
             <StatSkeleton />
             <StatSkeleton />
             <StatSkeleton />
@@ -64,62 +90,81 @@ const HeroSection = () => {
   if (error) {
     return (
       <section className="bg-red-50 py-16">
-        <div className="container mx-auto max-w-7xl px-6 text-center lg:px-8">
+        <div className="animate-slideInUp animation-delay-300 container mx-auto max-w-7xl rounded-lg px-6 text-center lg:px-8">
           <p className="font-medium text-red-700">Error loading statistics: {error}</p>
         </div>
       </section>
     );
   }
 
+  const sectionClasses =
+    "relative min-h-[85vh] w-full flex items-center justify-center overflow-hidden";
+
   return (
-    <section className="relative min-h-[75vh] w-full overflow-hidden">
+    <section className={sectionClasses}>
       <img
         src="../../../hero.jpg"
         alt="A vibrant farm field"
         className="absolute inset-0 h-full w-full object-cover"
       />
 
-      <div className="absolute inset-0 bg-white/80" aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" aria-hidden="true"></div>
 
-      <div className="relative z-10 flex h-full flex-col p-8 text-white">
-        <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <h1 className="mb-4 text-4xl font-bold text-emerald-900 md:text-6xl">
+      <div className="container relative z-10 mx-auto flex flex-col items-center px-6 py-12 text-center text-white">
+        <div className="mx-auto mt-10 max-w-4xl">
+          <h1 className="animate-slideInUp mb-4 text-4xl font-bold leading-tight text-emerald-900 md:text-6xl">
             Freshness from the farm.
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-emerald-700 md:text-xl">
+          <p className="animate-slideInUp animation-delay-100 mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-emerald-700 md:text-xl">
             Discover and shop from the best local farms across Egypt. Connect directly with farmers
             who care about quality and sustainability.
           </p>
 
-          <a
-            href="#DiscoverSection"
-            className="mt-8 flex items-center gap-2 rounded-full bg-emerald-700 px-7 py-2 text-lg font-medium transition-transform hover:scale-105"
-          >
-            Find Farms Near Me
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="h-5 w-5"
+          <div className="animate-slideInUp animation-delay-200 mt-10">
+            <a
+              href="#DiscoverSection"
+              onClick={(e) => {
+                e.preventDefault();
+                const section = document.getElementById("DiscoverSection");
+                if (section) {
+                  section.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+              className="group inline-flex cursor-pointer items-center gap-2 rounded-full bg-emerald-700 px-8 py-3 text-lg font-semibold text-white shadow-lg shadow-emerald-700/30 transition-all duration-300 hover:scale-105 hover:bg-emerald-800 hover:shadow-xl"
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </a>
+              Find Farms Near Me
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+                stroke="currentColor"
+                className="h-5 w-5 animate-bounce group-hover:animate-none"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </a>
+          </div>
 
-          <div className="mt-16 flex flex-wrap justify-center gap-8 md:gap-16">
-            {/* {stats.map((stat) => (
-                            <div key={stat.id} className="flex flex-col items-center"> */}
-            {/* <span className="text-3xl font-bold text-emerald-600">{stat.value}</span>
-                                <span className="text-sm uppercase tracking-wider mt-3 text-emerald-900">{stat.name}</span> */}
+          <div className="mt-16 flex w-full max-w-5xl flex-wrap justify-center gap-8 md:gap-16">
+            <div className="grid w-full grid-cols-1 gap-8 uppercase tracking-wider md:grid-cols-2 lg:grid-cols-3">
+              <StatItem
+                value={stats.farmsRegistered}
+                label="Farms"
+                delay="animation-delay-300"
+              />
 
-            <div className="grid grid-cols-1 gap-8 uppercase tracking-wider md:grid-cols-2 lg:grid-cols-3">
-              <StatItem value={stats.farmsRegistered} label="Farms" />
+              <StatItem
+                value={stats.customersJoined}
+                label="Customers"
+                delay="animation-delay-500"
+              />
 
-              <StatItem value={stats.customersJoined} label="Customers" />
-
-              <StatItem value={stats.productsListed} label="Products" />
+              <StatItem
+                value={stats.productsListed}
+                label="Products"
+                delay="animation-delay-700"
+              />
             </div>
           </div>
         </div>

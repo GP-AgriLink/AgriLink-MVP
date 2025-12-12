@@ -58,6 +58,7 @@ const FarmsDisplay = ({ userCoords }) => {
   const [filteredFarms, setFilteredFarms] = useState([]);
   const [farmLocations, setFarmLocations] = useState({});
   const [loading, setLoading] = useState(false);
+  const [locationName, setLocationName] = useState("Your Selected Location");
 
   // Fetch farms from API
   useEffect(() => {
@@ -83,6 +84,35 @@ const FarmsDisplay = ({ userCoords }) => {
     };
     fetchFarms();
   }, [userCoords, selectedDistance]);
+
+  useEffect(() => {
+    if (userCoords) {
+      setLocationName("Fetching address...");
+
+      // 2. Call the API
+      fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCoords.latitude}&lon=${userCoords.longitude}`
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.address) {
+            const city = data.address.city || data.address.town || data.address.village || data.address.state;
+            const country = data.address.country;
+
+            const displayName = city ? `${city}, ${country}` : country;
+
+            setLocationName(displayName || "Unknown Location");
+          } else {
+            setLocationName("Location Found");
+          }
+        })
+        .catch((err) => {
+          console.error("Reverse geocoding failed", err);
+          setLocationName("Selected Location");
+        });
+    }
+  }, [userCoords]);
+
 
   // Client-side filtering
   useEffect(() => {
@@ -188,7 +218,7 @@ const FarmsDisplay = ({ userCoords }) => {
 
           {userCoords && (
             <Marker position={[userCoords.latitude, userCoords.longitude]}>
-              <Popup>Your Location</Popup>
+              <Popup>{locationName}</Popup>
             </Marker>
           )}
 

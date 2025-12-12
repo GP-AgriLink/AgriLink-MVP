@@ -211,11 +211,10 @@ const ProfilePage = ({ isEditing = false, onEditToggle = null }) => {
           <h2 className="text-2xl font-semibold text-gray-800 md:text-3xl">My Profile</h2>
           <button
             onClick={handleEditClick}
-            className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all sm:justify-start ${
-              isEditing
-                ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                : "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-700"
-            }`}
+            className={`flex items-center justify-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all sm:justify-start ${isEditing
+              ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-700"
+              }`}
           >
             {isEditing ? (
               <>

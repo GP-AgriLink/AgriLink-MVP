@@ -190,11 +190,10 @@ export default function EditProfile() {
                 <nav className="space-y-1">
                   <button
                     onClick={() => setActiveSection("user")}
-                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${
-                      activeSection === "user"
+                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${activeSection === "user"
                         ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md"
                         : "text-gray-700 hover:bg-white hover:shadow-sm"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <User className="h-4 w-4" />
@@ -204,11 +203,10 @@ export default function EditProfile() {
                   </button>
                   <button
                     onClick={() => setActiveSection("farm")}
-                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${
-                      activeSection === "farm"
+                    className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition-all ${activeSection === "farm"
                         ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md"
                         : "text-gray-700 hover:bg-white hover:shadow-sm"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <Store className="h-4 w-4" />

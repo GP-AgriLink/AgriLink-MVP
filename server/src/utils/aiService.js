@@ -426,10 +426,19 @@ export const generateProductDescription = async (
     throw new Error('Product name is required');
   }
 
+  // Build dynamic context
+  const contextParts = [`Product: ${productName}`];
+  
+  if (fileData) {
+    contextParts.push('Visual Context: Analyze the image to enhance your description with specific details about appearance, quality, and freshness.');
+  }
+
+  const context = contextParts.join('\n');
+
+  // Single optimized prompt template
   const prompt = `You are an expert agricultural product copywriter. Create a compelling, concise product description.
 
-Product: ${productName}
-${fileData ? 'Visual Context: Analyze the image to enhance your description with specific details about appearance, quality, and freshness.' : ''}
+${context}
 
 Requirements:
 - Write EXACTLY 1-2 clear, descriptive sentences
@@ -451,6 +460,9 @@ Return ONLY the description text, no labels or titles.`;
  * @param {object|null} fileData - Optional uploaded file data {uri, mimeType, name}
  * @returns {Promise<string>} - Standardized category
  */
+// Valid product categories (constant)
+const VALID_CATEGORIES = ['Vegetables', 'Fruits', 'Grains', 'Herbs', 'Dairy', 'Organic'];
+
 export const standardizeCategory = async (
   productName,
   imageUrl = '',
@@ -461,30 +473,34 @@ export const standardizeCategory = async (
     throw new Error('Product name is required');
   }
 
+  // Build dynamic context
+  const contextParts = [`Product Name: ${productName}`];
+  
+  if (existingCategory) {
+    contextParts.push(`Current Category: ${existingCategory}`);
+  }
+  
+  if (fileData) {
+    contextParts.push('Visual Context: Analyze the provided image to accurately identify the product category based on visual features.');
+  }
+
+  const context = contextParts.join('\n');
+
+  // Determine primary rule based on available data
+  const primaryRule = fileData
+    ? 'PRIORITIZE visual analysis - the image is the most reliable source for categorization'
+    : 'Use the product name primarily';
+
+  // Single optimized prompt template
   const prompt = `You are a product categorization system. Your task is to assign products to ONE standardized category.
 
 CRITICAL: You MUST return EXACTLY ONE of these category names (case-sensitive):
-- Vegetables
-- Fruits
-- Grains
-- Herbs
-- Dairy
-- Organic
+${VALID_CATEGORIES.map(cat => `- ${cat}`).join('\n')}
 
-Product Name: ${productName}
-${existingCategory ? `Current Category: ${existingCategory}` : ''}
-${
-    fileData
-      ? 'Visual Context: Analyze the provided image to accurately identify the product category based on visual features.'
-      : ''
-  }
+${context}
 
 Rules:
-1. ${
-    fileData
-      ? 'PRIORITIZE visual analysis - the image is the most reliable source for categorization'
-      : 'Use the product name primarily'
-  }
+1. ${primaryRule}
 2. Return ONLY the category name, nothing else
 3. Use the EXACT spelling and capitalization shown above
 4. Be consistent - the same product should ALWAYS get the same category
@@ -495,18 +511,10 @@ Return ONLY the category name:`;
   const category = await callAI(prompt, 50, fileData);
 
   // Validate and clean the response
-  const validCategories = [
-    'Vegetables',
-    'Fruits',
-    'Grains',
-    'Herbs',
-    'Dairy',
-    'Organic',
-  ];
   const trimmedCategory = category.trim();
 
   // Find exact match or case-insensitive match
-  const matchedCategory = validCategories.find(
+  const matchedCategory = VALID_CATEGORIES.find(
     (valid) => valid.toLowerCase() === trimmedCategory.toLowerCase()
   );
 
@@ -516,14 +524,14 @@ Return ONLY the category name:`;
 /**
  * Generate or polish farm bio based on farm details
  * @param {string} farmName - Name of the farm
- * @param {number[]} coordinates - [longitude, latitude]
+ * @param {string} locationName - Location name (e.g., "Cairo, Egypt")
  * @param {string[]} specialties - Array of farm specialties
  * @param {string} existingBio - Optional existing bio to polish
  * @returns {Promise<string>} - Generated or polished bio
  */
 export const generateFarmBio = async (
   farmName,
-  coordinates,
+  locationName,
   specialties = [],
   existingBio = ''
 ) => {
@@ -531,108 +539,67 @@ export const generateFarmBio = async (
     throw new Error('Farm name is required');
   }
 
-  // Get location details
-  const location = coordinates ? await getLocationDetails(coordinates) : null;
-  const hasLocation = !!location;
+  const hasLocation = !!locationName;
   const hasSpecialties = specialties && specialties.length > 0;
   const hasExistingBio = existingBio && existingBio.trim();
 
-  // Check if this is a brand new farm with minimal data
-  const isNewFarm = !hasExistingBio && !hasLocation && !hasSpecialties;
-
-  const locationInfo = location
-    ? `Located in ${location.city}${
-        location.region ? `, ${location.region}` : ''
-      }${location.country ? `, ${location.country}` : ''}`
-    : '';
-
-  const specialtiesInfo = hasSpecialties
-    ? `Farm specialties: ${specialties.join(', ')}`
-    : '';
-
-  let prompt;
-
+  // Build dynamic context based on available data
+  const contextParts = [`Farm Name: ${farmName}`];
+  
+  if (hasLocation) {
+    contextParts.push(`Location: ${locationName}`);
+  }
+  
+  if (hasSpecialties) {
+    contextParts.push(`Specialties: ${specialties.join(', ')}`);
+  }
+  
   if (hasExistingBio) {
-    // Polish existing bio
-    prompt = `You are an agricultural content writer. Polish and enhance this farm bio while keeping its core message.
-
-Farm Name: ${farmName}
-${locationInfo}
-${specialtiesInfo}
-
-Current Bio:
-${existingBio}
-
-Task:
-- Enhance the bio while keeping it authentic and professional
-- Maintain the core message and personality
-- Fix any grammar or clarity issues
-- Write a detailed, engaging bio (5-7 sentences, 250-400 words)
-- Incorporate location and specialties naturally if they're missing
-- Make it warm and inviting
-- Tell a compelling story about the farm
-
-Return ONLY the polished bio text:`;
-  } else if (isNewFarm) {
-    // Generate a helpful starter bio for brand new farms
-    prompt = `You are an agricultural content writer. Create a welcoming starter bio for a new farm profile.
-
-Farm Name: ${farmName}
-
-Task:
-- Write a professional, friendly starter bio (4-5 sentences, 150-250 words)
-- Create a warm welcome message that introduces the farm
-- Emphasize commitment to quality, freshness, and sustainability
-- Include generic but authentic statements about farm-to-table values
-- Make it easy for the farmer to personalize later by adding placeholders for specific details
-- Use an inviting, community-focused tone
-- Keep it genuine and professional, not overly promotional
-
-Example structure:
-- Welcome introduction
-- Commitment to quality and sustainable practices
-- Connection to community and customers
-- Invitation to explore products
-
-Return ONLY the bio text:`;
-  } else {
-    // Generate new bio with available data
-    const contextInfo = [];
-    if (locationInfo) contextInfo.push(locationInfo);
-    if (specialtiesInfo) contextInfo.push(specialtiesInfo);
-
-    const availableContext =
-      contextInfo.length > 0
-        ? contextInfo.join('\n')
-        : 'Limited information available - generate a welcoming, general farm bio';
-
-    prompt = `You are an expert agricultural brand storyteller. Create an amazing, memorable farm bio that captivates customers.
-
-Farm Name: ${farmName}
-${availableContext}
-
-Requirements:
-- Write EXACTLY 1-3 clear, professional sentences
-- Create an inspiring, authentic narrative that stands out
-- Highlight what makes this farm truly special and unique
-- ${
-      locationInfo
-        ? 'Weave in the location naturally as a strength'
-        : 'Emphasize farming heritage, values, and dedication to quality'
-    }
-- ${
-      hasSpecialties
-        ? 'Showcase specialties as the farm\'s signature offerings'
-        : 'Present the farm\'s diverse, quality agricultural products'
-    }
-- Use compelling, vivid language that builds trust and connection
-- Focus on: quality, freshness, sustainability, community, and passion
-- Make it memorable and professional
-
-Return ONLY the bio text, no titles or labels.`;
+    contextParts.push(`\nCurrent Bio:\n${existingBio}`);
   }
 
-  return await callAI(prompt, 150);
+  const context = contextParts.join('\n');
+
+  // Determine the task type
+  const taskType = hasExistingBio ? 'polish' : 'generate';
+  const taskInstruction = hasExistingBio
+    ? 'Polish and enhance the current bio while keeping its core message and authenticity.'
+    : 'Create a compelling farm bio that introduces the farm to customers.';
+
+  // Build guidance based on available data
+  const guidanceParts = [];
+  
+  if (hasLocation) {
+    guidanceParts.push('Naturally incorporate the location as a strength');
+  }
+  
+  if (hasSpecialties) {
+    guidanceParts.push('Highlight the specialties as signature offerings');
+  }
+  
+  if (!hasLocation && !hasSpecialties) {
+    guidanceParts.push('Emphasize farming values, quality commitment, and community connection');
+  }
+
+  const guidance = guidanceParts.length > 0 
+    ? `\nFocus:\n- ${guidanceParts.join('\n- ')}`
+    : '';
+
+  // Single optimized prompt template
+  const prompt = `You are an expert agricultural content writer. ${taskInstruction}
+
+${context}
+
+Requirements:
+- CRITICAL: Write EXACTLY 1-4 clear short, professional, amazing sentences (max 75 words total)
+- Create an inspiring, authentic narrative that stands out
+- Use compelling, vivid language that builds trust and connection
+- Be authentic, memorable, and professional
+- Emphasize: quality, freshness, sustainability, community, passion${guidance}
+
+Return ONLY the bio text (1-4 sentences), no titles or labels.`;
+
+  return await callAI(prompt, 100);
 };
 
 /**

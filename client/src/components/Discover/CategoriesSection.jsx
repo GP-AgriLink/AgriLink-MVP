@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-// import { Link } from 'react-router-dom';
 
 const LeafIcon = ({ className }) => (
     <svg
@@ -16,7 +15,7 @@ const LeafIcon = ({ className }) => (
 
 const CategoryCard = ({ imageSrc, name, description }) => {
     return (
-        <div className="group relative max-w-xl w-80 h-80 overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
+        <div className="group relative w-full max-w-[20rem] h-80 overflow-hidden rounded-2xl shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
             <img
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                 src={imageSrc}
@@ -144,7 +143,7 @@ const CategoriesSection = () => {
                     <div className="mx-auto mt-5 w-20 h-1 bg-green-700"></div>
                 </div>
 
-                <div className="sm:grid lg:flex justify-around mx-auto max-w-lg gap-2 lg:max-w-none lg:grid-cols-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
 
                     {categories.map((categoryName) => {
                         const details = categoryDetails[categoryName] || categoryDetails.default;

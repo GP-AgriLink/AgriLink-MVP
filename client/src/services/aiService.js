@@ -110,14 +110,14 @@ export const standardizeCategory = async (
 /**
  * Generate farm bio using AI
  * @param {string} farmName - Farm name
- * @param {number[]} coordinates - [longitude, latitude]
+ * @param {string} locationName - Location name (e.g., "Cairo, Egypt")
  * @param {string[]} specialties - Farm specialties
  * @param {string} existingBio - Optional existing bio
  * @returns {Promise<string>} - Generated bio
  */
 export const generateFarmBio = async (
   farmName,
-  coordinates = null,
+  locationName = null,
   specialties = [],
   existingBio = ""
 ) => {
@@ -127,7 +127,7 @@ export const generateFarmBio = async (
 
   const data = await makeAuthenticatedRequest("/farm-bio", {
     farmName,
-    coordinates,
+    locationName,
     specialties,
     existingBio,
   });

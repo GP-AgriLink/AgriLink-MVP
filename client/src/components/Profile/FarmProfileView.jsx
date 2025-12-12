@@ -11,6 +11,7 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { reverseGeocodeSmart } from "../../utils/geoCode";
 
 // Map setup
 delete L.Icon.Default.prototype._getIconUrl;
@@ -58,23 +59,12 @@ const CompactInfoItem = ({ icon: Icon, label, value, className = "" }) => {
 
 export const FarmProfileView = ({ farmData }) => {
   const [currentZoom, setCurrentZoom] = useState(9);
-  const [showResolvedLocation, setShowResolvedLocation] = useState(true);
-  const [resolvedLocation, setResolvedLocation] = useState(null);
-  const [loadingLocation, setLoadingLocation] = useState(false);
   const mapRef = useRef(null);
   const navigate = useNavigate();
 
   if (!farmData) return null;
 
   const { farmName, farmBio, specialties = [], location } = farmData;
-
-  // Auto-fetch location on mount
-  useEffect(() => {
-    if (location?.coordinates && !resolvedLocation && !loadingLocation) {
-      fetchResolvedLocation();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
 
   const renderValue = (value, defaultText = "Not provided") => {
     return value || defaultText;
@@ -84,92 +74,40 @@ export const FarmProfileView = ({ farmData }) => {
     ? [location.coordinates[1], location.coordinates[0]] // Leaflet: [Lat, Lng]
     : [30.0444, 31.2357]; // Cairo default
 
-  // Location caching with 10-minute expiration
-  const getCachedLocation = (coordinates) => {
-    if (!coordinates || coordinates.length !== 2) return null;
+  const initialLabel =
+    farmData.locationAddress ||
+    farmData.locationName ||
+    farmData.address ||
+    farmData.location?.address ||
+    farmData.location?.displayName ||
+    null;
 
-    const cacheKey = `location_${coordinates[0]}_${coordinates[1]}`;
-    const cached = localStorage.getItem(cacheKey);
+  const [locationLabel, setLocationLabel] = useState(initialLabel);
 
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      const now = Date.now();
-      const tenMinutes = 10 * 60 * 1000; // 10 minutes in milliseconds
+  useEffect(() => {
+    if (locationLabel) return;
 
-      if (now - timestamp < tenMinutes) {
-        return data;
-      }
-      // Cache expired, remove it
-      localStorage.removeItem(cacheKey);
-    }
-    return null;
-  };
+    const coords = farmData?.location?.coordinates;
+    if (!coords || coords.length !== 2) return;
 
-  const setCachedLocation = (coordinates, locationData) => {
-    if (!coordinates || coordinates.length !== 2) return;
-
-    const cacheKey = `location_${coordinates[0]}_${coordinates[1]}`;
-    localStorage.setItem(
-      cacheKey,
-      JSON.stringify({
-        data: locationData,
-        timestamp: Date.now(),
-      })
-    );
-  };
-
-  const fetchResolvedLocation = async () => {
-    if (!location?.coordinates) return;
-
-    const [lng, lat] = location.coordinates;
-
-    // Check cache first
-    const cached = getCachedLocation(location.coordinates);
-    if (cached) {
-      setResolvedLocation(cached);
-      return;
-    }
-
-    // Fetch from OpenStreetMap
-    setLoadingLocation(true);
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`,
-        {
-          headers: {
-            "User-Agent": "AgriLink-MVP/1.0",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        console.warn("Failed to fetch location details");
+      const storedName = localStorage.getItem("agrillink_farm_location_name");
+      if (storedName) {
+        setLocationLabel(storedName);
         return;
       }
-
-      const data = await response.json();
-      const locationData = {
-        city: data.address?.city || data.address?.town || data.address?.village || "Unknown",
-        region: data.address?.state || data.address?.region || "",
-        country: data.address?.country || "",
-      };
-
-      setResolvedLocation(locationData);
-      setCachedLocation(location.coordinates, locationData);
-    } catch (error) {
-      console.error("Location lookup error:", error);
-    } finally {
-      setLoadingLocation(false);
+    } catch (err) {
     }
-  };
 
-  const handleToggleLocation = () => {
-    if (!showResolvedLocation && !resolvedLocation && !loadingLocation) {
-      // Switching to resolved view for the first time
-      fetchResolvedLocation();
-    }
-    setShowResolvedLocation(!showResolvedLocation);
-  };
+    (async () => {
+      try {
+        const name = await reverseGeocodeSmart(coords);
+        if (name) setLocationLabel(name);
+      } catch (err) {
+        console.error("reverse geocode in FarmProfileView failed:", err);
+      }
+    })();
+  }, [farmData, locationLabel]);
 
   const handleRecenter = () => {
     if (mapRef.current) {
@@ -238,32 +176,16 @@ export const FarmProfileView = ({ farmData }) => {
           <div className="col-span-2 space-y-4 lg:col-span-2">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={handleToggleLocation}
-                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg bg-emerald-50 transition-all hover:scale-105 hover:bg-emerald-100"
-                  title={showResolvedLocation ? "Show coordinates" : "Show location name"}
-                >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
                   <FiMapPin className="h-5 w-5 text-emerald-600" />
-                </button>
+                </div>
                 <div className="flex flex-col">
                   <h3 className="text-lg font-semibold text-gray-800">Farm Location</h3>
-                  {showResolvedLocation ? (
-                    resolvedLocation ? (
-                      <p className="text-xs font-medium text-gray-600">
-                        {resolvedLocation.city}
-                        {resolvedLocation.region && `, ${resolvedLocation.region}`}
-                        {resolvedLocation.country && `, ${resolvedLocation.country}`}
-                      </p>
-                    ) : (
-                      <p className="text-xs text-gray-500">
-                        Coordinates: {mapCenter[0].toFixed(6)}°N, {mapCenter[1].toFixed(6)}°E
-                      </p>
-                    )
-                  ) : (
-                    <p className="text-xs text-gray-500">
-                      Coordinates: {mapCenter[0].toFixed(6)}°N, {mapCenter[1].toFixed(6)}°E
-                    </p>
-                  )}
+                  <p className="text-xs text-gray-500">
+                    {locationLabel
+                      ? locationLabel
+                      : `Coordinates: ${mapCenter[0].toFixed(6)}°N, ${mapCenter[1].toFixed(6)}°E`}
+                  </p>
                 </div>
               </div>
 
@@ -291,14 +213,16 @@ export const FarmProfileView = ({ farmData }) => {
                 <Marker position={mapCenter}>
                   <Popup>
                     <div className="p-2 text-center">
-                      <p className="mb-1 font-bold text-emerald-700">
-                        {farmName || "Farm Location"}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {mapCenter[0].toFixed(6)}°N
-                        <br />
-                        {mapCenter[1].toFixed(6)}°E
-                      </p>
+                      <p className="mb-1 font-bold text-emerald-700">{farmName || "Farm Location"}</p>
+                      {locationLabel ? (
+                        <p className="text-xs text-gray-600">{locationLabel}</p>
+                      ) : (
+                        <p className="text-xs text-gray-600">
+                          {mapCenter[0].toFixed(6)}°N
+                          <br />
+                          {mapCenter[1].toFixed(6)}°E
+                        </p>
+                      )}
                     </div>
                   </Popup>
                 </Marker>
