@@ -4,6 +4,7 @@ import { FiMapPin, FiBriefcase, FiFileText, FiTag, FiNavigation } from "react-ic
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { reverseGeocodeSmart } from "../../utils/geoCode";
 
 // Map setup
 delete L.Icon.Default.prototype._getIconUrl;
@@ -65,6 +66,41 @@ export const FarmProfileView = ({ farmData }) => {
   const mapCenter = location?.coordinates
     ? [location.coordinates[1], location.coordinates[0]] // Leaflet: [Lat, Lng]
     : [30.0444, 31.2357]; // Cairo default
+
+  const initialLabel =
+    farmData.locationAddress ||
+    farmData.locationName ||
+    farmData.address ||
+    farmData.location?.address ||
+    farmData.location?.displayName ||
+    null;
+
+  const [locationLabel, setLocationLabel] = useState(initialLabel);
+
+  useEffect(() => {
+    if (locationLabel) return;
+
+    const coords = farmData?.location?.coordinates;
+    if (!coords || coords.length !== 2) return;
+
+    try {
+      const storedName = localStorage.getItem("agrillink_farm_location_name");
+      if (storedName) {
+        setLocationLabel(storedName);
+        return;
+      }
+    } catch (err) {
+    }
+
+    (async () => {
+      try {
+        const name = await reverseGeocodeSmart(coords);
+        if (name) setLocationLabel(name);
+      } catch (err) {
+        console.error("reverse geocode in FarmProfileView failed:", err);
+      }
+    })();
+  }, [farmData, locationLabel]);
 
   const handleRecenter = () => {
     if (mapRef.current) {
@@ -139,7 +175,9 @@ export const FarmProfileView = ({ farmData }) => {
                 <div>
                   <h3 className="text-lg font-semibold text-gray-800">Farm Location</h3>
                   <p className="text-xs text-gray-500">
-                    Coordinates: {mapCenter[0].toFixed(6)}°N, {mapCenter[1].toFixed(6)}°E
+                    {locationLabel
+                      ? locationLabel
+                      : `Coordinates: ${mapCenter[0].toFixed(6)}°N, ${mapCenter[1].toFixed(6)}°E`}
                   </p>
                 </div>
               </div>
@@ -170,14 +208,16 @@ export const FarmProfileView = ({ farmData }) => {
                 <Marker position={mapCenter}>
                   <Popup>
                     <div className="p-2 text-center">
-                      <p className="mb-1 font-bold text-emerald-700">
-                        {farmName || "Farm Location"}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {mapCenter[0].toFixed(6)}°N
-                        <br />
-                        {mapCenter[1].toFixed(6)}°E
-                      </p>
+                      <p className="mb-1 font-bold text-emerald-700">{farmName || "Farm Location"}</p>
+                      {locationLabel ? (
+                        <p className="text-xs text-gray-600">{locationLabel}</p>
+                      ) : (
+                        <p className="text-xs text-gray-600">
+                          {mapCenter[0].toFixed(6)}°N
+                          <br />
+                          {mapCenter[1].toFixed(6)}°E
+                        </p>
+                      )}
                     </div>
                   </Popup>
                 </Marker>

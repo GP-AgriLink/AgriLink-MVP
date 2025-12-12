@@ -4,9 +4,9 @@ import { Users, Code, Heart, Leaf } from 'lucide-react';
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen bg-emerald-50">
+    <div className="min-h-screen bg-gradient-to-b from-green-100 via-emerald-50/30 to-teal-50/20">
       {/* Hero Section */}
-      <section className="py-16 px-6">
+      <section className="py-16 px-6 bg-gradient-to-b from-white via-emerald-50/30 to-teal-50/20">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-semibold mb-6">
             <Leaf className="w-4 h-4" />

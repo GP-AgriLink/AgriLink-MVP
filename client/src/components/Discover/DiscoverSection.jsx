@@ -24,18 +24,20 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [error, setError] = useState(null);
   const [locationName, setLocationName] = useState("Your Selected Location");
+  const [mapCenter, setMapCenter] = useState(FALLBACK_POSITION);
 
   useEffect(() => {
     if (userCoords) {
       setLocationName("Fetching address...");
+      setMapCenter([userCoords.latitude, userCoords.longitude]);
 
       // 2. Call the API
       fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${userCoords.latitude}&lon=${userCoords.longitude}`,
         {
           headers: {
-            'User-Agent': 'Mozilla/5.0'
-          }
+            "User-Agent": "Mozilla/5.0",
+          },
         }
       )
         .then((res) => res.json())
@@ -82,10 +84,10 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
         setError("Unable to retrieve your location.");
         setLoadingLocation(false);
       },
-      { 
-        enableHighAccuracy: true,  // Use GPS for accurate farm locations
-        timeout: 15000,             // 15s balanced timeout
-        maximumAge: 60000           // Cache for 1 minute only
+      {
+        enableHighAccuracy: true, // Use GPS for accurate farm locations
+        timeout: 15000, // 15s balanced timeout
+        maximumAge: 60000, // Cache for 1 minute only
       }
     );
   };
@@ -103,8 +105,8 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
         )}`,
         {
           headers: {
-            'User-Agent': 'Mozilla/5.0'
-          }
+            "User-Agent": "Mozilla/5.0",
+          },
         }
       );
       const data = await res.json();
@@ -129,8 +131,8 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
 
   return (
     <div className="relative w-full bg-emerald-50" id="DiscoverSection">
-      <div className="mx-auto max-w-2xl text-center">
-        <p className="mb-2 mt-4 text-sm font-semibold uppercase tracking-wider text-green-700">
+      <div className="mx-auto max-w-2xl px-4 pt-16 text-center lg:pt-20">
+        <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-green-700 sm:text-sm">
           Discover
         </p>
         <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
@@ -139,42 +141,43 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
         <div className="mx-auto mt-5 h-1 w-20 bg-green-700"></div>
       </div>
 
-      <div className="container mx-auto grid min-h-[70vh] grid-cols-1 items-center gap-12 px-4 py-20 lg:grid-cols-2">
+      <div className="container mx-auto grid min-h-[60vh] grid-cols-1 items-center gap-12 px-4 py-12 lg:min-h-[70vh] lg:grid-cols-2 lg:py-20">
         <div className="text-center lg:text-left">
-          <h1 className="text-5xl font-bold text-gray-900 drop-shadow-sm">
+          <h1 className="text-4xl font-bold leading-tight text-gray-900 drop-shadow-sm sm:text-5xl">
             Discover fresh produce,
-            <br />
-            lovely grown near you.
+            <br className="hidden sm:block" />
+            grown near you.
           </h1>
-          <p className="mt-7 max-w-[600px] text-xl text-gray-600">
+
+          <p className="mx-auto mt-6 max-w-xl text-lg text-gray-600 sm:text-xl lg:mx-0">
             Explore AgriLink's interactive farm network map. Hover or click on a marker to learn
             more about each farm, their growing practices, and shop their seasonal offerings.
           </p>
 
-          <div className="mt-10 max-w-lg space-y-4 lg:mx-0">
+          <div className="mx-auto mt-8 max-w-lg space-y-4 sm:mt-10 lg:mx-0">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <input
                 type="text"
                 value={searchLocation}
                 onChange={(e) => setSearchLocation(e.target.value)}
                 placeholder="Enter your city or zip code"
-                className="w-full rounded-full border border-gray-300 px-6 py-4 pr-16 text-lg caret-emerald-200 shadow-lg focus:border-emerald-200 focus:outline-none focus:ring-1 focus:ring-emerald-200"
+                className="w-full rounded-full border border-gray-300 px-6 py-4 pr-14 text-base caret-emerald-200 shadow-lg focus:border-emerald-200 focus:outline-none focus:ring-1 focus:ring-emerald-200 sm:text-lg"
               />
 
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-600 p-3 text-white shadow-md transition-colors hover:bg-emerald-700"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-emerald-600 p-2.5 text-white shadow-md transition-colors hover:bg-emerald-700 sm:p-3"
                 disabled={loadingLocation}
               >
-                <Search className="h-6 w-6" />
+                <Search className="h-5 w-5 sm:h-6 sm:w-6" />
               </button>
             </form>
 
-            <div className="flex items-center justify-center gap-4 lg:justify-start">
-              <span className="text-gray-500">or</span>
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row lg:justify-start">
+              <span className="hidden text-gray-500 sm:inline">or</span>
               <button
                 onClick={handleUseMyLocation}
-                className="flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-emerald-600 shadow-lg transition-all hover:shadow-xl"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-6 py-3 font-semibold text-emerald-600 shadow-lg transition-all hover:shadow-xl sm:w-auto"
                 disabled={loadingLocation}
               >
                 <MapPin className="h-5 w-5" />
@@ -182,17 +185,17 @@ const DiscoverSection = ({ onLocationSet, userCoords }) => {
               </button>
             </div>
 
-            {error && <p className="mt-4 text-red-600">{error}</p>}
+            {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
           </div>
         </div>
 
         {/* --- Map --- */}
-        <div className="z-0 h-96 w-full rounded-2xl shadow-lg lg:h-[50vh]">
+        <div className="relative z-0 h-[400px] w-full overflow-hidden rounded-2xl shadow-lg lg:h-[50vh]">
           <MapContainer
             center={FALLBACK_POSITION}
             zoom={10}
-            scrollWheelZoom={true}
-            className="h-full w-full rounded-2xl"
+            scrollWheelZoom={false}
+            className="h-full w-full"
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 

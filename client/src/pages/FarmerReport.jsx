@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuthToken, clearAuthData, useAuth } from "../context/AuthContext";
 import { getMyFarmReport } from "../services/farmApi";
-import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Sparkles } from "lucide-react";
+import { DollarSign, ShoppingBag, TrendingUp, Package, Users, Sparkles, ChevronDown } from "lucide-react";
 import LogoSpinner from "../components/common/LogoSpinner.jsx";
 
 const FarmerReportPage = () => {
@@ -25,6 +25,26 @@ const FarmerReportPage = () => {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [isYearDropdownOpen, setIsYearDropdownOpen] = useState(false);
+  const monthDropdownRef = useRef(null);
+  const yearDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target)) {
+        setIsMonthDropdownOpen(false);
+      }
+      if (yearDropdownRef.current && !yearDropdownRef.current.contains(event.target)) {
+        setIsYearDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -63,7 +83,6 @@ const FarmerReportPage = () => {
     fetchReport();
   }, [navigate, user, month, year]);
 
-  // Loading UI with animation
   if (loading) {
     return (
       <div className="relative min-h-screen">
@@ -72,7 +91,6 @@ const FarmerReportPage = () => {
     );
   }
 
-  // Error UI
   if (error) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -120,7 +138,6 @@ const FarmerReportPage = () => {
     return badges[index] || { bg: "bg-gray-100", text: "text-gray-700", icon: `#${index + 1}` };
   };
 
-  // Render animated empty state for sections
   const renderEmptyState = (icon, message) => (
     <div
       className="flex min-h-[200px] flex-col items-center justify-center p-4"
@@ -158,58 +175,137 @@ const FarmerReportPage = () => {
   return (
     <div className="space-y-6 px-4 py-8 sm:px-8">
       {/* Header Section */}
-      <div className="animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative z-30 animate-fade-in flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
             Sales Report
           </h1>
           <p className="mt-2 text-sm font-medium text-gray-500">
-            {reportData?.reportMonth ||
-              new Date().toLocaleString(undefined, { month: "long", year: "numeric" })}
+            {new Date(year, month - 1).toLocaleDateString("en-US", {
+              month: "long",
+              year: "numeric",
+            })}
           </p>
         </div>
 
-        {/* Month/Year Selectors */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-semibold text-gray-700">Month</label>
-            <select
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              className="rounded-lg border-2 border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+        {/* Month and Year Dropdown Selectors */}
+        <div className="relative flex items-center gap-3 rounded-2xl border border-emerald-100/50 bg-white shadow-lg">
+          {/* Month Dropdown */}
+          <div className="relative z-50" ref={monthDropdownRef}>
+            <button
+              onClick={() => {
+                setIsMonthDropdownOpen(!isMonthDropdownOpen);
+                setIsYearDropdownOpen(false);
+              }}
+              className="flex items-center gap-2 rounded-l-2xl px-4 py-3 font-medium text-gray-700 transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2000, i).toLocaleString("default", { month: "long" })}
-                </option>
-              ))}
-            </select>
+              <span>
+                {[
+                  "January",
+                  "February",
+                  "March",
+                  "April",
+                  "May",
+                  "June",
+                  "July",
+                  "August",
+                  "September",
+                  "October",
+                  "November",
+                  "December",
+                ][month - 1]}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${isMonthDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isMonthDropdownOpen && (
+              <div className="absolute right-0 top-full z-[9999] mt-2 w-48 rounded-2xl border border-emerald-100/50 bg-white shadow-2xl">
+                <div className="max-h-60 overflow-y-auto py-2">
+                  {[
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                  ].map((m, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setMonth(idx + 1);
+                        setIsMonthDropdownOpen(false);
+                      }}
+                      className={`group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium transition-all ${month === idx + 1
+                        ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700"
+                        : "text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
+                        }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-semibold text-gray-700">Year</label>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="rounded-lg border-2 border-emerald-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-emerald-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          {/* Divider */}
+          <div className="h-6 w-px bg-gray-200" />
+
+          {/* Year Dropdown */}
+          <div className="relative z-50" ref={yearDropdownRef}>
+            <button
+              onClick={() => {
+                setIsYearDropdownOpen(!isYearDropdownOpen);
+                setIsMonthDropdownOpen(false);
+              }}
+              className="flex items-center gap-2 rounded-r-2xl px-4 py-3 font-medium text-gray-700 transition-all hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
             >
-              {(() => {
-                const currentYear = new Date().getFullYear();
-                const years = [];
-                for (let y = currentYear + 1; y >= 2018; y--) years.push(y);
-                return years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ));
-              })()}
-            </select>
+              <span>{year}</span>
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${isYearDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+
+            {isYearDropdownOpen && (
+              <div className="absolute right-0 top-full z-[9999] mt-2 w-32 rounded-2xl border border-emerald-100/50 bg-white shadow-2xl">
+                <div className="max-h-60 overflow-y-auto py-2">
+                  {(() => {
+                    const currentYear = new Date().getFullYear();
+                    const years = [];
+                    for (let y = currentYear + 1; y >= 2018; y--) years.push(y);
+                    return years.map((y) => (
+                      <button
+                        key={y}
+                        onClick={() => {
+                          setYear(y);
+                          setIsYearDropdownOpen(false);
+                        }}
+                        className={`group flex w-full items-center gap-3.5 px-5 py-3 text-left font-medium transition-all ${year === y
+                          ? "bg-gradient-to-r from-emerald-50 to-teal-50 text-emerald-700"
+                          : "text-gray-700 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50"
+                          }`}
+                      >
+                        {y}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Stats Overview Cards */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="relative z-0 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {/* Total Revenue */}
         <div
           className="group relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 shadow-md transition-all hover:scale-[1.02] hover:shadow-xl"
