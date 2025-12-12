@@ -299,7 +299,7 @@ export const getOrUploadImage = async (imageUrl, productId) => {
  * @param {object|null} fileData - Optional uploaded file data {uri, mimeType, name}
  * @returns {Promise<string>} - Generated content
  */
-const callAI = async (prompt, maxTokens = 150, fileData = null) => {
+const callAI = async (prompt, maxTokens = 150, fileData = null, options = {}) => {
   if (!AI_API_KEY || AI_API_KEY === 'your_api_key_here') {
     throw new Error(
       'AI API key is not configured. Please add AI_API_KEY to your .env file.'
@@ -323,25 +323,31 @@ const callAI = async (prompt, maxTokens = 150, fileData = null) => {
     // Add text prompt
     parts.push({ text: prompt });
 
+    // Build request body
+    const requestBody = {
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: options.temperature ?? 0.7,
+        maxOutputTokens: maxTokens,
+        topP: options.topP ?? 0.85,
+        topK: options.topK ?? 40,
+      },
+    };
+
+    // Add system instruction if provided
+    if (options.systemInstruction) {
+      requestBody.systemInstruction = {
+        parts: [{ text: options.systemInstruction }],
+      };
+    }
+
     const response = await fetch(AI_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-goog-api-key': AI_API_KEY,
       },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: parts,
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: maxTokens,
-          topP: 0.8,
-          topK: 40,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -426,30 +432,16 @@ export const generateProductDescription = async (
     throw new Error('Product name is required');
   }
 
-  // Build dynamic context
-  const contextParts = [`Product: ${productName}`];
-  
-  if (fileData) {
-    contextParts.push('Visual Context: Analyze the image to enhance your description with specific details about appearance, quality, and freshness.');
-  }
+  const systemInstruction = 'You are an expert agricultural product copywriter creating compelling, market-ready product descriptions for an online farm marketplace.';
 
-  const context = contextParts.join('\n');
+  const prompt = fileData
+    ? `Analyze the image and create a product description for: ${productName}\n\nWrite 1-2 vivid sentences highlighting quality, freshness, and appeal. Focus on visual details from the image.`
+    : `Create a product description for: ${productName}\n\nWrite 1-2 vivid sentences highlighting quality, freshness, taste, and unique characteristics that make customers want to buy.`;
 
-  // Single optimized prompt template
-  const prompt = `You are an expert agricultural product copywriter. Create a compelling, concise product description.
-
-${context}
-
-Requirements:
-- Write EXACTLY 1-2 clear, descriptive sentences
-- Highlight key features: quality, freshness, taste, or unique characteristics
-- Use vivid, appetizing language that makes customers want to buy
-- Be professional yet engaging
-- Focus on benefits and sensory appeal
-
-Return ONLY the description text, no labels or titles.`;
-
-  return await callAI(prompt, 100, fileData);
+  return await callAI(prompt, 80, fileData, {
+    temperature: 0.8,
+    systemInstruction,
+  });
 };
 
 /**
@@ -558,48 +550,170 @@ export const generateFarmBio = async (
     contextParts.push(`\nCurrent Bio:\n${existingBio}`);
   }
 
+  const systemInstruction = 'You are an expert agricultural storyteller crafting authentic, compelling farm bios that build trust and inspire customers to support local agriculture.';
+
+  let prompt;
+  if (hasExistingBio) {
+    prompt = `Farm: ${farmName}\n${hasLocation ? `Location: ${locationName}\n` : ''}${hasSpecialties ? `Specialties: ${specialties.join(', ')}\n` : ''}\nCurrent Bio: ${existingBio}\n\nPolish this bio. Keep 1-4 sentences (max 75 words). Enhance clarity and appeal while preserving authenticity.`;
+  } else {
+    const focus = hasSpecialties ? specialties.join(', ') : 'quality farming, community connection, sustainable practices';
+    prompt = `Farm: ${farmName}\n${hasLocation ? `Location: ${locationName}\n` : ''}\nWrite a farm bio in 1-4 sentences (max 75 words). Highlight: ${focus}. Be inspiring, authentic, professional.`;
+  }
+
+  return await callAI(prompt, 120, null, {
+    temperature: 0.75,
+    systemInstruction,
+  });
+};
+
+/**
+ * Generate AI-powered farm report analysis with predictions and suggestions
+ * @param {string} farmName - Name of the farm
+ * @param {Array} reportsHistory - Array of past reports (up to 12 months)
+ * @param {object} currentReport - Current month report data
+ * @returns {Promise<object>} - AI analysis with predictions and suggestions
+ */
+export const generateFarmReportAnalysis = async (
+  farmName,
+  reportsHistory = [],
+  currentReport = null,
+  language = 'EN',
+  isDetailed = false
+) => {
+  if (!farmName || !farmName.trim()) {
+    throw new Error('Farm name is required');
+  }
+
+  const hasHistory = reportsHistory && reportsHistory.length > 0;
+  const hasCurrent = !!currentReport;
+
+  // Language configuration
+  const languageConfig = {
+    EN: {
+      instruction: '',
+      summary: 'Summary',
+      predictions: 'Predictions',
+      suggestions: 'Suggestions',
+      insights: 'Insights',
+    },
+    AR: {
+      instruction: 'IMPORTANT: Respond in Arabic language. All text should be in Arabic.',
+      summary: 'الملخص',
+      predictions: 'التوقعات',
+      suggestions: 'التوصيات',
+      insights: 'الرؤى',
+    },
+  };
+
+  const langConfig = languageConfig[language] || languageConfig.EN;
+  const detailLevel = isDetailed ? 'detailed and comprehensive' : 'concise and professional';
+
+  // Build context based on available data
+  const contextParts = [`Farm: ${farmName}`];
+
+  if (hasCurrent) {
+    contextParts.push(`\nCurrent Month Report:`);
+    contextParts.push(`- Revenue: $${currentReport.totalRevenue || 0}`);
+    contextParts.push(`- Orders: ${currentReport.totalOrdersCompleted || 0}`);
+    contextParts.push(`- Average Order: $${currentReport.averageOrderValue?.toFixed(2) || 0}`);
+    
+    if (currentReport.bestSellingProducts?.length > 0) {
+      contextParts.push(`- Top Products: ${currentReport.bestSellingProducts.slice(0, 3).map(p => p.name).join(', ')}`);
+    }
+  }
+
+  if (hasHistory) {
+    contextParts.push(`\nHistorical Data (${reportsHistory.length} months):`);
+    
+    const revenues = reportsHistory.map(r => r.salesOverview?.totalRevenue || 0);
+    const orders = reportsHistory.map(r => r.salesOverview?.totalOrdersCompleted || 0);
+    
+    const avgRevenue = revenues.reduce((a, b) => a + b, 0) / revenues.length;
+    const avgOrders = orders.reduce((a, b) => a + b, 0) / orders.length;
+    
+    contextParts.push(`- Average Monthly Revenue: $${avgRevenue.toFixed(2)}`);
+    contextParts.push(`- Average Monthly Orders: ${avgOrders.toFixed(0)}`);
+    contextParts.push(`- Trend: ${revenues.length >= 2 ? (revenues[revenues.length - 1] > revenues[0] ? 'Growing' : 'Declining') : 'Stable'}`);
+  }
+
   const context = contextParts.join('\n');
 
-  // Determine the task type
-  const taskType = hasExistingBio ? 'polish' : 'generate';
-  const taskInstruction = hasExistingBio
-    ? 'Polish and enhance the current bio while keeping its core message and authenticity.'
-    : 'Create a compelling farm bio that introduces the farm to customers.';
+  // System instruction for consistent high-quality analysis
+  const systemInstruction = `You are an expert agricultural business analyst specializing in farm performance optimization and market strategy. ${langConfig.instruction}\n\nProvide data-driven, actionable insights in valid JSON format only.`;
 
-  // Build guidance based on available data
-  const guidanceParts = [];
-  
-  if (hasLocation) {
-    guidanceParts.push('Naturally incorporate the location as a strength');
+  let prompt;
+
+  if (!hasHistory && !hasCurrent) {
+    // No data available - motivational guidance
+    const counts = isDetailed ? { pred: 5, sugg: 7, ins: 4 } : { pred: 3, sugg: 4, ins: 2 };
+    const predExample = isDetailed 
+      ? '["Revenue will grow 15-20% in first quarter", "Customer base expected to reach 50+ buyers", "Organic products show 30% premium potential", "Seasonal demand peaks in spring/summer", "Market expansion opportunity in nearby regions"]'
+      : '["Revenue expected to grow steadily with marketing", "Customer base will expand through word-of-mouth", "Product quality will drive repeat purchases"]';
+    const suggExample = isDetailed
+      ? '["Focus on high-margin organic vegetables", "Build customer loyalty program", "Optimize pricing based on competitor analysis", "Implement efficient inventory tracking", "Develop social media marketing strategy", "Partner with local delivery services", "Position as premium local brand"]'
+      : '["Ensure consistent product quality", "Engage customers through social media", "Set competitive yet profitable prices", "Maintain optimal inventory levels"]';
+    const insExample = isDetailed
+      ? '["Quality and freshness are key differentiators", "Local sourcing builds customer trust", "Sustainable practices attract premium buyers", "Industry trend shows 25% growth in online farm sales"]'
+      : '["Focus on product quality and customer service", "Local farms have 65% customer retention rate"]';
+    
+    prompt = `${context}\n\nNew farm starting out. Provide ${detailLevel} guidance in JSON format.\n\nReturn valid JSON with these EXACT field names:\n{\n  "summary": "Write ${isDetailed?'3-4':'2'} encouraging sentences about building a data-driven farm business",\n  "predictions": ${predExample},\n  "suggestions": ${suggExample},\n  "insights": ${insExample}\n}\n\nIMPORTANT: Each array item must be a complete sentence string, not an object.`;
+  } else {
+    // Has data - analytical insights
+    const counts = isDetailed 
+      ? { pred: 6, sugg: 8, ins: 5 } 
+      : { pred: 3, sugg: 5, ins: 3 };
+    
+    const dataType = hasHistory ? `${reportsHistory.length}mo history` : 'current month';
+    
+    const predExample = isDetailed
+      ? '["Revenue forecast: $X,XXX next month (15% growth)", "Expected 25-30 orders based on trend", "Customer retention rate will reach 70%", "New customer acquisition: 10-15 buyers", "Product mix will shift toward organic items", "Seasonal demand will peak in 2 months"]'
+      : '["Revenue expected to reach $X,XXX next month", "Sales volume will increase by Y%", "Customer base will grow to Z buyers"]';
+    const suggExample = isDetailed
+      ? '["Increase inventory for top 3 products", "Launch email campaign for repeat customers", "Adjust pricing on slow-moving items", "Improve delivery time to under 24 hours", "Expand social media presence", "Implement seasonal promotions", "Optimize supply chain efficiency", "Consider adding 2-3 new product lines"]'
+      : '["Stock up on best-selling products", "Focus on customer retention strategies", "Review and adjust pricing strategy", "Streamline order fulfillment process", "Engage customers through promotions"]';
+    const insExample = isDetailed
+      ? '["Weekend sales are 40% higher than weekdays", "Organic products have 25% higher margins", "Top customers account for 60% of revenue", "Delivery speed correlates with repeat purchases", "Competitor analysis shows pricing advantage"]'
+      : '["Peak sales days are weekends", "Product quality drives 80% of repeat orders", "Customer retention is above industry average"]';
+
+    prompt = `${context}\n\nData available: ${dataType}\n\nAnalyze performance (${detailLevel}). Use actual numbers from data.\n\nReturn valid JSON:\n{\n  "summary": "Write ${isDetailed?'3-4':'2-3'} sentences analyzing trends, growth patterns${isDetailed?', seasonality, market position, competitive advantages':''}",\n  "predictions": ${predExample},\n  "suggestions": ${suggExample},\n  "insights": ${insExample}\n}\n\nIMPORTANT: Replace examples with actual data-driven insights. Each array item must be a string, not an object. Be specific and actionable.`;
   }
-  
-  if (hasSpecialties) {
-    guidanceParts.push('Highlight the specialties as signature offerings');
+
+  // Use optimized token limits based on detail level
+  const maxTokens = isDetailed ? 1200 : 600; // Reduced from 1500/800 for cost efficiency
+  const response = await callAI(prompt, maxTokens, null, {
+    temperature: 0.6, // Lower temperature for more consistent, factual analysis
+    topP: 0.85, // Balanced for quality and consistency
+    systemInstruction,
+  });
+
+  // Parse JSON response
+  try {
+    // Extract JSON from response (handle markdown code blocks if present)
+    let jsonStr = response.trim();
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.replace(/```json\n?/, '').replace(/\n?```$/, '');
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/```\n?/, '').replace(/\n?```$/, '');
+    }
+    
+    const analysis = JSON.parse(jsonStr);
+    
+    return {
+      summary: analysis.summary || '',
+      predictions: analysis.predictions || [],
+      suggestions: analysis.suggestions || [],
+      insights: analysis.insights || [],
+    };
+  } catch (error) {
+    console.error('Failed to parse AI response:', error);
+    // Fallback response
+    return {
+      summary: response,
+      predictions: [],
+      suggestions: [],
+      insights: [],
+    };
   }
-  
-  if (!hasLocation && !hasSpecialties) {
-    guidanceParts.push('Emphasize farming values, quality commitment, and community connection');
-  }
-
-  const guidance = guidanceParts.length > 0 
-    ? `\nFocus:\n- ${guidanceParts.join('\n- ')}`
-    : '';
-
-  // Single optimized prompt template
-  const prompt = `You are an expert agricultural content writer. ${taskInstruction}
-
-${context}
-
-Requirements:
-- CRITICAL: Write EXACTLY 1-4 clear short, professional, amazing sentences (max 75 words total)
-- Create an inspiring, authentic narrative that stands out
-- Use compelling, vivid language that builds trust and connection
-- Be authentic, memorable, and professional
-- Emphasize: quality, freshness, sustainability, community, passion${guidance}
-
-Return ONLY the bio text (1-4 sentences), no titles or labels.`;
-
-  return await callAI(prompt, 100);
 };
 
 /**

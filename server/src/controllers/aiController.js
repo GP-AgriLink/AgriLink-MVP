@@ -13,7 +13,10 @@ import {
   uploadImageToAI,
   deleteAIFile,
   getOrUploadImage,
+  generateFarmReportAnalysis,
 } from '../utils/aiService.js';
+import Farm from '../models/Farm.js';
+import Order from '../models/Order.js';
 
 /**
  * @desc    Generate product description using AI
@@ -274,6 +277,152 @@ export const getImage = async (req, res) => {
     console.error('AI Get or Upload Error:', error);
     res.status(500).json({
       message: error.message || 'Failed to get or upload image',
+    });
+  }
+};
+
+/**
+ * @desc    Generate AI-powered farm report analysis
+ * @route   POST /api/ai/farm-report-analysis
+ * @access  Private (Farmer only)
+ */
+export const generateReportAnalysis = async (req, res) => {
+  try {
+    // Validate AI configuration
+    if (!isAIConfigured()) {
+      return res.status(503).json({
+        message:
+          'AI service is not configured. Please configure AI_API_KEY in server environment.',
+      });
+    }
+
+    const { month, year, language = 'EN', isDetailed = false } = req.body;
+
+    // Get farmer's farm
+    const farm = await Farm.findOne({ user: req.user._id });
+    if (!farm) {
+      return res.status(404).json({ message: 'Farm profile not found.' });
+    }
+
+    const farmId = farm._id;
+    const farmName = farm.farmName || 'Your Farm';
+
+    // Get current month report if month/year provided
+    let currentReport = null;
+    if (month && year) {
+      const startDate = new Date(year, month - 1, 1, 0, 0, 0);
+      const endDate = new Date(year, month, 0, 23, 59, 59);
+
+      const currentData = await Order.aggregate([
+        {
+          $match: {
+            farm: farmId,
+            status: 'Completed',
+            createdAt: { $gte: startDate, $lte: endDate },
+          },
+        },
+        {
+          $facet: {
+            salesOverview: [
+              {
+                $group: {
+                  _id: null,
+                  totalRevenue: { $sum: '$totalAmount' },
+                  totalOrdersCompleted: { $sum: 1 },
+                  averageOrderValue: { $avg: '$totalAmount' },
+                },
+              },
+            ],
+            bestSellingProducts: [
+              { $unwind: '$orderItems' },
+              {
+                $group: {
+                  _id: '$orderItems.productId',
+                  name: { $first: '$orderItems.name' },
+                  totalQuantitySold: { $sum: '$orderItems.quantity' },
+                },
+              },
+              { $sort: { totalQuantitySold: -1 } },
+              { $limit: 5 },
+            ],
+          },
+        },
+      ]);
+
+      if (currentData[0]) {
+        const salesResult = currentData[0].salesOverview[0] || {
+          totalRevenue: 0,
+          totalOrdersCompleted: 0,
+          averageOrderValue: 0,
+        };
+
+        currentReport = {
+          totalRevenue: salesResult.totalRevenue,
+          totalOrdersCompleted: salesResult.totalOrdersCompleted,
+          averageOrderValue: salesResult.averageOrderValue,
+          bestSellingProducts: currentData[0].bestSellingProducts,
+        };
+      }
+    }
+
+    // Get historical reports (last 12 months or available)
+    const now = new Date();
+    const twelveMonthsAgo = new Date(now);
+    twelveMonthsAgo.setMonth(now.getMonth() - 12);
+
+    const historicalData = await Order.aggregate([
+      {
+        $match: {
+          farm: farmId,
+          status: 'Completed',
+          createdAt: { $gte: twelveMonthsAgo },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$createdAt' },
+            month: { $month: '$createdAt' },
+          },
+          salesOverview: {
+            $push: {
+              totalRevenue: { $sum: '$totalAmount' },
+              totalOrdersCompleted: { $sum: 1 },
+              averageOrderValue: { $avg: '$totalAmount' },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          year: '$_id.year',
+          month: '$_id.month',
+          salesOverview: {
+            totalRevenue: { $sum: '$salesOverview.totalRevenue' },
+            totalOrdersCompleted: { $size: '$salesOverview' },
+            averageOrderValue: { $avg: '$salesOverview.averageOrderValue' },
+          },
+        },
+      },
+      { $sort: { year: 1, month: 1 } },
+      { $limit: 12 },
+    ]);
+
+    // Generate AI analysis
+    const analysis = await generateFarmReportAnalysis(
+      farmName,
+      historicalData,
+      currentReport,
+      language,
+      isDetailed
+    );
+
+    res.json(analysis);
+  } catch (error) {
+    console.error('AI Report Analysis Error:', error);
+    res.status(500).json({
+      message: error.message || 'Failed to generate report analysis',
     });
   }
 };

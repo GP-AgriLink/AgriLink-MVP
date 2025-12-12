@@ -12,6 +12,7 @@ import {
   uploadImage,
   deleteFile,
   getImage,
+  generateReportAnalysis,
 } from '../controllers/aiController.js';
 
 const router = express.Router();
@@ -60,5 +61,12 @@ router.delete("/files/:fileName", deleteFile);
  * @access  Private
  */
 router.post("/img", getImage);
+
+/**
+ * @route   POST /api/ai/farm-report-analysis
+ * @desc    Generate AI-powered farm report analysis with predictions and suggestions
+ * @access  Private (Farmer only)
+ */
+router.post("/farm-report-analysis", generateReportAnalysis);
 
 export default router;
