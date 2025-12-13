@@ -183,11 +183,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
     setAIOperation("description");
     try {
       // Server handles file upload (temporary upload without productId)
-      const description = await generateProductDescription(
-        formData.name,
-        formData.imageUrl,
-        ''
-      );
+      const description = await generateProductDescription(formData.name, formData.imageUrl, "");
       const newFormData = { ...formData, description };
       setFormData(newFormData);
       validateForm(newFormData);
@@ -199,7 +195,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
       setIsAIGenerating(false);
       setAIOperation("");
     }
-  }, [formData, validateForm]);
+  }, [formData]);
 
   const handleStandardizeCategory = useCallback(async () => {
     if (!formData.name.trim()) {
@@ -211,11 +207,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
     setAIOperation("category");
     try {
       // Server handles file upload (temporary upload without productId)
-      const category = await standardizeCategory(
-        formData.name,
-        formData.imageUrl,
-        ''
-      );
+      const category = await standardizeCategory(formData.name, formData.imageUrl, "");
 
       // Check if it's one of the standard categories
       if (CATEGORY_OPTIONS.includes(category)) {
@@ -453,7 +445,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   }`}
                 />
                 {errors.name && (
-                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.name}</p>
+                  <p className="mt-1 animate-fadeIn text-xs text-red-500">{errors.name}</p>
                 )}
               </div>
               <div className="col-span-2">
@@ -519,7 +511,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   ))}
                 </datalist>
                 {(errors.category || errors.customCategory) && (
-                  <p className="animate-fadeIn mt-1 text-xs text-red-500">
+                  <p className="mt-1 animate-fadeIn text-xs text-red-500">
                     {errors.category || errors.customCategory}
                   </p>
                 )}
@@ -549,7 +541,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   />
                 </div>
                 {errors.price && (
-                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.price}</p>
+                  <p className="mt-1 animate-fadeIn text-xs text-red-500">{errors.price}</p>
                 )}
               </div>
 
@@ -573,7 +565,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   ))}
                 </select>
                 {errors.unit && (
-                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.unit}</p>
+                  <p className="mt-1 animate-fadeIn text-xs text-red-500">{errors.unit}</p>
                 )}
               </div>
 
@@ -593,7 +585,7 @@ const AddProduct = memo(({ isOpen, onClose, onSubmit }) => {
                   }`}
                 />
                 {errors.stock && (
-                  <p className="animate-fadeIn mt-1 text-xs text-red-500">{errors.stock}</p>
+                  <p className="mt-1 animate-fadeIn text-xs text-red-500">{errors.stock}</p>
                 )}
               </div>
             </div>

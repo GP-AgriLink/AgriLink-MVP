@@ -1,15 +1,6 @@
 import { useState, useEffect, useRef, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  X,
-  Send,
-  Loader2,
-  Bot,
-  User,
-  ChevronDown,
-  Sparkles,
-  Plus,
-} from "lucide-react";
+import { X, Send, Loader2, Bot, User, ChevronDown, Sparkles, Plus } from "lucide-react";
 import { sendChatMessage, getChatHistory, startNewConversation } from "../../services/chatService";
 import { toast } from "react-toastify";
 
@@ -26,7 +17,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
     const loadHistory = async () => {
       try {
         const history = await getChatHistory();
-        
+
         if (history.length > 0) {
           // User has existing history
           setMessages(history);
@@ -41,7 +32,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
           setMessages([welcomeMessage]);
         }
       } catch (error) {
-        console.error('Failed to load chat history:', error);
+        console.error("Failed to load chat history:", error);
         // Still show welcome message on error
         const welcomeMessage = {
           role: "ai",
@@ -61,7 +52,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTo({
         top: chatContainerRef.current.scrollHeight,
-        behavior: "smooth"
+        behavior: "smooth",
       });
     }
   };
@@ -77,8 +68,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
   // Handle scroll to show/hide scroll button
   const handleScroll = () => {
     if (chatContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } =
-        chatContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
       const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShowScrollButton(!isNearBottom);
     }
@@ -130,7 +120,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
   const handleNewConversation = async () => {
     try {
       await startNewConversation();
-      
+
       // Clear current messages and show welcome message
       const welcomeMessage = {
         role: "ai",
@@ -139,7 +129,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
         timestamp: new Date().toISOString(),
       };
       setMessages([welcomeMessage]);
-      
+
       toast.success("New conversation started! Previous messages deleted.", {
         position: "top-right",
         autoClose: 2000,
@@ -177,13 +167,11 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
             <Sparkles className="h-5 w-5 text-white" />
           </motion.div>
           <div>
-            <h3 className="text-lg font-semibold text-white">
-              AgriLink AI Assistant
-            </h3>
+            <h3 className="text-lg font-semibold text-white">AgriLink AI Assistant</h3>
             <p className="text-xs text-white/80">Powered by AI</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {/* New Conversation Button */}
           <motion.button
@@ -195,7 +183,7 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
           >
             <Plus className="h-5 w-5 text-white" />
           </motion.button>
-          
+
           {/* Close Button */}
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -323,22 +311,23 @@ const LiveChat = forwardRef(({ onClose }, ref) => {
         </AnimatePresence>
 
         <div ref={messagesEndRef} />
-      </div>
 
-      {/* Scroll to Bottom Button */}
-      <AnimatePresence>
-        {showScrollButton && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0 }}
-            onClick={scrollToBottom}
-            className="absolute bottom-24 right-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg hover:shadow-xl"
-          >
-            <ChevronDown className="h-5 w-5 text-white" />
-          </motion.button>
-        )}
-      </AnimatePresence>
+        {/* Scroll to Bottom Button */}
+        <AnimatePresence>
+          {showScrollButton && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+              onClick={scrollToBottom}
+              className="sticky bottom-2 left-[calc(100%-3rem)] z-30 float-right flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg transition-shadow hover:shadow-xl"
+              title="Scroll to bottom"
+            >
+              <ChevronDown className="h-5 w-5 text-white" />
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Input Area */}
       <div className="relative z-10 border-t border-emerald-200/50 bg-white/50 p-4 backdrop-blur-sm">

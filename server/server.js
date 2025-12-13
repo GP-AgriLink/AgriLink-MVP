@@ -6,19 +6,19 @@
  */
 
 // --- Module Imports ---
-import express from 'express';
-import dotenv from 'dotenv';
-import connectDB from './src/config/db.js';
-import userRoutes from './src/routes/userRoutes.js';
-import productRoutes from './src/routes/productRoutes.js';
-import farmRoutes from './src/routes/farmRoutes.js';
-import orderRoutes from './src/routes/orderRoutes.js';
-import { notFound, errorHandler } from './src/middleware/errorMiddleware.js';
-import uploadRoutes from './src/routes/uploadRoutes.js';
-import cartRoutes from './src/routes/cartRoutes.js';
-import aiRoutes from './src/routes/aiRoutes.js';
-import chatRoutes from './src/routes/chatRoutes.js';
-import cors from 'cors';
+import express from "express";
+import dotenv from "dotenv";
+import connectDB from "./src/config/db.js";
+import userRoutes from "./src/routes/userRoutes.js";
+import productRoutes from "./src/routes/productRoutes.js";
+import farmRoutes from "./src/routes/farmRoutes.js";
+import orderRoutes from "./src/routes/orderRoutes.js";
+import { notFound, errorHandler } from "./src/middleware/errorMiddleware.js";
+import uploadRoutes from "./src/routes/uploadRoutes.js";
+import cartRoutes from "./src/routes/cartRoutes.js";
+import aiRoutes from "./src/routes/aiRoutes.js";
+import chatRoutes from "./src/routes/chatRoutes.js";
+import cors from "cors";
 
 // --- Configuration ---
 // Load environment variables from the .env file into process.env
@@ -32,7 +32,7 @@ const app = express();
 
 // To connect with client
 const allowedOrigins = [
-  'https://agrilink-server.vercel.app',
+  "https://agrilink-server.vercel.app",
   /http:\/\/localhost:\d+/,
   /http:\/\/127.0.0.1:\d+/,
 ];
@@ -54,7 +54,7 @@ app.use(
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        callback(new Error("Not allowed by CORS"));
       }
     },
     credentials: true,
@@ -63,19 +63,19 @@ app.use(
 
 // --- Middleware ---
 // This middleware is essential for parsing incoming request bodies with JSON payloads.
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // --- API Routes ---
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/farms', farmRoutes);
-app.use('/api/orders', orderRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/farms", farmRoutes);
+app.use("/api/orders", orderRoutes);
 
-app.use('/api/uploads', uploadRoutes);
-app.use('/api/cart', cartRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/chat', chatRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/chat", chatRoutes);
 // --- Error Handling Middleware ---
 // Custom middleware to handle 404 Not Found errors.
 app.use(notFound);

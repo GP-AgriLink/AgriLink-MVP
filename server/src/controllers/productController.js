@@ -22,7 +22,8 @@ const createProduct = async (req, res) => {
         .json({ message: "Farm profile not found for this user." });
     }
 
-    const { name, price, unit, stock, category, imageUrl, description } = req.body;
+    const { name, price, unit, stock, category, imageUrl, description } =
+      req.body;
 
     const newProduct = new Product({
       name,
@@ -49,57 +50,53 @@ const createProduct = async (req, res) => {
  * @access  Private
  */
 const getMyProducts = async (req, res) => {
-    try {
-        const limit = Number(req.query.limit) || 10;
-        const page = Number(req.query.page) || 1;
-        const skip = (page - 1) * limit;
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
 
-        const farm = await Farm.findOne({ user: req.user._id });
-        if (!farm) {
-            return res.status(404).json({ message: 'Farm profile not found.' });
-        }
-
-        // --- Build the base query ---
-        const query = { farm: farm._id };
-
-        // --- Add category filter if it exists ---
-        if (req.query.category) {
-            query.category = req.query.category;
-        }
-
-        // --- ADD SEARCH LOGIC ---
-        if (req.query.search) {
-            query.$text = { $search: req.query.search };
-        }
-
-        // status filters
-        if (req.query.status) {
-          query.status = req.query.status;
-          query.isArchived = false;
-        }
-      
-        if (req.query.isArchived === "true") {
-          query.isArchived = true; // Convert string 'true' to boolean
-        }
-
-
-        // --- Get total count and paginated data ---
-        const total = await Product.countDocuments(query);
-        const products = await Product.find(query)
-            .skip(skip)
-            .limit(limit);
-
-        res.json({
-            data: products,
-            page,
-            pages: Math.ceil(total / limit),
-            total,
-        });
-
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+    const farm = await Farm.findOne({ user: req.user._id });
+    if (!farm) {
+      return res.status(404).json({ message: "Farm profile not found." });
     }
+
+    // --- Build the base query ---
+    const query = { farm: farm._id };
+
+    // --- Add category filter if it exists ---
+    if (req.query.category) {
+      query.category = req.query.category;
+    }
+
+    // --- ADD SEARCH LOGIC ---
+    if (req.query.search) {
+      query.$text = { $search: req.query.search };
+    }
+
+    // status filters
+    if (req.query.status) {
+      query.status = req.query.status;
+      query.isArchived = false;
+    }
+
+    if (req.query.isArchived === "true") {
+      query.isArchived = true; // Convert string 'true' to boolean
+    }
+
+    // --- Get total count and paginated data ---
+    const total = await Product.countDocuments(query);
+    const products = await Product.find(query).skip(skip).limit(limit);
+
+    res.json({
+      data: products,
+      page,
+      pages: Math.ceil(total / limit),
+      total,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
 };
 
 /**
@@ -108,42 +105,39 @@ const getMyProducts = async (req, res) => {
  * @access  Public
  */
 const getProductsByFarm = async (req, res) => {
-    try {
-        const limit = Number(req.query.limit) || 10;
-        const page = Number(req.query.page) || 1;
-        const skip = (page - 1) * limit;
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const page = Number(req.query.page) || 1;
+    const skip = (page - 1) * limit;
 
-        const query = {
-            farm: req.params.farmId,
-            status: 'active',
-            isArchived: false
-        };
+    const query = {
+      farm: req.params.farmId,
+      status: "active",
+      isArchived: false,
+    };
 
-        if (req.query.category) {
-            query.category = req.query.category;
-        }
-
-        // --- ADD SEARCH LOGIC ---
-        if (req.query.search) {
-            query.$text = { $search: req.query.search };
-        }
-
-        const total = await Product.countDocuments(query);
-        const products = await Product.find(query)
-            .skip(skip)
-            .limit(limit);
-
-        res.json({
-            data: products,
-            page,
-            pages: Math.ceil(total / limit),
-            total,
-        });
-        
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
+    if (req.query.category) {
+      query.category = req.query.category;
     }
+
+    // --- ADD SEARCH LOGIC ---
+    if (req.query.search) {
+      query.$text = { $search: req.query.search };
+    }
+
+    const total = await Product.countDocuments(query);
+    const products = await Product.find(query).skip(skip).limit(limit);
+
+    res.json({
+      data: products,
+      page,
+      pages: Math.ceil(total / limit),
+      total,
+    });
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
 };
 
 /**
@@ -177,7 +171,7 @@ const updateProduct = async (req, res) => {
       status,
       stock,
       isArchived,
-      category
+      category,
     } = req.body;
     if (name) product.name = name;
     if (description) product.description = description;
@@ -236,15 +230,19 @@ const archiveProduct = async (req, res) => {
  * @access  Public
  */
 const getAllCategories = async (req, res) => {
-    try {
-        // 'distinct' scans the 'category' field across all products
-        // and returns an array of unique values.
-        const categories = await Product.find().distinct('category');
-        res.json(categories);
-    } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Server Error');
-    }
+  try {
+    // 'distinct' scans the 'category' field across all products
+    // and returns an array of unique values.
+    const categories = await Product.find().distinct("category");
+    // Filter out empty strings and null values
+    const validCategories = categories.filter(
+      (cat) => cat && cat.trim() !== ""
+    );
+    res.json(validCategories);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("Server Error");
+  }
 };
 
 export {
@@ -253,5 +251,5 @@ export {
   getProductsByFarm,
   updateProduct,
   archiveProduct,
-  getAllCategories
+  getAllCategories,
 };

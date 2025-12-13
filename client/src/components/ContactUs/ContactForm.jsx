@@ -26,8 +26,6 @@ const ContactForm = () => {
 
     emailjs.send(SERVICE_ID, TEMPLATE_ID, sanitizedValues, PUBLIC_KEY).then(
       (response) => {
-        // console.log("SUCCESS!", response.status, response.text);
-
         toast.success("Message sent successfully! We'll be in touch soon.", {
           position: "top-right",
           autoClose: 5000,
@@ -41,8 +39,6 @@ const ContactForm = () => {
         setSubmitLoading(false);
       },
       (err) => {
-        console.log("FAILED...", err);
-
         toast.error("Failed to send message. Please try again.", {
           position: "top-right",
           autoClose: 7000,

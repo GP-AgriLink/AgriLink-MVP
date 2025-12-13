@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 /**
  * ChatHistory Schema
@@ -8,7 +8,7 @@ const chatHistorySchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       unique: true, // One chat history per user
       index: true,
@@ -17,7 +17,7 @@ const chatHistorySchema = new mongoose.Schema(
       {
         role: {
           type: String,
-          enum: ['user', 'ai'],
+          enum: ["user", "ai"],
           required: true,
         },
         content: {
@@ -45,15 +45,13 @@ const chatHistorySchema = new mongoose.Schema(
  * Auto-cleanup messages older than 30 days
  * Called before saving to keep database clean
  */
-chatHistorySchema.pre('save', function (next) {
+chatHistorySchema.pre("save", function (next) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  
+
   // Filter out messages older than 30 days
-  this.messages = this.messages.filter(
-    (msg) => msg.timestamp >= thirtyDaysAgo
-  );
-  
+  this.messages = this.messages.filter((msg) => msg.timestamp >= thirtyDaysAgo);
+
   next();
 });
 
@@ -75,11 +73,9 @@ chatHistorySchema.statics.cleanupOldMessages = async function () {
       },
     }
   );
-
-  console.log(`[ChatHistory] Cleaned up old messages from ${result.modifiedCount} users`);
   return result;
 };
 
-const ChatHistory = mongoose.model('ChatHistory', chatHistorySchema);
+const ChatHistory = mongoose.model("ChatHistory", chatHistorySchema);
 
 export default ChatHistory;
