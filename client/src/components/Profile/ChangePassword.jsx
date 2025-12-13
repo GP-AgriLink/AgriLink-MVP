@@ -191,7 +191,7 @@ export const ChangePassword = ({ isOpen, onClose }) => {
         setIsLoading(false);
       }
     },
-    [isFormValid, formData, onClose]
+    [isFormValid, formData, onClose, handleClose]
   );
 
   const getInputClasses = (fieldName) => {

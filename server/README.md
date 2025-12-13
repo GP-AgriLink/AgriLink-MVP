@@ -135,7 +135,7 @@ Authorization: Bearer <your_jwt_token>
 | POST | `/users/login` | Login user | ❌ |
 | GET | `/users/profile` | Get current user | ✅ |
 | PUT | `/users/profile` | Update profile | ✅ |
-| PUT | `/users/change-password` | Change password | ✅ |
+| PUT | `/users/profile/password` | Change password | ✅ |
 | POST | `/users/forgot-password` | Request password reset | ❌ |
 | PUT | `/users/reset-password/:token` | Reset password | ❌ |
 

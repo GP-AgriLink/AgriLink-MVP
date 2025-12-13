@@ -167,7 +167,8 @@ const updateUserPassword = async (req, res) => {
     }
 
     // Ensure new password is different from current password
-    if (currentPassword === newPassword) {
+    const isSamePassword = await user.matchPassword(newPassword);
+    if (isSamePassword) {
       return res.status(400).json({
         message: "New password must be different from current password",
       });
