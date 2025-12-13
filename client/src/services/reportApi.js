@@ -1,4 +1,4 @@
-import apiClient from "../config/api";
+import apiClient, { API_ENDPOINTS } from "../config/api";
 import { getAuthToken } from "./authService";
 
 /**
@@ -15,7 +15,7 @@ export const getCustomerReport = async (params = {}) => {
       console.debug("getCustomerReport: failed to read token", e);
     }
 
-    const response = await apiClient.get("/api/users/profile/report", { params });
+    const response = await apiClient.get(API_ENDPOINTS.users.report, { params });
     return response.data;
   } catch (error) {
     console.error("Error fetching customer report:", error);

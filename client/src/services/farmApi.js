@@ -31,6 +31,21 @@ export const getAllFarms = async () => {
   }
 };
 
+/**
+ * Get a specific farm by ID (public data)
+ * @param {string} farmId - Farm ID
+ * @returns {Promise<object>} Farm data
+ */
+export const getFarmById = async (farmId) => {
+  try {
+    const { data } = await apiClient.get(API_ENDPOINTS.farms.byId(farmId));
+    return data;
+  } catch (error) {
+    console.error("Error fetching farm by ID:", error);
+    throw error;
+  }
+};
+
 // --- TASK 3.2: ADDED FUNCTIONS ---
 
 /**

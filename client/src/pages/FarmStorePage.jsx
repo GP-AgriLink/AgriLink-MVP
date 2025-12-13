@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import apiClient, { API_ENDPOINTS } from "../config/api.js";
+import { getFarmById } from "../services/farmApi.js";
+import { getPublicProductsByFarm } from "../services/farmProductApi.js";
 
 // Icons
 import { FaSearch, FaTimes } from "react-icons/fa";
@@ -48,14 +49,14 @@ const FarmStorePage = () => {
     const fetchInitialData = async () => {
       try {
         setIsLoading(true);
-        const [farmRes, allProductsRes] = await Promise.all([
-          apiClient.get(API_ENDPOINTS.farms.byId(id)),
-          apiClient.get(`${API_ENDPOINTS.products.publicByFarm(id)}?limit=1000`),
+        const [farmData, allProductsData] = await Promise.all([
+          getFarmById(id),
+          getPublicProductsByFarm(id, { limit: 1000 }),
         ]);
 
-        setFarm(farmRes.data);
+        setFarm(farmData);
 
-        const allProds = allProductsRes.data.data || [];
+        const allProds = allProductsData.data || [];
         const cats = allProds.map((p) => p.category).filter((cat) => cat);
         setAllCategories([...new Set(cats)]);
       } catch (err) {
@@ -74,22 +75,21 @@ const FarmStorePage = () => {
     const fetchProducts = async () => {
       setIsProductsLoading(true);
       try {
-        const params = new URLSearchParams();
-        params.append("page", currentPage);
-        params.append("limit", ITEMS_PER_PAGE);
+        const params = {
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        };
 
-        if (activeSearch) params.append("search", activeSearch);
+        if (activeSearch) params.search = activeSearch;
 
         if (selectedCategories.length > 0) {
-          params.append("category", selectedCategories[0]);
+          params.category = selectedCategories[0];
         }
 
-        const response = await apiClient.get(
-          `${API_ENDPOINTS.products.publicByFarm(id)}?${params.toString()}`
-        );
+        const productsData = await getPublicProductsByFarm(id, params);
 
-        setProducts(response.data.data || []);
-        setTotalPages(response.data.pages || 1);
+        setProducts(productsData.data || []);
+        setTotalPages(productsData.pages || 1);
 
         // Update URL
         const urlParams = new URLSearchParams();

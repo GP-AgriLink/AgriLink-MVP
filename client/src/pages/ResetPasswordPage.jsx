@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Formik, Form } from "formik";
 import * as Yup from "yup";
-import axios from "axios";
 import { toast } from "react-toastify";
 import { Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import Logo from "../components/common/Logo";
 import { useAuth } from "../context/AuthContext";
+import { resetPassword } from "../services/authService";
 import { sanitizeString } from "../utils/sanitizers";
 
 const validationSchema = Yup.object({
@@ -46,8 +46,6 @@ export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const API_URL = import.meta.env.VITE_APP_API_URL || "http://localhost:5000";
-
   useEffect(() => {
     if (!token || token.length < 10) {
       toast.error("Invalid password reset link");
@@ -67,9 +65,7 @@ export default function ResetPasswordPage() {
         return;
       }
 
-      const response = await axios.put(`${API_URL}/api/users/reset-password/${token}`, {
-        password: sanitizedPassword,
-      });
+      await resetPassword(token, sanitizedPassword);
 
       setIsSuccess(true);
 

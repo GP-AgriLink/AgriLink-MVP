@@ -5,51 +5,7 @@
  * SECURITY: API calls are made to server endpoints, keeping the API key secure
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
-/**
- * Get authentication token from localStorage
- * @returns {string|null} - JWT token or null if not authenticated
- */
-const getAuthToken = () => {
-  try {
-    const token = localStorage.getItem("token");
-    return token;
-  } catch (error) {
-    console.error('[AI Service] Error retrieving token:', error);
-    return null;
-  }
-};
-
-/**
- * Make authenticated API request
- * @param {string} endpoint - API endpoint
- * @param {object} data - Request body data
- * @returns {Promise<any>} - Response data
- */
-const makeAuthenticatedRequest = async (endpoint, data) => {
-  const token = getAuthToken();
-
-  if (!token) {
-    throw new Error("Authentication required. Please log in.");
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/ai${endpoint}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Request failed: ${response.status}`);
-  }
-
-  return await response.json();
-};
+import apiClient, { API_ENDPOINTS } from "../config/api";
 
 /**
  * Generate product description using AI
@@ -69,14 +25,14 @@ export const generateProductDescription = async (
     throw new Error("Product name is required");
   }
 
-  const data = await makeAuthenticatedRequest("/product-description", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.productDescription, {
     name,
     imageUrl,
     existingDescription,
     productId, // Server uses this for smart file caching
   });
 
-  return data.description;
+  return response.data.description;
 };
 
 /**
@@ -97,14 +53,14 @@ export const standardizeCategory = async (
     throw new Error("Product name is required");
   }
 
-  const data = await makeAuthenticatedRequest("/standardize-category", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.standardizeCategory, {
     name,
     imageUrl,
     existingCategory,
     productId, // Server uses this for smart file caching
   });
 
-  return data.category;
+  return response.data.category;
 };
 
 /**
@@ -125,14 +81,14 @@ export const generateFarmBio = async (
     throw new Error("Farm name is required");
   }
 
-  const data = await makeAuthenticatedRequest("/farm-bio", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.farmBio, {
     farmName,
     locationName,
     specialties,
     existingBio,
   });
 
-  return data.bio;
+  return response.data.bio;
 };
 
 /**
@@ -145,11 +101,11 @@ export const uploadImageToAI = async (imageUrl) => {
     throw new Error("Image URL is required");
   }
 
-  const data = await makeAuthenticatedRequest("/upload-image", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.uploadImage, {
     imageUrl,
   });
 
-  return data.fileData;
+  return response.data.fileData;
 };
 
 /**
@@ -162,25 +118,8 @@ export const deleteFile = async (fileName) => {
     throw new Error("File name is required");
   }
 
-  const token = localStorage.getItem("token");
-
-  if (!token) {
-    throw new Error("Authentication required. Please log in.");
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/ai/files/${fileName}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.message || `Delete failed: ${response.status}`);
-  }
-
-  return await response.json();
+  const response = await apiClient.delete(API_ENDPOINTS.ai.deleteFile(fileName));
+  return response.data;
 };
 
 /**
@@ -199,21 +138,28 @@ export const cacheProductImage = async (imageUrl, productId) => {
     throw new Error("Product ID is required");
   }
 
-  const data = await makeAuthenticatedRequest("/img", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.cacheImage, {
     imageUrl,
     productId,
   });
 
-  return data.fileData;
+  return response.data.fileData;
 };
 
 /**
  * Generate AI-powered farm report analysis with predictions and suggestions
  * @param {number} month - Month number (1-12)
  * @param {number} year - Year (e.g., 2024)
+ * @param {string} language - Language code ('EN' or 'AR')
+ * @param {boolean} isDetailed - Whether to generate detailed analysis
  * @returns {Promise<{summary: string, predictions: Array, suggestions: Array, insights: Array}>}
  */
-export const generateFarmReportAnalysis = async (month, year, language = 'EN', isDetailed = false) => {
+export const generateFarmReportAnalysis = async (
+  month,
+  year,
+  language = "EN",
+  isDetailed = false
+) => {
   if (!month || !year) {
     throw new Error("Month and year are required");
   }
@@ -222,13 +168,12 @@ export const generateFarmReportAnalysis = async (month, year, language = 'EN', i
     throw new Error("Month must be between 1 and 12");
   }
 
-  const data = await makeAuthenticatedRequest("/farm-report-analysis", {
+  const response = await apiClient.post(API_ENDPOINTS.ai.farmReportAnalysis, {
     month,
     year,
     language,
     isDetailed,
   });
 
-  return data;
+  return response.data;
 };
-

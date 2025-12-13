@@ -1,14 +1,9 @@
 import { useState, useEffect } from "react";
-import {
-  MapContainer,
-  TileLayer,
-  Marker,
-  Popup,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { renderToString } from "react-dom/server";
 import { FaSeedling, FaMapMarkerAlt } from "react-icons/fa";
+import { getNearbyFarms, getAllFarms } from "../../services/farmApi";
 import "leaflet/dist/leaflet.css";
 
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -17,9 +12,7 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLon / 2) ** 2;
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
@@ -28,11 +21,7 @@ function SetBounds({ bounds }) {
   const map = useMap();
   useEffect(() => {
     if (bounds) {
-      if (
-        bounds[0][0] !== Infinity &&
-        bounds[0][0] !== -Infinity &&
-        bounds.length > 0
-      ) {
+      if (bounds[0][0] !== Infinity && bounds[0][0] !== -Infinity && bounds.length > 0) {
         map.fitBounds(bounds, { padding: [50, 50] });
       }
     } else {
@@ -46,7 +35,7 @@ const DISTANCES = [10, 25, 40, 100, Infinity];
 
 // Custom icon
 const seedlingIcon = L.divIcon({
-  html: renderToString(<FaSeedling className="text-green-600 text-5xl" />),
+  html: renderToString(<FaSeedling className="text-5xl text-green-600" />),
   className: "bg-transparent border-0",
   iconSize: [30, 42],
   iconAnchor: [15, 42],
@@ -66,15 +55,17 @@ const FarmsDisplay = ({ userCoords }) => {
     const fetchFarms = async () => {
       setLoading(true);
       try {
-        const url =
-          selectedDistance === Infinity
-            ? "http://localhost:5000/api/farms"
-            : `http://localhost:5000/api/farms/nearby?longitude=${userCoords.longitude
-            }&latitude=${userCoords.latitude}&distance=${selectedDistance * 1000
-            }`;
-        const res = await fetch(url);
-        const responseData = await res.json();
-        setFarms(responseData.data || responseData || []);
+        let farmsData;
+        if (selectedDistance === Infinity) {
+          farmsData = await getAllFarms();
+        } else {
+          farmsData = await getNearbyFarms({
+            latitude: userCoords.latitude,
+            longitude: userCoords.longitude,
+            distance: selectedDistance * 1000,
+          });
+        }
+        setFarms(farmsData);
       } catch (err) {
         console.error(err);
         setFarms([]);
@@ -96,7 +87,8 @@ const FarmsDisplay = ({ userCoords }) => {
         .then((res) => res.json())
         .then((data) => {
           if (data && data.address) {
-            const city = data.address.city || data.address.town || data.address.village || data.address.state;
+            const city =
+              data.address.city || data.address.town || data.address.village || data.address.state;
             const country = data.address.country;
 
             const displayName = city ? `${city}, ${country}` : country;
@@ -112,7 +104,6 @@ const FarmsDisplay = ({ userCoords }) => {
         });
     }
   }, [userCoords]);
-
 
   // Client-side filtering
   useEffect(() => {
@@ -156,55 +147,48 @@ const FarmsDisplay = ({ userCoords }) => {
     if (filteredFarms.length > 0) fetchLocations();
   }, [filteredFarms]);
 
-  // Calculate map bounds 
-  const latitudes = filteredFarms
-    .map((f) => f.location?.coordinates?.[1])
-    .filter(Boolean);
-  const longitudes = filteredFarms
-    .map((f) => f.location?.coordinates?.[0])
-    .filter(Boolean);
+  // Calculate map bounds
+  const latitudes = filteredFarms.map((f) => f.location?.coordinates?.[1]).filter(Boolean);
+  const longitudes = filteredFarms.map((f) => f.location?.coordinates?.[0]).filter(Boolean);
 
   const bounds =
     filteredFarms.length > 0
       ? [
-        [Math.min(...latitudes), Math.min(...longitudes)],
-        [Math.max(...latitudes), Math.max(...longitudes)],
-      ]
+          [Math.min(...latitudes), Math.min(...longitudes)],
+          [Math.max(...latitudes), Math.max(...longitudes)],
+        ]
       : null;
 
   return (
     <div className="container mx-auto px-4 py-16">
-      <h2 className="mb-6 text-3xl font-bold text-gray-900">
-        Farms Near You
-      </h2>
+      <h2 className="mb-6 text-3xl font-bold text-gray-900">Farms Near You</h2>
 
       <div className="mb-6 flex flex-wrap gap-2">
         {DISTANCES.map((dist) => (
           <button
             key={dist}
             onClick={() => setSelectedDistance(dist)}
-            className={`rounded-full px-5 py-2 font-semibold transition ${selectedDistance === dist
-              ? "bg-emerald-600 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-              }`}
+            className={`rounded-full px-5 py-2 font-semibold transition ${
+              selectedDistance === dist
+                ? "bg-emerald-600 text-white"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            }`}
           >
             {dist === Infinity ? "Show all farms" : `Within ${dist} km`}
           </button>
         ))}
       </div>
 
-      <div className="relative h-[50vh] w-full rounded-2xl shadow-lg z-0">
+      <div className="relative z-0 h-[50vh] w-full rounded-2xl shadow-lg">
         {loading && (
-          <div className="absolute top-0 left-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-white bg-opacity-75">
+          <div className="absolute left-0 top-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-white bg-opacity-75">
             <p className="text-gray-600">Loading farms...</p>
           </div>
         )}
 
         {!loading && filteredFarms.length === 0 && (
-          <div className="absolute top-0 left-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-gray-50 bg-opacity-75">
-            <p className="text-gray-500">
-              No farms found within the selected distance.
-            </p>
+          <div className="absolute left-0 top-0 z-[1000] flex h-full w-full items-center justify-center rounded-2xl bg-gray-50 bg-opacity-75">
+            <p className="text-gray-500">No farms found within the selected distance.</p>
           </div>
         )}
 
@@ -227,31 +211,27 @@ const FarmsDisplay = ({ userCoords }) => {
             const distance =
               userCoords != null
                 ? getDistanceFromLatLonInKm(
-                  userCoords.latitude,
-                  userCoords.longitude,
-                  lat,
-                  lng
-                ).toFixed(1)
+                    userCoords.latitude,
+                    userCoords.longitude,
+                    lat,
+                    lng
+                  ).toFixed(1)
                 : null;
             const locationName = farmLocations[farm._id] || "Loading...";
 
             return (
               <Marker key={farm._id} position={[lat, lng]} icon={seedlingIcon}>
                 <Popup>
-                  <div className="max-w-md w-60 overflow-hidden rounded-lg p-0">
-                    <div className="flex gap-1 mb-4">
+                  <div className="w-60 max-w-md overflow-hidden rounded-lg p-0">
+                    <div className="mb-4 flex gap-1">
                       <div>
                         <div className="p-4">
                           <div className="mb-2">
-                            <h3 className="text-lg font-bold text-gray-900">
-                              {farm.farmName}
-                            </h3>
+                            <h3 className="text-lg font-bold text-gray-900">{farm.farmName}</h3>
                             {distance && (
-                              <span className="text-xs text-gray-500">
-                                {distance} km away
-                              </span>
+                              <span className="text-xs text-gray-500">{distance} km away</span>
                             )}
-                            <p className="text-sm text-gray-600 italic mb-3">
+                            <p className="mb-3 text-sm italic text-gray-600">
                               {farm.farmBio ? `"${farm.farmBio}"` : ""}
                             </p>
                           </div>
@@ -259,21 +239,21 @@ const FarmsDisplay = ({ userCoords }) => {
                       </div>
                     </div>
 
-                    <div className="flex items-center text-sm text-gray-700 mb-3 px-1">
-                      <FaMapMarkerAlt className="text-gray-400 mr-2 flex-shrink-0" />
+                    <div className="mb-3 flex items-center px-1 text-sm text-gray-700">
+                      <FaMapMarkerAlt className="mr-2 flex-shrink-0 text-gray-400" />
                       <span>{locationName}</span>
                     </div>
 
                     {farm.specialties?.length > 0 && (
                       <div className="mb-4 px-1">
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                        <h4 className="mb-1 text-xs font-semibold uppercase text-gray-500">
                           Specialties
                         </h4>
                         <div className="flex flex-wrap gap-1">
                           {farm.specialties.map((spec) => (
                             <span
                               key={spec}
-                              className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-medium"
+                              className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800"
                             >
                               {spec}
                             </span>
@@ -282,13 +262,8 @@ const FarmsDisplay = ({ userCoords }) => {
                       </div>
                     )}
 
-                    <a
-                      href={`/farm/${farm._id}`}
-                      rel="noopener noreferrer"
-                    >
-                      <button
-                        className="block w-full text-center px-4 py-2 bg-emerald-600 text-white font-semibold text-sm rounded-lg shadow-md transition-all duration-300 ease-in-out hover:bg-white hover:text-emerald-600 hover:shadow-lg border border-gray-200"
-                      >
+                    <a href={`/farm/${farm._id}`} rel="noopener noreferrer">
+                      <button className="block w-full rounded-lg border border-gray-200 bg-emerald-600 px-4 py-2 text-center text-sm font-semibold text-white shadow-md transition-all duration-300 ease-in-out hover:bg-white hover:text-emerald-600 hover:shadow-lg">
                         Visit Store
                       </button>
                     </a>

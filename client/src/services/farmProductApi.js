@@ -34,8 +34,8 @@ export const getMyProducts = async (params = {}) => {
   try {
     // Filter out undefined/null values and empty strings
     const cleanParams = {};
-    Object.keys(params).forEach(key => {
-      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+    Object.keys(params).forEach((key) => {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== "") {
         cleanParams[key] = params[key];
       }
     });
@@ -62,6 +62,34 @@ export const getAllCategories = async () => {
     return response.data || []; // Returns an array of strings
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Failed to fetch categories";
+    throw new Error(errorMessage);
+  }
+};
+
+/**
+ * Get public products from a specific farm (Public endpoint)
+ *
+ * @param {string} farmId - Farm ID
+ * @param {object} params - Query parameters (page, limit, search, category)
+ * @returns {Promise<object>} Paginated product object { data: [], page, pages, total }
+ */
+export const getPublicProductsByFarm = async (farmId, params = {}) => {
+  try {
+    // Filter out undefined/null values and empty strings
+    const cleanParams = {};
+    Object.keys(params).forEach((key) => {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== "") {
+        cleanParams[key] = params[key];
+      }
+    });
+
+    const response = await apiClient.get(API_ENDPOINTS.products.publicByFarm(farmId), {
+      params: cleanParams,
+    });
+    // Return the full paginated object from the server
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch products";
     throw new Error(errorMessage);
   }
 };
