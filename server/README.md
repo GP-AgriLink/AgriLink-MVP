@@ -38,7 +38,8 @@
 - **Database**: MongoDB with Mongoose ODM
 - **AI**: Google Gemini API
 - **Storage**: Cloudinary
-- **Security**: Helmet, CORS, Rate Limiting, JWT
+<!-- - **Security**: Helmet, CORS, Rate Limiting, JWT -->
+- **Security**: CORS, JWT
 - **Email**: Nodemailer
 
 ## 🚀 Getting Started
@@ -324,13 +325,13 @@ Authorization: Bearer <your_jwt_token>
 
 ## 🔒 Security Features
 
-- ✅ **Helmet.js** - Security headers (XSS, clickjacking protection)
-- ✅ **Rate Limiting** - DDoS protection with configurable limits
+<!-- - ✅ **Helmet.js** - Security headers (XSS, clickjacking protection) -->
+<!-- - ✅ **Rate Limiting** - DDoS protection with configurable limits -->
 - ✅ **CORS** - Cross-origin resource sharing controls
 - ✅ **JWT** - Secure token-based authentication
 - ✅ **Bcrypt** - Password hashing with salt rounds
 - ✅ **Input Validation** - Express Validator for request sanitization
-- ✅ **NoSQL Injection Prevention** - Mongo Sanitize middleware
+<!-- - ✅ **NoSQL Injection Prevention** - Mongo Sanitize middleware -->
 - ✅ **Error Handling** - Custom error middleware (no data leaks)
 
 ## 🚢 Deployment

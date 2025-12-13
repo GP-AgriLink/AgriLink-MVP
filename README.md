@@ -115,19 +115,21 @@ npm run dev
 
 The project runs as two separate services interacting via REST API.
 
-```mermaid
-graph TD
-    User((User))
-    Client[React Frontend <br/> Port: 5173]
-    Server[Express Backend <br/> Port: 5000]
-    DB[(MongoDB)]
-    Ext[External Services <br/> Cloudinary / Gemini AI]
+<div align="center">
 
-    User -->|Browser| Client
-    Client -->|REST API (JSON)| Server
-    Server -->|Read/Write| DB
-    Server -->|API Calls| Ext
-```
+![AgriLink Architecture](.github/assets/architecture.png)
+
+**System Architecture Overview**
+
+</div>
+
+The platform follows a modern three-tier architecture:
+
+- **👤 User Layer**: Customers and farmers interact through their web browsers
+- **🎨 Frontend**: React-based SPA (Port 5173) providing the user interface
+- **⚙️ Backend**: Express.js REST API (Port 5000) handling business logic
+- **💾 Database**: MongoDB for persistent data storage
+- **🔌 External Services**: Cloudinary (media storage) and Google Gemini AI (content generation)
 
 ---
 
