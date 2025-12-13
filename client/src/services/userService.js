@@ -40,7 +40,31 @@ export const updateUserProfile = async (payload) => {
   }
 };
 
+/**
+ * Update the logged-in user's password
+ * @param {string} currentPassword - Current password for verification
+ * @param {string} newPassword - New password to set
+ * @returns {Promise<object>} Response data
+ */
+export const updatePassword = async (currentPassword, newPassword) => {
+  try {
+    const response = await apiClient.put(API_ENDPOINTS.users.updatePassword, {
+      currentPassword,
+      newPassword,
+    }, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating password:", error);
+    throw error;
+  }
+};
+
 export default {
   getUserProfile,
   updateUserProfile,
+  updatePassword,
 };

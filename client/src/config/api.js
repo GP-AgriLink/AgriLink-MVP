@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   // User-specific profile (firstName, lastName, avatarUrl)
   users: {
     profile: "/api/users/profile",
+    updatePassword: "/api/users/profile/password",
   },
   // Farm-specific profile (farmBio, location) and public discovery
   farms: {
