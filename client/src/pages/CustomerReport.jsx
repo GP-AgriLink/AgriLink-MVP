@@ -63,7 +63,22 @@ const CustomerReportPage = () => {
         }
 
         const fetched = await getCustomerReport({ month, year });
-        setReportData(fetched);
+
+        const transformedData = {
+          totalSpent: fetched.spendingSummary?.totalSpent || 0,
+          totalOrdersPlaced: fetched.spendingSummary?.totalOrdersPlaced || 0,
+          averageOrderValue:
+            fetched.spendingSummary?.totalOrdersPlaced > 0
+              ? fetched.spendingSummary.totalSpent / fetched.spendingSummary.totalOrdersPlaced
+              : 0,
+          favoriteProducts: (fetched.topProducts || []).map((product) => ({
+            ...product,
+            totalQuantityOrdered: product.totalQuantity,
+          })),
+          favoriteFarm: fetched.favoriteFarm || null,
+        };
+
+        setReportData(transformedData);
       } catch (err) {
         console.error("Error fetching customer report:", err);
         setError(err.response?.data?.message || "Failed to load customer report");
