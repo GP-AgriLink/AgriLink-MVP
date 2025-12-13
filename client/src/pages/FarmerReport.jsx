@@ -58,6 +58,15 @@ const FarmerReportPage = () => {
   const [currentCacheKey, setCurrentCacheKey] = useState("EN-summary");
   const languageDropdownRef = useRef(null);
 
+  // Clear cache on user change or logout
+  useEffect(() => {
+    if (!user) {
+      setCachedAnalyses({});
+      setCurrentAnalysis(null);
+      setShowAiAnalysis(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (monthDropdownRef.current && !monthDropdownRef.current.contains(event.target)) {
@@ -121,7 +130,7 @@ const FarmerReportPage = () => {
     // Cache key includes language and detail level for separate caching
     const cacheKey = `${language}-${isDetailed ? "detailed" : "summary"}`;
     const now = Date.now();
-    const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const CACHE_DURATION = 60 * 60 * 1000; // 60 minutes in milliseconds
 
     // Check if we have this specific report cached
     const cached = cachedAnalyses[cacheKey];
@@ -182,7 +191,7 @@ const FarmerReportPage = () => {
       const summaryKey = `${selectedLanguage}-summary`;
       const cached = cachedAnalyses[summaryKey];
       const now = Date.now();
-      const CACHE_DURATION = 30 * 60 * 1000;
+      const CACHE_DURATION = 60 * 60 * 1000;
 
       if (cached && now - cached.timestamp < CACHE_DURATION) {
         // Use cached summary
@@ -339,7 +348,7 @@ const FarmerReportPage = () => {
                   const summaryKey = `${selectedLanguage}-summary`;
                   const isCached =
                     cachedAnalyses[summaryKey] &&
-                    Date.now() - cachedAnalyses[summaryKey].timestamp < 30 * 60 * 1000;
+                    Date.now() - cachedAnalyses[summaryKey].timestamp < 60 * 60 * 1000;
                   return isCached && viewMode !== "ai-summary" ? (
                     <span className="flex h-2 w-2">
                       <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-600 opacity-75"></span>
@@ -368,7 +377,7 @@ const FarmerReportPage = () => {
                   <span className="hidden sm:inline">Detailed Report</span>
                   <span className="sm:hidden">Detailed</span>
                   {(() => {
-                    const CACHE_DURATION = 30 * 60 * 1000;
+                    const CACHE_DURATION = 60 * 60 * 1000;
                     const now = Date.now();
                     const cachedCount = Object.values(cachedAnalyses).filter(
                       (cache) => cache.isDetailed && now - cache.timestamp < CACHE_DURATION
@@ -399,7 +408,7 @@ const FarmerReportPage = () => {
                       const detailedKey = `${lang.code}-detailed`;
                       const isCached =
                         cachedAnalyses[detailedKey] &&
-                        Date.now() - cachedAnalyses[detailedKey].timestamp < 30 * 60 * 1000;
+                        Date.now() - cachedAnalyses[detailedKey].timestamp < 60 * 60 * 1000;
 
                       return (
                         <button
@@ -500,6 +509,12 @@ const FarmerReportPage = () => {
                 showAiAnalysis={showAiAnalysis}
                 onGenerate={handleGenerateAIAnalysis}
                 onToggle={() => handleTabClick("report")}
+                reportMetadata={{
+                  month,
+                  year,
+                }}
+                isDetailed={viewMode === "ai-detailed"}
+                language={selectedLanguage}
               />
             </div>
           )

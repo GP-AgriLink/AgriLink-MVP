@@ -1,5 +1,6 @@
 import React from "react";
-import { Brain, Sparkles, Loader2, ChevronUp, AlertCircle, BarChart3, TrendingUp, Lightbulb } from "lucide-react";
+import { Brain, Sparkles, Loader2, ChevronUp, AlertCircle, BarChart3, TrendingUp, Lightbulb, Download } from "lucide-react";
+import { generateAIReportPDF } from "../../utils/pdfGenerator";
 
 const AIAnalysis = ({
   aiAnalysis,
@@ -8,9 +9,51 @@ const AIAnalysis = ({
   showAiAnalysis,
   onGenerate,
   onToggle,
+  reportMetadata,
+  isDetailed,
+  language,
 }) => {
+  const isArabic = language === "AR";
+  
+  // Translations object similar to PDF generator
+  const translations = isArabic ? {
+    title: "رؤى الأعمال بالذكاء الاصطناعي",
+    subtitle: "التحليل المهني والتوصيات",
+    downloadPDF: "تحميل PDF",
+    analyzing: "جاري التحليل...",
+    hideAnalysis: "إخفاء التحليل",
+    generateAnalysis: "إنشاء التحليل",
+    analysisFailed: "فشل التحليل",
+    analyzingData: "جاري تحليل بيانات عملك...",
+    thisMayTake: "قد يستغرق هذا بضع لحظات",
+    executiveSummary: "الملخص التنفيذي",
+    predictions: "التوقعات",
+    recommendations: "التوصيات",
+    keyInsights: "الرؤى الأساسية"
+  } : {
+    title: "AI Business Insights",
+    subtitle: "Professional analysis & recommendations",
+    downloadPDF: "Download PDF",
+    analyzing: "Analyzing...",
+    hideAnalysis: "Hide Analysis",
+    generateAnalysis: "Generate Analysis",
+    analysisFailed: "Analysis Failed",
+    analyzingData: "Analyzing Your Business Data...",
+    thisMayTake: "This may take a few moments",
+    executiveSummary: "Executive Summary",
+    predictions: "Predictions",
+    recommendations: "Recommendations",
+    keyInsights: "Key Insights"
+  };
+
+  const handleDownloadPDF = () => {
+    if (!aiAnalysis) return;
+    
+    generateAIReportPDF(aiAnalysis, reportMetadata, isDetailed, language);
+  };
+
   return (
-    <div className="animate-fade-in relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-lg">
+    <div className="animate-fade-in relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 shadow-lg" dir={isArabic ? "rtl" : "ltr"}>
       <div className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -18,33 +61,46 @@ const AIAnalysis = ({
               <Brain className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">AI Business Insights</h2>
-              <p className="text-sm text-gray-500">Professional analysis & recommendations</p>
+              <h2 className="text-xl font-bold text-gray-900">{translations.title}</h2>
+              <p className="text-sm text-gray-500">{translations.subtitle}</p>
             </div>
           </div>
 
-          <button
-            onClick={showAiAnalysis ? onToggle : onGenerate}
-            disabled={aiLoading}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
-          >
-            {aiLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : showAiAnalysis ? (
-              <>
-                <ChevronUp className="h-4 w-4" />
-                Hide Analysis
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                Generate Analysis
-              </>
+          <div className="flex items-center gap-2">
+            {showAiAnalysis && aiAnalysis && !aiLoading && (
+              <button
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-2 rounded-xl bg-white border border-emerald-200 px-4 py-2.5 font-semibold text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 hover:shadow-md active:scale-95"
+              >
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">{translations.downloadPDF}</span>
+                <span className="sm:hidden">PDF</span>
+              </button>
             )}
-          </button>
+            
+            <button
+              onClick={showAiAnalysis ? onToggle : onGenerate}
+              disabled={aiLoading}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 font-semibold text-white shadow-md transition-all hover:scale-105 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {translations.analyzing}
+                </>
+              ) : showAiAnalysis ? (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  {translations.hideAnalysis}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {translations.generateAnalysis}
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* AI Error State */}
@@ -53,7 +109,7 @@ const AIAnalysis = ({
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
               <div>
-                <p className="font-semibold text-red-700">Analysis Failed</p>
+                <p className="font-semibold text-red-700">{translations.analysisFailed}</p>
                 <p className="text-sm text-red-600">{aiError}</p>
               </div>
             </div>
@@ -70,9 +126,9 @@ const AIAnalysis = ({
               </div>
             </div>
             <p className="mb-2 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-lg font-bold text-transparent">
-              Analyzing Your Business Data...
+              {translations.analyzingData}
             </p>
-            <p className="text-sm text-gray-500">This may take a few moments</p>
+            <p className="text-sm text-gray-500">{translations.thisMayTake}</p>
           </div>
         )}
 
@@ -83,7 +139,7 @@ const AIAnalysis = ({
             <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
               <div className="mb-3 flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-emerald-600" />
-                <h3 className="font-bold text-gray-900">Executive Summary</h3>
+                <h3 className="font-bold text-gray-900">{translations.executiveSummary}</h3>
               </div>
               <p className="leading-relaxed text-gray-700">{aiAnalysis.summary}</p>
             </div>
@@ -93,7 +149,7 @@ const AIAnalysis = ({
               <div className="rounded-xl border border-teal-100 bg-white p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-teal-600" />
-                  <h3 className="font-bold text-gray-900">Predictions</h3>
+                  <h3 className="font-bold text-gray-900">{translations.predictions}</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {aiAnalysis.predictions.map((prediction, idx) => (
@@ -119,7 +175,7 @@ const AIAnalysis = ({
               <div className="rounded-xl border border-emerald-100 bg-white p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-emerald-600" />
-                  <h3 className="font-bold text-gray-900">Recommendations</h3>
+                  <h3 className="font-bold text-gray-900">{translations.recommendations}</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {aiAnalysis.suggestions.map((suggestion, idx) => (
@@ -145,7 +201,7 @@ const AIAnalysis = ({
               <div className="rounded-xl border border-teal-100 bg-white p-5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-teal-600" />
-                  <h3 className="font-bold text-gray-900">Key Insights</h3>
+                  <h3 className="font-bold text-gray-900">{translations.keyInsights}</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {aiAnalysis.insights.map((insight, idx) => (
