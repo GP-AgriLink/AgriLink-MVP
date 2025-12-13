@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiMapPin, FiBriefcase, FiFileText, FiTag, FiNavigation } from "react-icons/fi";
+import {
+  FiMapPin,
+  FiBriefcase,
+  FiFileText,
+  FiTag,
+  FiNavigation,
+  FiRefreshCw,
+} from "react-icons/fi";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -115,7 +122,7 @@ export const FarmProfileView = ({ farmData }) => {
     <div className="space-y-6">
       <div className="rounded-xl border border-gray-100 bg-white p-6 text-start shadow-sm">
         {/* 2-column grid layout */}
-        <div className="grid gap-6 lg:grid-cols-3 grid-cols-1">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Column 1 */}
           <div className="space-y-6 lg:col-span-1">
             {/* Row 1: Farm Name */}
@@ -172,7 +179,7 @@ export const FarmProfileView = ({ farmData }) => {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50">
                   <FiMapPin className="h-5 w-5 text-emerald-600" />
                 </div>
-                <div>
+                <div className="flex flex-col">
                   <h3 className="text-lg font-semibold text-gray-800">Farm Location</h3>
                   <p className="text-xs text-gray-500">
                     {locationLabel
@@ -199,9 +206,7 @@ export const FarmProfileView = ({ farmData }) => {
                 scrollWheelZoom={true}
                 className="z-0 h-[400px] w-full"
               >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
+                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
                 <MapEventsHandler mapRef={mapRef} setZoom={setCurrentZoom} />
 

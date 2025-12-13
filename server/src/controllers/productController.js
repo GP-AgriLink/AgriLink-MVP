@@ -22,7 +22,7 @@ const createProduct = async (req, res) => {
         .json({ message: "Farm profile not found for this user." });
     }
 
-    const { name, price, unit, stock,category, imageUrl } = req.body;
+    const { name, price, unit, stock, category, imageUrl, description } = req.body;
 
     const newProduct = new Product({
       name,
@@ -31,6 +31,7 @@ const createProduct = async (req, res) => {
       stock,
       category,
       imageUrl,
+      description,
       farm: farm._id, // Use the Farm's ID, not the User's ID
     });
 

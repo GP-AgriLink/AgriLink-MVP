@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react";
 import { getAllCategories } from "../../services/farmProductApi";
 import { toast } from "react-toastify";
 import LogoSpinner from "../common/LogoSpinner";
-import { sanitizeProductData, sanitizeString } from "../../utils/sanitizers";
-import { X, Upload, Image as ImageIcon, Edit2, CheckCircle } from "lucide-react";
+import { sanitizeProductData, sanitizeString, sanitizeProductName } from "../../utils/sanitizers";
+import { X, Upload, Image as ImageIcon, Edit2, CheckCircle, Sparkles } from "lucide-react";
+import { generateProductDescription, standardizeCategory } from "../../services/aiService";
 
 /**
  * Supported product units matching server model validation
@@ -49,6 +50,8 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
   const localPreviewRef = useRef(null);
   const [allCategories, setAllCategories] = useState([]);
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [aiOperation, setAIOperation] = useState(""); // Track which AI operation is running
 
   // Helper function to get the final category value
   const getFinalCategory = useCallback((category, customCategory) => {
@@ -179,9 +182,20 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       const price = parseFloat(dataToValidate.price);
       const stock = parseInt(dataToValidate.stock);
 
-      if (!name) newErrors.name = "Product name is required";
-      else if (name.length < 2) newErrors.name = "Must be at least 2 characters";
-      else if (name.length > 100) newErrors.name = "Cannot exceed 100 characters";
+      // Strict product name validation: only letters, hyphens, spaces
+      if (!name) {
+        newErrors.name = "Product name is required";
+      } else if (!/^[A-Za-z\u0621-\u064A\s\-]+$/.test(name)) {
+        newErrors.name = "Product name can only contain letters, hyphens, and spaces";
+      } else if ((name.match(/[a-zA-Z\u0621-\u064A]/g) || []).length < 3) {
+        newErrors.name = "Product name must contain at least 3 letters";
+      } else if (name.length < 2) {
+        newErrors.name = "Must be at least 2 characters";
+      } else if (name.length > 100) {
+        newErrors.name = "Cannot exceed 100 characters";
+      } else if (/\s{2,}/.test(name)) {
+        newErrors.name = "Product name cannot have consecutive spaces";
+      }
 
       if (!dataToValidate.price || isNaN(price) || price < 0.01)
         newErrors.price = "Price must be at least 0.01";
@@ -342,8 +356,8 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File is too large (Max 5MB)");
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File is too large (Max 10MB)");
         return;
       }
 
@@ -369,6 +383,76 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
     },
     [formData, validateForm]
   );
+
+  // AI Handlers
+  const handleGenerateDescription = useCallback(async () => {
+    if (!formData.name.trim()) {
+      toast.warning("Please enter a product name first");
+      return;
+    }
+
+    setIsAIGenerating(true);
+    setAIOperation("description");
+    try {
+      // Server handles file upload internally
+      const description = await generateProductDescription(
+        formData.name,
+        formData.imageUrl,
+        '',
+        product?._id // Server uses this for smart caching
+      );
+      const newFormData = { ...formData, description };
+      setFormData(newFormData);
+      validateForm(newFormData);
+      toast.success("Description generated!");
+    } catch (error) {
+      console.error("AI Error:", error);
+      toast.error(error.message || "Failed to generate description");
+    } finally {
+      setIsAIGenerating(false);
+      setAIOperation("");
+    }
+  }, [formData, validateForm, product]);
+
+  const handleStandardizeCategory = useCallback(async () => {
+    if (!formData.name.trim()) {
+      toast.warning("Please enter a product name first");
+      return;
+    }
+
+    setIsAIGenerating(true);
+    setAIOperation("category");
+    try {
+      // Server handles file upload internally
+      const category = await standardizeCategory(
+        formData.name,
+        formData.imageUrl,
+        '',
+        product?._id // Server uses this for smart caching
+      );
+
+      let newFormData;
+      // Check if it's one of the standard categories
+      if (CATEGORY_OPTIONS.includes(category)) {
+        newFormData = { ...formData, category, customCategory: "" };
+        setShowCustomInput(false);
+      } else {
+        // It's a custom category
+        newFormData = { ...formData, category: "Other", customCategory: category };
+        setShowCustomInput(true);
+      }
+
+      setFormData(newFormData);
+      validateForm(newFormData);
+      toast.success(`Category set to: ${category}`);
+    } catch (error) {
+      console.error("AI Error:", error);
+      toast.error(error.message || "Failed to standardize category");
+    } finally {
+      setIsAIGenerating(false);
+      setAIOperation("");
+    }
+  }, [formData, validateForm, product]);
 
   // Memoized values
   const displayImageUrl = useMemo(() => imagePreview, [imagePreview]);
@@ -504,8 +588,22 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
               </div>
 
               <div className="col-span-2">
-                <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                  Category <span className="text-red-500">*</span>
+                <label className="mb-1.5 flex items-center justify-between text-sm font-semibold text-gray-700">
+                  <span>
+                    Category <span className="text-red-500">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStandardizeCategory}
+                    disabled={isAIGenerating || !formData.name.trim()}
+                    className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                    title="AI Category Suggestion"
+                  >
+                    <Sparkles
+                      className={`h-3.5 w-3.5 ${isAIGenerating && aiOperation === "category" ? "animate-spin" : "group-hover:animate-pulse"}`}
+                    />
+                    AI
+                  </button>
                 </label>
                 {showCustomInput ? (
                   <input
@@ -653,8 +751,22 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-gray-700">
-                Description <span className="text-xs text-gray-400">(Optional)</span>
+              <label className="mb-1.5 flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>
+                  Description <span className="text-xs text-gray-400">(Optional)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateDescription}
+                  disabled={isAIGenerating || !formData.name.trim()}
+                  className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                  title="AI Generate Description"
+                >
+                  <Sparkles
+                    className={`h-3.5 w-3.5 ${isAIGenerating && aiOperation === "description" ? "animate-spin" : "group-hover:animate-pulse"}`}
+                  />
+                  AI
+                </button>
               </label>
               <textarea
                 name="description"
@@ -788,7 +900,7 @@ const EditProduct = memo(({ isOpen, onClose, onSubmit, product }) => {
                           <p className="text-sm font-semibold text-gray-700">
                             Click to upload image
                           </p>
-                          <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP (Max 5MB)</p>
+                          <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP (Max 10MB)</p>
                           <p className="mt-1 text-xs font-medium text-emerald-600">
                             Original quality preserved
                           </p>
