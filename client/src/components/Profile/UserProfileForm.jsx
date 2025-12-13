@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { updateUserProfile } from "../../services/userService";
 import { uploadImage } from "../../services/uploadService";
@@ -7,6 +7,7 @@ import { validateFile, validateEgyptianPhone } from "../../utils/validators";
 import { toast } from "react-toastify";
 import { Camera } from "lucide-react";
 import avatarPlaceholder from "/avatar-placeholder.svg";
+import { ChangePassword } from "./ChangePassword";
 
 const NAME_REGEX = /^[a-zA-Z\u0621-\u064A\s'-]{2,50}$/;
 const NAME_ERROR_MESSAGE =
@@ -27,6 +28,7 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
   const [avatarFile, setAvatarFile] = useState(null);
   const [avatarPreview, setAvatarPreview] = useState(initialData.avatarUrl || avatarPlaceholder);
   const localPreviewRef = useRef(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Sync form state when initialData is loaded
   useEffect(() => {
@@ -143,6 +145,14 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
     }
   };
 
+  const handleOpenPasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(true);
+  }, []);
+
+  const handleClosePasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(false);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid() || !isDirty) {
@@ -192,9 +202,9 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
       initialData.avatarUrl = updatedUser.avatarUrl;
 
       toast.success("User profile updated successfully!");
-      
+
       // Call onSaveSuccess callback if provided (for toggling back to view mode)
-      if (onSaveSuccess && typeof onSaveSuccess === 'function') {
+      if (onSaveSuccess && typeof onSaveSuccess === "function") {
         onSaveSuccess(updatedUser);
       }
     } catch (error) {
@@ -211,7 +221,8 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
       "w-full px-3.5 py-2.5 text-sm border rounded-lg outline-none transition duration-200 relative";
     const hasError = formErrors[fieldName];
     const isEmpty = !formData[fieldName]?.trim();
-    const isRequired = fieldName === "phoneNumber" || fieldName === "firstName" || fieldName === "lastName";
+    const isRequired =
+      fieldName === "phoneNumber" || fieldName === "firstName" || fieldName === "lastName";
     const isValid = !hasError && (isRequired ? !isEmpty : true);
     if (hasError) {
       return `${baseClasses} border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400`;
@@ -225,7 +236,8 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
   const ValidationStatus = ({ fieldName }) => {
     const error = formErrors[fieldName];
     const value = formData[fieldName]?.trim();
-    const isRequired = fieldName === "phoneNumber" || fieldName === "firstName" || fieldName === "lastName";
+    const isRequired =
+      fieldName === "phoneNumber" || fieldName === "firstName" || fieldName === "lastName";
     if (error) {
       return <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{error}</p>;
     }
@@ -301,60 +313,69 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
 
         {/* Form Fields - Grid */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-            First Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="firstName"
-            value={formData.firstName || ""}
-            onChange={handleChange}
-            placeholder="Enter first name"
-            className={getInputClasses("firstName")}
-          />
-          <ValidationStatus fieldName="firstName" />
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              First Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="firstName"
+              value={formData.firstName || ""}
+              onChange={handleChange}
+              placeholder="Enter first name"
+              className={getInputClasses("firstName")}
+            />
+            <ValidationStatus fieldName="firstName" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Last Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="lastName"
+              value={formData.lastName || ""}
+              onChange={handleChange}
+              placeholder="Enter last name"
+              className={getInputClasses("lastName")}
+            />
+            <ValidationStatus fieldName="lastName" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              disabled
+              placeholder="example@email.com"
+              className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500"
+            />
+            <button
+              type="button"
+              onClick={handleOpenPasswordModal}
+              className="mt-1 text-xs font-medium text-emerald-600 transition hover:text-emerald-700 hover:underline"
+            >
+              Edit Password
+            </button>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber || ""}
+              onChange={handleChange}
+              placeholder="01012345678"
+              className={getInputClasses("phoneNumber")}
+            />
+            <ValidationStatus fieldName="phoneNumber" />
+          </div>
         </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Last Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="lastName"
-            value={formData.lastName || ""}
-            onChange={handleChange}
-            placeholder="Enter last name"
-            className={getInputClasses("lastName")}
-          />
-          <ValidationStatus fieldName="lastName" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">Email</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            disabled
-            placeholder="example@email.com"
-            className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-500"
-          />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Phone Number <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            name="phoneNumber"
-            value={formData.phoneNumber || ""}
-            onChange={handleChange}
-            placeholder="01012345678"
-            className={getInputClasses("phoneNumber")}
-          />
-          <ValidationStatus fieldName="phoneNumber" />
-        </div>
-      </div>
 
         {/* Submit Button */}
         <div className="flex justify-end border-t border-gray-100 pt-4">
@@ -367,6 +388,9 @@ export const UserProfileForm = ({ initialData, onSaveSuccess }) => {
           </button>
         </div>
       </form>
+
+      {/* Password Change Modal */}
+      <ChangePassword isOpen={isPasswordModalOpen} onClose={handleClosePasswordModal} />
     </div>
   );
 };

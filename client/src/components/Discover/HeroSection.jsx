@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { getPublicStats } from "../../services/farmApi";
 
 function StatItem({ value, label, delay }) {
   const [count, setCount] = useState(0);
@@ -54,14 +55,8 @@ const HeroSection = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/farms/stats");
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setStats(data);
+        const stats = await getPublicStats();
+        setStats(stats);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -90,7 +85,7 @@ const HeroSection = () => {
   if (error) {
     return (
       <section className="bg-red-50 py-16">
-        <div className="animate-slideInUp animation-delay-300 container mx-auto max-w-7xl rounded-lg px-6 text-center lg:px-8">
+        <div className="container mx-auto max-w-7xl animate-slideInUp rounded-lg px-6 text-center animation-delay-300 lg:px-8">
           <p className="font-medium text-red-700">Error loading statistics: {error}</p>
         </div>
       </section>
@@ -112,15 +107,15 @@ const HeroSection = () => {
 
       <div className="container relative z-10 mx-auto flex flex-col items-center px-6 py-12 text-center text-white">
         <div className="mx-auto mt-10 max-w-4xl">
-          <h1 className="animate-slideInUp mb-4 text-4xl font-bold leading-tight text-emerald-900 md:text-6xl">
+          <h1 className="mb-4 animate-slideInUp text-4xl font-bold leading-tight text-emerald-900 md:text-6xl">
             Freshness from the farm.
           </h1>
-          <p className="animate-slideInUp animation-delay-100 mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-emerald-700 md:text-xl">
+          <p className="mx-auto mt-5 max-w-2xl animate-slideInUp text-lg leading-relaxed text-emerald-700 animation-delay-100 md:text-xl">
             Discover and shop from the best local farms across Egypt. Connect directly with farmers
             who care about quality and sustainability.
           </p>
 
-          <div className="animate-slideInUp animation-delay-200 mt-10">
+          <div className="mt-10 animate-slideInUp animation-delay-200">
             <a
               href="#DiscoverSection"
               onClick={(e) => {
@@ -148,11 +143,7 @@ const HeroSection = () => {
 
           <div className="mt-16 flex w-full max-w-5xl flex-wrap justify-center gap-8 md:gap-16">
             <div className="grid w-full grid-cols-1 gap-8 uppercase tracking-wider md:grid-cols-2 lg:grid-cols-3">
-              <StatItem
-                value={stats.farmsRegistered}
-                label="Farms"
-                delay="animation-delay-300"
-              />
+              <StatItem value={stats.farmsRegistered} label="Farms" delay="animation-delay-300" />
 
               <StatItem
                 value={stats.customersJoined}
@@ -160,11 +151,7 @@ const HeroSection = () => {
                 delay="animation-delay-500"
               />
 
-              <StatItem
-                value={stats.productsListed}
-                label="Products"
-                delay="animation-delay-700"
-              />
+              <StatItem value={stats.productsListed} label="Products" delay="animation-delay-700" />
             </div>
           </div>
         </div>

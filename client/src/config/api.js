@@ -21,6 +21,8 @@ export const API_ENDPOINTS = {
   // User-specific profile (firstName, lastName, avatarUrl)
   users: {
     profile: "/api/users/profile",
+    updatePassword: "/api/users/profile/password",
+    report: "/api/users/profile/report", // GET (Customer report)
   },
   // Farm-specific profile (farmBio, location) and public discovery
   farms: {
@@ -46,6 +48,7 @@ export const API_ENDPOINTS = {
     create: "/api/orders", // POST (Protected)
     myOrders: "/api/orders/myorders", // GET (Customer or Farmer)
     updateStatus: (orderId) => `/api/orders/${orderId}/status`, // PUT (Farmer-only)
+    incomingCount: "/api/orders/count/incoming", // GET (Farmer - order count badge)
   },
   // Cart management (Customer)
   cart: {
@@ -57,6 +60,23 @@ export const API_ENDPOINTS = {
   // Centralized file uploads
   uploads: {
     uploadImage: "/api/uploads", // POST
+  },
+  // Chat endpoints
+  chat: {
+    history: "/api/chat/history", // GET, DELETE
+    message: "/api/chat/message", // POST
+    newConversation: "/api/chat/new-conversation", // POST
+    conversations: "/api/chat/conversations", // GET
+  },
+  // AI endpoints
+  ai: {
+    productDescription: "/api/ai/product-description", // POST
+    standardizeCategory: "/api/ai/standardize-category", // POST
+    farmBio: "/api/ai/farm-bio", // POST
+    uploadImage: "/api/ai/upload-image", // POST
+    deleteFile: (fileName) => `/api/ai/files/${fileName}`, // DELETE
+    cacheImage: "/api/ai/img", // POST - cache product image with smart reuse
+    farmReportAnalysis: "/api/ai/farm-report-analysis", // POST
   },
 };
 
@@ -112,18 +132,34 @@ apiClient.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const errorMessage = error.response?.data?.message || "An unexpected error occurred";
+    const requestUrl = error.config?.url || "";
+
+    // List of auth endpoints that should not trigger auto-logout on 401
+    const authEndpoints = [
+      "/api/users/login",
+      "/api/users/register",
+      "/api/users/forgot-password",
+      "/api/users/reset-password",
+    ];
+
+    // Check if this is an auth endpoint
+    const isAuthEndpoint = authEndpoints.some((endpoint) => requestUrl.includes(endpoint));
 
     if (status === 401) {
-      // Unauthorized: Token expired or invalid
-      console.warn("Unauthorized: Session expired or invalid token");
-      clearAuthData(); // This function will be provided by the new authService
-      toast.error("Your session has expired. Please log in again.");
-      // Delay redirect slightly to allow toast to be seen
-      setTimeout(() => {
-        if (typeof window !== "undefined") {
-          window.location.href = "/login";
-        }
-      }, 1500);
+      // Only trigger auto-logout if this is NOT an auth endpoint
+      if (!isAuthEndpoint) {
+        // Unauthorized: Token expired or invalid
+        console.warn("Unauthorized: Session expired or invalid token");
+        clearAuthData(); // This function will be provided by the new authService
+        toast.error("Your session has expired. Please log in again.");
+        // Delay redirect slightly to allow toast to be seen
+        setTimeout(() => {
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
+        }, 1500);
+      }
+      // For auth endpoints, let the calling function handle the 401
     } else if (status === 403) {
       // Forbidden (e.g., Customer trying to access Farmer route)
       console.error("Forbidden: Insufficient permissions");

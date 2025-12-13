@@ -1,20 +1,4 @@
-/**
- * Chat Service
- * Handles API calls for live chat functionality
- */
-
-const API_BASE_URL = import.meta.env.VITE_APP_API_URL;
-
-/**
- * Get API base URL
- * @returns {string} API base URL
- */
-const getApiUrl = () => {
-  if (!API_BASE_URL) {
-    throw new Error('API base URL is not configured');
-  }
-  return API_BASE_URL;
-};
+import apiClient, { API_ENDPOINTS } from "../config/api";
 
 /**
  * Get chat history for current user
@@ -22,29 +6,10 @@ const getApiUrl = () => {
  */
 export const getChatHistory = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${getApiUrl()}/api/chat/history`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to load chat history');
-    }
-
-    const data = await response.json();
-    return data.messages || [];
+    const response = await apiClient.get(API_ENDPOINTS.chat.history);
+    return response.data.messages || [];
   } catch (error) {
-    console.error('Get chat history error:', error);
+    console.error("Get chat history error:", error);
     throw error;
   }
 };
@@ -55,28 +20,10 @@ export const getChatHistory = async () => {
  */
 export const clearChatHistory = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${getApiUrl()}/api/chat/history`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to clear chat history');
-    }
-
-    return await response.json();
+    const response = await apiClient.delete(API_ENDPOINTS.chat.history);
+    return response.data;
   } catch (error) {
-    console.error('Clear chat history error:', error);
+    console.error("Clear chat history error:", error);
     throw error;
   }
 };
@@ -88,32 +35,12 @@ export const clearChatHistory = async () => {
  */
 export const sendChatMessage = async (message) => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('Please log in to use chat');
-    }
-
-    const response = await fetch(`${getApiUrl()}/api/chat/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        message,
-      }),
+    const response = await apiClient.post(API_ENDPOINTS.chat.message, {
+      message,
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to send message');
-    }
-
-    const data = await response.json();
-    return data;
+    return response.data;
   } catch (error) {
-    console.error('Chat service error:', error);
+    console.error("Chat service error:", error);
     throw error;
   }
 };
@@ -124,28 +51,10 @@ export const sendChatMessage = async (message) => {
  */
 export const startNewConversation = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${getApiUrl()}/api/chat/new-conversation`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to start new conversation');
-    }
-
-    return await response.json();
+    const response = await apiClient.post(API_ENDPOINTS.chat.newConversation);
+    return response.data;
   } catch (error) {
-    console.error('Start new conversation error:', error);
+    console.error("Start new conversation error:", error);
     throw error;
   }
 };
@@ -156,29 +65,10 @@ export const startNewConversation = async () => {
  */
 export const getConversations = async () => {
   try {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    const response = await fetch(`${getApiUrl()}/api/chat/conversations`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get conversations');
-    }
-
-    const data = await response.json();
-    return data.conversations || [];
+    const response = await apiClient.get(API_ENDPOINTS.chat.conversations);
+    return response.data.conversations || [];
   } catch (error) {
-    console.error('Get conversations error:', error);
+    console.error("Get conversations error:", error);
     throw error;
   }
 };

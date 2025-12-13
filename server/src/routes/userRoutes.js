@@ -5,6 +5,7 @@ import {
   loginUser,
   getUserProfile,
   updateUserProfile,
+  updateUserPassword,
   forgotPassword,
   resetPassword,
   getCustomerReport,
@@ -54,6 +55,21 @@ router
   .route("/profile")
   .get(protect, getUserProfile)
   .put(protect, updateUserProfile);
+
+// @route   PUT /api/users/profile/password
+// @desc    Update user password
+// @access  Private
+router.put(
+  "/profile/password",
+  protect,
+  [
+    body("currentPassword", "Current password is required").not().isEmpty(),
+    body("newPassword", "Password must be 6 or more characters").isLength({
+      min: 6,
+    }),
+  ],
+  updateUserPassword
+);
 
 // --- PASSWORD RESET ROUTES ---
 router.post("/forgot-password", forgotPassword);

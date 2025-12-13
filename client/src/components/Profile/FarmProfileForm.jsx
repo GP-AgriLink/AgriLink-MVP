@@ -8,6 +8,7 @@ import { X, Sparkles } from "lucide-react";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { ChangePassword } from "./ChangePassword";
 import { generateFarmBio } from "../../services/aiService";
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -93,7 +94,8 @@ function FlyToLocation({ coordinates }) {
 }
 
 const FARM_NAME_REGEX = /^[a-zA-Z\u0621-\u064A\s'-]{3,100}$/;
-const NAME_ERROR_MESSAGE = "Name can only contain letters (English or Arabic), spaces, hyphens, and apostrophes";
+const NAME_ERROR_MESSAGE =
+  "Name can only contain letters (English or Arabic), spaces, hyphens, and apostrophes";
 
 const getDefaultErrors = () => ({
   farmName: "",
@@ -112,6 +114,7 @@ export const FarmProfileForm = ({ initialData }) => {
   const [showMap, setShowMap] = useState(false);
   const locationInputRef = useRef(null);
   const [isAIGenerating, setIsAIGenerating] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   const allSpecialties = ["Organic", "Vegetables", "Fruits", "Herbs", "Dairy", "Grains"];
 
@@ -177,7 +180,12 @@ export const FarmProfileForm = ({ initialData }) => {
         console.error("localStorage read error:", err);
       }
 
-      if (!restoredFromLocal && initialData.location && initialData.location.coordinates && initialData.location.coordinates.length === 2) {
+      if (
+        !restoredFromLocal &&
+        initialData.location &&
+        initialData.location.coordinates &&
+        initialData.location.coordinates.length === 2
+      ) {
         if (pickAddress) {
           setLocationName(pickAddress);
         } else {
@@ -206,8 +214,7 @@ export const FarmProfileForm = ({ initialData }) => {
         setLocationName(storedName);
         return;
       }
-    } catch (err) {
-    }
+    } catch (err) {}
 
     (async () => {
       try {
@@ -223,7 +230,8 @@ export const FarmProfileForm = ({ initialData }) => {
     if (!initialData) return false;
     if (formData.farmName !== initialData.farmName) return true;
     if (formData.farmBio !== initialData.farmBio) return true;
-    if (JSON.stringify(formData.specialties) !== JSON.stringify(initialData.specialties)) return true;
+    if (JSON.stringify(formData.specialties) !== JSON.stringify(initialData.specialties))
+      return true;
     if (JSON.stringify(formData.location) !== JSON.stringify(initialData.location)) return true;
 
     if (locationName !== initialData.locationAddress) return true;
@@ -305,6 +313,14 @@ export const FarmProfileForm = ({ initialData }) => {
     setFormData({ ...formData, specialties: formData.specialties.filter((s) => s !== specialty) });
   };
 
+  const handleOpenPasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(true);
+  }, []);
+
+  const handleClosePasswordModal = useCallback(() => {
+    setIsPasswordModalOpen(false);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isFormValid()) {
@@ -319,7 +335,7 @@ export const FarmProfileForm = ({ initialData }) => {
         farmBio: sanitizeTextArea(formData.farmBio),
         specialties: sanitizeArray(formData.specialties),
         location: formData.location,
-        locationAddress: locationName
+        locationAddress: locationName,
       };
 
       if (formData.location?.coordinates && formData.location.coordinates.length === 2) {
@@ -339,7 +355,11 @@ export const FarmProfileForm = ({ initialData }) => {
       try {
         if (updatedFarm.locationAddress) {
           setLocationName(updatedFarm.locationAddress);
-        } else if (updatedFarm.location && updatedFarm.location.coordinates && updatedFarm.location.coordinates.length === 2) {
+        } else if (
+          updatedFarm.location &&
+          updatedFarm.location.coordinates &&
+          updatedFarm.location.coordinates.length === 2
+        ) {
           const name = await reverseGeocodeSmart(updatedFarm.location.coordinates);
           if (name) setLocationName(name);
         }
@@ -412,7 +432,8 @@ export const FarmProfileForm = ({ initialData }) => {
     const error = formErrors[fieldName];
     const value = formData[fieldName]?.trim();
     const isRequired = fieldName === "farmName";
-    if (error) return <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{error}</p>;
+    if (error)
+      return <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">{error}</p>;
     if (!value && isRequired) return <p className="mt-1 text-xs text-gray-500">Required field</p>;
     return null;
   };
@@ -420,169 +441,192 @@ export const FarmProfileForm = ({ initialData }) => {
   if (!formData) return null;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Farm Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="farmName"
-            value={formData.farmName || ""}
-            onChange={handleChange}
-            placeholder="Enter your farm name"
-            className={getInputClasses("farmName")}
-          />
-          <ValidationStatus fieldName="farmName" />
-        </div>
-        <div>
-          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-            Specialties (max 3)
-          </label>
-          <select
-            onChange={(e) => handleAddSpecialty(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
-            value=""
-          >
-            <option value="" disabled>Select a specialty</option>
-            {allSpecialties.map((spec) => (
-              <option key={spec} value={spec} disabled={formData.specialties.includes(spec)}>
-                {spec}
-              </option>
-            ))}
-          </select>
-          {formData.specialties.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {formData.specialties.map((spec) => (
-                <span
-                  key={spec}
-                  className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 px-2.5 py-1 text-xs font-medium text-emerald-700"
-                >
-                  {spec}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSpecialty(spec)}
-                    className="text-emerald-600 transition hover:text-red-500"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-600">
-          <span>Farm Bio</span>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Edit Password Link */}
+        <div className="flex justify-end">
           <button
             type="button"
-            onClick={handleGenerateFarmBio}
-            disabled={isAIGenerating || !formData.farmName.trim()}
-            className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium normal-case text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-            title={formData.farmBio ? "Polish Farm Bio with AI" : "Generate Farm Bio with AI"}
+            onClick={handleOpenPasswordModal}
+            className="text-xs font-medium text-emerald-600 transition hover:text-emerald-700 hover:underline"
           >
-            <Sparkles
-              className={`h-3.5 w-3.5 ${isAIGenerating ? "animate-spin" : "group-hover:animate-pulse"}`}
-            />
-            AI {formData.farmBio ? "Polish" : "Generate"}
+            Edit Password
           </button>
-        </label>
-        <textarea
-          name="farmBio"
-          value={formData.farmBio || ""}
-          onChange={handleChange}
-          placeholder="Tell us about your farm..."
-          rows={3}
-          className={getInputClasses("farmBio") + " resize-none"}
-        ></textarea>
-        <ValidationStatus fieldName="farmBio" />
-      </div>
+        </div>
 
-      <div className="relative">
-        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
-          Farm Location <span className="text-red-500">*</span>
-        </label>
-        <input
-          ref={locationInputRef}
-          type="text"
-          readOnly
-          value={
-            locationName && locationName.length > 0
-              ? locationName
-              : formData.location?.coordinates
-                ? "Location Selected"
-                : "Click to select location on map"
-          }
-          className={`w-full cursor-pointer rounded-lg border px-3.5 py-2.5 text-sm outline-none transition ${formErrors.location
-            ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
-            : formData.location?.coordinates
-              ? "border-emerald-400 bg-emerald-50/30 focus:ring-2 focus:ring-emerald-400"
-              : "border-gray-200 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
-            }`}
-        />
-        {formErrors.location ? (
-          <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">
-            {formErrors.location}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-gray-500">Click the input to select your farm location on the map</p>
-        )}
-        <div
-          className={`mt-3 overflow-hidden transition-all duration-500 ease-in-out ${showMap ? "max-h-[320px] scale-100 opacity-100" : "pointer-events-none max-h-0 scale-95 opacity-0"}`}
-        >
-          <MapContainer
-            center={
-              formData.location.coordinates
-                ? [formData.location.coordinates[1], formData.location.coordinates[0]]
-                : [30.0444, 31.2357]
-            }
-            zoom={13}
-            scrollWheelZoom={true}
-            className="relative z-10 h-80 w-full rounded-lg"
-          >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-            <LocationPicker
-              setFormData={setFormData}
-              setFormErrors={setFormErrors}
-              validateLocationField={validateLocationField}
-              setLocationName={setLocationName}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Farm Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="farmName"
+              value={formData.farmName || ""}
+              onChange={handleChange}
+              placeholder="Enter your farm name"
+              className={getInputClasses("farmName")}
             />
+            <ValidationStatus fieldName="farmName" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+              Specialties (max 3)
+            </label>
+            <select
+              onChange={(e) => handleAddSpecialty(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
+              value=""
+            >
+              <option value="" disabled>
+                Select a specialty
+              </option>
+              {allSpecialties.map((spec) => (
+                <option key={spec} value={spec} disabled={formData.specialties.includes(spec)}>
+                  {spec}
+                </option>
+              ))}
+            </select>
+            {formData.specialties.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {formData.specialties.map((spec) => (
+                  <span
+                    key={spec}
+                    className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 px-2.5 py-1 text-xs font-medium text-emerald-700"
+                  >
+                    {spec}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSpecialty(spec)}
+                      className="text-emerald-600 transition hover:text-red-500"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
-            <FlyToLocation
-              coordinates={
+        <div>
+          <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-gray-600">
+            <span>Farm Bio</span>
+            <button
+              type="button"
+              onClick={handleGenerateFarmBio}
+              disabled={isAIGenerating || !formData.farmName.trim()}
+              className="group flex items-center gap-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-2 py-1 text-xs font-medium normal-case text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+              title={formData.farmBio ? "Polish Farm Bio with AI" : "Generate Farm Bio with AI"}
+            >
+              <Sparkles
+                className={`h-3.5 w-3.5 ${isAIGenerating ? "animate-spin" : "group-hover:animate-pulse"}`}
+              />
+              AI {formData.farmBio ? "Polish" : "Generate"}
+            </button>
+          </label>
+          <textarea
+            name="farmBio"
+            value={formData.farmBio || ""}
+            onChange={handleChange}
+            placeholder="Tell us about your farm..."
+            rows={3}
+            className={getInputClasses("farmBio") + " resize-none"}
+          ></textarea>
+          <ValidationStatus fieldName="farmBio" />
+        </div>
+
+        <div className="relative">
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-600">
+            Farm Location <span className="text-red-500">*</span>
+          </label>
+          <input
+            ref={locationInputRef}
+            type="text"
+            readOnly
+            value={
+              locationName && locationName.length > 0
+                ? locationName
+                : formData.location?.coordinates
+                  ? "Location Selected"
+                  : "Click to select location on map"
+            }
+            className={`w-full cursor-pointer rounded-lg border px-3.5 py-2.5 text-sm outline-none transition ${
+              formErrors.location
+                ? "border-red-400 bg-red-50/50 focus:ring-2 focus:ring-red-400"
+                : formData.location?.coordinates
+                  ? "border-emerald-400 bg-emerald-50/30 focus:ring-2 focus:ring-emerald-400"
+                  : "border-gray-200 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400"
+            }`}
+          />
+          {formErrors.location ? (
+            <p className="mt-1 text-xs text-red-500 transition-opacity duration-300">
+              {formErrors.location}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-500">
+              Click the input to select your farm location on the map
+            </p>
+          )}
+          <div
+            className={`mt-3 overflow-hidden transition-all duration-500 ease-in-out ${showMap ? "max-h-[320px] scale-100 opacity-100" : "pointer-events-none max-h-0 scale-95 opacity-0"}`}
+          >
+            <MapContainer
+              center={
                 formData.location.coordinates
                   ? [formData.location.coordinates[1], formData.location.coordinates[0]]
-                  : null
+                  : [30.0444, 31.2357]
               }
-            />
-            {formData.location?.coordinates && (
-              <Marker
-                position={[formData.location.coordinates[1], formData.location.coordinates[0]]}
-                icon={L.icon({
-                  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-                  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                })}
-              />
-            )}
-          </MapContainer>
-        </div>
-      </div>
+              zoom={13}
+              scrollWheelZoom={true}
+              className="relative z-10 h-80 w-full rounded-lg"
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-      <div className="flex justify-end border-t border-gray-100 pt-4">
-        <button
-          type="submit"
-          disabled={isLoading || !isFormValid() || !isDirty}
-          className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isLoading ? "Saving..." : "Save Changes"}
-        </button>
-      </div>
-    </form>
+              <LocationPicker
+                setFormData={setFormData}
+                setFormErrors={setFormErrors}
+                validateLocationField={validateLocationField}
+                setLocationName={setLocationName}
+              />
+
+              <FlyToLocation
+                coordinates={
+                  formData.location.coordinates
+                    ? [formData.location.coordinates[1], formData.location.coordinates[0]]
+                    : null
+                }
+              />
+              {formData.location?.coordinates && (
+                <Marker
+                  position={[formData.location.coordinates[1], formData.location.coordinates[0]]}
+                  icon={L.icon({
+                    iconUrl:
+                      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+                    shadowUrl:
+                      "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                  })}
+                />
+              )}
+            </MapContainer>
+          </div>
+        </div>
+
+        <div className="flex justify-end border-t border-gray-100 pt-4">
+          <button
+            type="submit"
+            disabled={isLoading || !isFormValid() || !isDirty}
+            className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-emerald-600 hover:to-teal-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </form>
+
+      {/* Password Change Modal */}
+      <ChangePassword isOpen={isPasswordModalOpen} onClose={handleClosePasswordModal} />
+    </>
   );
 };
