@@ -209,14 +209,14 @@ const getMyOrders = async (req, res) => {
         select: 'farmName avatarUrl location user',
         populate: {
           path: 'user',
-          select: 'avatarUrl'
-        }
+          select: 'avatarUrl',
+        },
       };
 
       // Search: "Customer searching for a specific Farm"
       if (req.query.search) {
         const matchingFarms = await Farm.find({
-          $text: { $search: req.query.search }
+          $text: { $search: req.query.search },
         }).select('_id');
 
         const farmIds = matchingFarms.map((farm) => farm._id);
@@ -242,7 +242,7 @@ const getMyOrders = async (req, res) => {
       if (req.query.search) {
         // 1. Find users using Text Index
         const matchingUsers = await User.find({
-          $text: { $search: req.query.search }
+          $text: { $search: req.query.search },
         }).select('_id');
 
         // 2. Extract IDs
@@ -281,81 +281,57 @@ const getMyOrders = async (req, res) => {
 };
 
 /**
- * @desc    Update the status of an order
+ * @desc    Update order status (Farmer only)
  * @route   PUT /api/orders/:id/status
- * @access  Private (Farmer only)
+ * @access  Private (Farmer)
  */
 const updateOrderStatus = async (req, res) => {
   try {
+    // 1. Find the order
     const order = await Order.findById(req.params.id);
-    const newStatus = req.body.status;
 
-    // Check if the order exists
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // Check if the order is properly linked to a farm
-    if (!order.farm) {
-      return res
-        .status(500)
-        .json({ message: 'Order is not linked to a farm (Data Error)' });
-    }
-
-    // Find the farm profile for the logged-in farmer
+    // 2. Verify Ownership: Ensure the logged-in farmer owns the farm associated with this order
+    // Note: Assuming you have a way to get the Farmer's ID or Farm ID from req.user
     const farm = await Farm.findOne({ user: req.user._id });
 
-    // Check if the farmer has a farm profile
-    if (!farm) {
-      return res.status(404).json({ message: 'Farmer profile not found' });
-    }
-
-    // --- CRITICAL: Ownership Check ---
-    // Compare the order's 'farm' field with the logged-in farmer's farm ID
-    if (order.farm.toString() !== farm._id.toString()) {
+    if (!farm || order.farm.toString() !== farm._id.toString()) {
       return res
-        .status(401)
-        .json({ message: 'Not authorized to update this order' });
+        .status(403)
+        .json({ message: 'Not authorized to manage this order' });
     }
 
-    // --- State Machine Logic ---
-    const currentStatus = order.status;
+    const oldStatus = order.status;
+    const newStatus = req.body.status;
 
-    // Check for final states
-    if (currentStatus === 'Completed' || currentStatus === 'Cancelled') {
-      return res.status(400).json({
-        message: `Order is already ${currentStatus} and cannot be changed.`,
-      });
+    // 3. RESTOCK LOGIC
+    // We only restore inventory if the order is being Cancelled AND it wasn't already Cancelled.
+    if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
+      // Prepare bulk operations for efficient database writes
+      const bulkOps = order.items.map((item) => ({
+        updateOne: {
+          filter: { _id: item.product },
+          // Use $inc with positive quantity to ADD back to stock
+          update: { $inc: { stock: +item.quantity } },
+        },
+      }));
+
+      // Execute all updates in parallel
+      await Product.bulkWrite(bulkOps);
+      console.log(`Inventory restored for Order ID: ${order._id}`);
     }
 
-    // Check for invalid reverse logic
-    if (currentStatus === 'Ready for Delivery' && newStatus === 'Incoming') {
-      return res.status(400).json({
-        message:
-          'Order is already "Ready for Delivery" and cannot be moved back to "Incoming".',
-      });
-    }
-
-    // Check for valid new status
-    const validStatuses = [
-      'Incoming',
-      'Ready for Delivery',
-      'Completed',
-      'Cancelled',
-    ];
-    if (!newStatus || !validStatuses.includes(newStatus)) {
-      return res
-        .status(400)
-        .json({ message: `"${newStatus}" is not a valid or provided status.` });
-    }
-
-    // All checks passed, update the status.
+    // 4. Update the status
     order.status = newStatus;
-    const updatedOrder = await order.save();
-    res.json(updatedOrder);
+    await order.save();
+
+    res.json(order);
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send('Server Error');
+    console.error('Error updating order status:', error.message);
+    res.status(500).json({ message: 'Server Error' });
   }
 };
 
