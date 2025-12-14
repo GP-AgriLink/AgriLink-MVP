@@ -297,7 +297,10 @@ const updateOrderStatus = async (req, res) => {
     // 2. Verify Ownership: Ensure the logged-in farmer owns the farm associated with this order
     // Note: Assuming you have a way to get the Farmer's ID or Farm ID from req.user
     const farm = await Farm.findOne({ user: req.user._id });
-
+    console.log(
+      'DEBUG ORDER ITEMS:',
+      JSON.stringify(order.orderItems, null, 2)
+    ); // <--- Add this
     if (!farm || order.farm.toString() !== farm._id.toString()) {
       return res
         .status(403)
@@ -308,20 +311,26 @@ const updateOrderStatus = async (req, res) => {
     const newStatus = req.body.status;
 
     // 3. RESTOCK LOGIC
-    // We only restore inventory if the order is being Cancelled AND it wasn't already Cancelled.
+    // 1. Check if status is being changed to Cancelled
     if (newStatus === 'Cancelled' && oldStatus !== 'Cancelled') {
-      // Prepare bulk operations for efficient database writes
-      const bulkOps = order.items.map((item) => ({
-        updateOne: {
-          filter: { _id: item.product },
-          // Use $inc with positive quantity to ADD back to stock
-          update: { $inc: { stock: +item.quantity } },
-        },
-      }));
+      // USE 'orderItems' HERE (Not 'items')
+      if (order.orderItems && order.orderItems.length > 0) {
+        const bulkOps = order.orderItems.map((item) => ({
+          updateOne: {
+            // USE 'productId' HERE (Not 'product') to match your schema
+            filter: { _id: item.productId },
+            update: { $inc: { stock: +item.quantity } },
+          },
+        }));
 
-      // Execute all updates in parallel
-      await Product.bulkWrite(bulkOps);
-      console.log(`Inventory restored for Order ID: ${order._id}`);
+        await Product.bulkWrite(bulkOps);
+        console.log('Stock restored for Order:', order._id);
+      } else {
+        console.warn(
+          'Order cancelled but no items found to restock:',
+          order._id
+        );
+      }
     }
 
     // 4. Update the status
